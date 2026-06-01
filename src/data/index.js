@@ -242,15 +242,34 @@ export const TESTIMONIALS = [
 export const FOOTER_COLUMNS = [
   {
     title: 'Tienda',
-    links: ['Indumentaria', 'Equipamiento', 'Calzado', 'Outlet · 40% OFF', 'Tarjetas de regalo'],
+    links: [
+      { label: 'Indumentaria',       view: 'indumentaria' },
+      { label: 'Equipamiento',       view: 'calzado' },
+      { label: 'Calzado',            view: 'calzado' },
+      { label: 'Accesorios',         view: 'accesorios' },
+      { label: 'Outlet · 40% OFF',   view: null },
+      { label: 'Tarjetas de regalo', view: null },
+    ],
   },
   {
     title: 'Soporte',
-    links: ['Envíos & devoluciones', 'Guía de tallas', 'Garantía de por vida', 'Estado de mi orden', 'Contacto'],
+    links: [
+      { label: 'Envíos & devoluciones', view: null },
+      { label: 'Guía de tallas',        view: null },
+      { label: 'Garantía de por vida',  view: null },
+      { label: 'Estado de mi orden',    view: null },
+      { label: 'Contacto',              view: null },
+    ],
   },
   {
     title: 'Cumbre',
-    links: ['Nuestra historia', 'Embajadores', 'Expediciones patrocinadas', 'Trabaja con nosotros', 'Prensa'],
+    links: [
+      { label: 'Nuestra historia',          view: null },
+      { label: 'Embajadores',               view: null },
+      { label: 'Expediciones patrocinadas',  view: null },
+      { label: 'Trabaja con nosotros',       view: null },
+      { label: 'Prensa',                     view: null },
+    ],
   },
 ]
 

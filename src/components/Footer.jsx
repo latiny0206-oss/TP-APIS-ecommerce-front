@@ -1,4 +1,6 @@
+import { useDispatch } from 'react-redux'
 import { Mountain, Instagram, Youtube, Activity } from 'lucide-react'
+import { navigate } from '../store/navigationSlice.js'
 import { FOOTER_COLUMNS, FOOTER_LEGAL_LINKS } from '../data/index.js'
 
 const SOCIAL_LINKS = [
@@ -8,6 +10,8 @@ const SOCIAL_LINKS = [
 ]
 
 export default function Footer() {
+  const dispatch = useDispatch()
+
   return (
     <footer
       id="contacto"
@@ -20,14 +24,17 @@ export default function Footer() {
 
           {/* Brand column */}
           <div>
-            <a href="#" className="inline-flex items-center gap-3 mb-6">
+            <button
+              onClick={() => dispatch(navigate('home'))}
+              className="inline-flex items-center gap-3 mb-6"
+            >
               <span className="flex h-9 w-9 items-center justify-center rounded-sm bg-alpenglow text-ivory">
                 <Mountain size={20} strokeWidth={2.2} />
               </span>
               <span className="font-display font-black tracking-tightest text-2xl uppercase">
                 Cumbre
               </span>
-            </a>
+            </button>
             <p className="text-ivory/65 max-w-sm text-sm lg:text-base leading-relaxed">
               Cumbre Expedition Equipment provee a guías profesionales y aventureros
               serios desde 2014. Diseñado en Bariloche. Probado en los Andes.
@@ -58,16 +65,30 @@ export default function Footer() {
                   {col.title}
                 </div>
                 <ul className="space-y-3">
-                  {col.links.map((l) => (
-                    <li key={l}>
-                      <a
-                        href="#"
-                        className="text-sm lg:text-base text-ivory/85 hover:text-alpenglow link-underline transition-colors"
-                      >
-                        {l}
-                      </a>
-                    </li>
-                  ))}
+                  {col.links.map(({ label, view }) =>
+                    view ? (
+                      // Link navegable → botón que usa el router Redux
+                      <li key={label}>
+                        <button
+                          onClick={() => dispatch(navigate(view))}
+                          className="text-sm lg:text-base text-ivory/85 hover:text-alpenglow link-underline transition-colors text-left"
+                        >
+                          {label}
+                        </button>
+                      </li>
+                    ) : (
+                      // Link decorativo → ancla sin destino real
+                      <li key={label}>
+                        <a
+                          href="#"
+                          onClick={(e) => e.preventDefault()}
+                          className="text-sm lg:text-base text-ivory/85 hover:text-alpenglow link-underline transition-colors"
+                        >
+                          {label}
+                        </a>
+                      </li>
+                    )
+                  )}
                 </ul>
               </div>
             ))}
@@ -94,7 +115,12 @@ export default function Footer() {
           </div>
           <div className="flex flex-wrap items-center gap-x-7 gap-y-2 font-mono text-[11px] tracking-widest-2 uppercase text-ivory/55">
             {FOOTER_LEGAL_LINKS.map((l) => (
-              <a key={l} href="#" className="hover:text-ivory transition-colors">
+              <a
+                key={l}
+                href="#"
+                onClick={(e) => e.preventDefault()}
+                className="hover:text-ivory transition-colors"
+              >
                 {l}
               </a>
             ))}
