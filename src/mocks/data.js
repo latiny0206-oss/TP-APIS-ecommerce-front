@@ -1,0 +1,231 @@
+// ─── Usuarios ────────────────────────────────────────────────────────────────
+export const MOCK_USERS = [
+  { id: 1, nombre: 'Ana García',  email: 'usuario@test.com', password: '123456' },
+  { id: 2, nombre: 'Luis Torres', email: 'luis@test.com',    password: 'test1234' },
+]
+
+// ─── Cupón ────────────────────────────────────────────────────────────────────
+export const MOCK_CUPONES = {
+  DESCUENTO10: { code: 'DESCUENTO10', type: 'percent', value: 0.10, label: 'DESCUENTO10 · 10% OFF' },
+  INVIERNO24:  { code: 'INVIERNO24',  type: 'percent', value: 0.20, label: 'INVIERNO24 · 20% OFF' },
+}
+
+// ─── Productos ───────────────────────────────────────────────────────────────
+export const MOCK_PRODUCTOS = [
+
+  // ── Indumentaria (5 productos) ─────────────────────────────────────────────
+  {
+    id: 1001,
+    nombre: 'Chaqueta Hardshell Cumbre Pro',
+    precio: 129990,
+    precioOriginal: 159990,
+    descuento: 19,
+    descripcion: 'Chaqueta impermeable con tecnología DRY-TECH. Costura sellada, cremallera YKK y capucha ajustable. Ideal para lluvia y viento intensos en alta montaña.',
+    categoria: 'indumentaria',
+    imagen: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=600&q=80',
+    talles: ['XS', 'S', 'M', 'L', 'XL'],
+    stock: 24,
+    tag: 'INVIERNO',
+  },
+  {
+    id: 1002,
+    nombre: 'Pantalón Trekking Strider',
+    precio: 89990,
+    precioOriginal: null,
+    descuento: 0,
+    descripcion: 'Pantalón técnico de secado rápido con sistema de ventilación lateral. 4-way stretch, bolsillos con cierre y refuerzo en rodillas.',
+    categoria: 'indumentaria',
+    imagen: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80',
+    talles: ['28', '30', '32', '34', '36'],
+    stock: 18,
+    tag: null,
+  },
+  {
+    id: 1003,
+    nombre: 'Base Layer Merino 200',
+    precio: 59990,
+    precioOriginal: 74990,
+    descuento: 20,
+    descripcion: 'Capa base de lana merino ultrafina 200 g/m². Regulación térmica natural, antiolor y muy suave al tacto. Para actividades de alta intensidad.',
+    categoria: 'indumentaria',
+    imagen: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80',
+    talles: ['XS', 'S', 'M', 'L', 'XL'],
+    stock: 30,
+    tag: 'NUEVO',
+  },
+  {
+    id: 1004,
+    nombre: 'Fleece Midlayer Polartec',
+    precio: 109990,
+    precioOriginal: null,
+    descuento: 0,
+    descripcion: 'Fleece de lana sintética Polartec 300. Capa intermedia perfecta para expediciones de invierno. Bolsillos con cremallera y puños elásticos.',
+    categoria: 'indumentaria',
+    imagen: 'https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?auto=format&fit=crop&w=600&q=80',
+    talles: ['S', 'M', 'L', 'XL'],
+    stock: 15,
+    tag: 'INVIERNO',
+  },
+  {
+    id: 1005,
+    nombre: 'Cortaviento Ultralight',
+    precio: 79990,
+    precioOriginal: 99990,
+    descuento: 20,
+    descripcion: 'Cortaviento plegable de 89 g. Tela ripstop antidesgarros, repelente al agua DWR y capucha guardable en el cuello. Pesa menos que un smartphone.',
+    categoria: 'indumentaria',
+    imagen: 'https://images.unsplash.com/photo-1467043237213-65f2da53396f?auto=format&fit=crop&w=600&q=80',
+    talles: ['XS', 'S', 'M', 'L', 'XL'],
+    stock: 8,
+    tag: 'BESTSELLER',
+  },
+
+  // ── Calzado (5 productos) ─────────────────────────────────────────────────
+  {
+    id: 2001,
+    nombre: 'Bota Summit GTX High',
+    precio: 189990,
+    precioOriginal: 229990,
+    descuento: 17,
+    descripcion: 'Bota de montaña high-cut con membrana Gore-Tex impermeable. Suela Vibram Megagrip, horma ancha y forro antibacterial. Recomendada para trekking 4 estaciones.',
+    categoria: 'calzado',
+    imagen: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80',
+    talles: ['38', '39', '40', '41', '42', '43', '44', '45'],
+    stock: 12,
+    tag: 'BESTSELLER',
+  },
+  {
+    id: 2002,
+    nombre: 'Zapatilla Trail Approach X',
+    precio: 119990,
+    precioOriginal: null,
+    descuento: 0,
+    descripcion: 'Zapatilla de aproximación con suela sticky rubber para roca. Diseño asimétrico para mayor precisión en punta de pie. Ligera y versátil.',
+    categoria: 'calzado',
+    imagen: 'https://images.unsplash.com/photo-1606471191009-63994c53433b?auto=format&fit=crop&w=600&q=80',
+    talles: ['38', '39', '40', '41', '42', '43', '44'],
+    stock: 20,
+    tag: null,
+  },
+  {
+    id: 2003,
+    nombre: 'Bota Invierno Thermal -20°C',
+    precio: 159990,
+    precioOriginal: null,
+    descuento: 0,
+    descripcion: 'Bota de alta montaña para temperaturas extremas hasta -20°C. Sistema Boa para ajuste preciso, forro de pluma sintética y gáiter integrado.',
+    categoria: 'calzado',
+    imagen: 'https://images.unsplash.com/photo-1533867617858-e7b97e060509?auto=format&fit=crop&w=600&q=80',
+    talles: ['39', '40', '41', '42', '43', '44', '45'],
+    stock: 7,
+    tag: 'INVIERNO',
+  },
+  {
+    id: 2004,
+    nombre: 'Sandalia Trekking Amphibian',
+    precio: 69990,
+    precioOriginal: 89990,
+    descuento: 22,
+    descripcion: 'Sandalia anfibio con suela Vibram y correas ajustables. Seca rápido, ideal para cruces de río y trekking en clima cálido. Peso: 320 g.',
+    categoria: 'calzado',
+    imagen: 'https://images.unsplash.com/photo-1603487742131-4160ec999306?auto=format&fit=crop&w=600&q=80',
+    talles: ['37', '38', '39', '40', '41', '42', '43', '44'],
+    stock: 16,
+    tag: null,
+  },
+  {
+    id: 2005,
+    nombre: 'Zapatilla Trail Running Pro',
+    precio: 129990,
+    precioOriginal: null,
+    descuento: 0,
+    descripcion: 'Zapatilla de trail running con drop 8mm, placa de carbono y amortiguación MAX. Suela Contagrip para agarre en todo terreno húmedo o seco.',
+    categoria: 'calzado',
+    imagen: 'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&w=600&q=80',
+    talles: ['38', '39', '40', '41', '42', '43', '44', '45'],
+    stock: 22,
+    tag: 'NUEVO',
+  },
+
+  // ── Accesorios (5 productos) ──────────────────────────────────────────────
+  {
+    id: 3001,
+    nombre: 'Mochila Expedition 40L',
+    precio: 149990,
+    precioOriginal: 179990,
+    descuento: 17,
+    descripcion: 'Mochila de trekking 40 litros con marco de aluminio, panel de acceso inferior, porta-hidratación y arnés ergonómico ajustable. Carga max 18 kg.',
+    categoria: 'accesorios',
+    imagen: 'https://images.unsplash.com/photo-1622260614153-03223fb72052?auto=format&fit=crop&w=600&q=80',
+    talles: ['Único'],
+    stock: 14,
+    tag: 'BESTSELLER',
+  },
+  {
+    id: 3002,
+    nombre: 'Linterna Frontal 500 lm',
+    precio: 34990,
+    precioOriginal: null,
+    descuento: 0,
+    descripcion: 'Frontal LED de 500 lúmenes con sensor de proximidad PowerTap. Resistente IPX8, 3 modos de luz y memoria de potencia. Batería recargable USB-C.',
+    categoria: 'accesorios',
+    imagen: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=600&q=80',
+    talles: ['Único'],
+    stock: 35,
+    tag: null,
+  },
+  {
+    id: 3003,
+    nombre: 'Bastones Plegables Carbon Z',
+    precio: 89990,
+    precioOriginal: 109990,
+    descuento: 18,
+    descripcion: 'Bastones ultraligeros de fibra de carbono (180 g el par). Sistema de plegado en Z, empuñadura de corcho natural y punta de tungsteno intercambiable.',
+    categoria: 'accesorios',
+    imagen: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&q=80',
+    talles: ['Único'],
+    stock: 19,
+    tag: 'INVIERNO',
+  },
+  {
+    id: 3004,
+    nombre: 'Guantes Escalada Dedo Completo',
+    precio: 49990,
+    precioOriginal: null,
+    descuento: 0,
+    descripcion: 'Guantes de cuero de cabra con protección de nudillos y palma reforzada. Cierre de velcro ajustable, dedo índice y pulgar de tacto para smartphone.',
+    categoria: 'accesorios',
+    imagen: 'https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=600&q=80',
+    talles: ['S', 'M', 'L', 'XL'],
+    stock: 28,
+    tag: null,
+  },
+  {
+    id: 3005,
+    nombre: 'Gafas Montaña UV400 Cat.4',
+    precio: 79990,
+    precioOriginal: 99990,
+    descuento: 20,
+    descripcion: 'Gafas para alta montaña con protección lateral y lente categoría 4 (transmisión ≤ 8%). Marco de titanio liviano, lente policarbonato antirayado.',
+    categoria: 'accesorios',
+    imagen: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=600&q=80',
+    talles: ['Único'],
+    stock: 11,
+    tag: 'NUEVO',
+  },
+]
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+export const getProductosByCategoria = (categoria) =>
+  MOCK_PRODUCTOS.filter((p) => p.categoria === categoria)
+
+export const getProductoById = (id) =>
+  MOCK_PRODUCTOS.find((p) => p.id === Number(id)) ?? null
+
+export const fmtPrice = (n) =>
+  '$' + Math.round(n).toLocaleString('es-CL').replaceAll(',', '.')
+
+export const precioFinal = (producto) =>
+  producto.descuento > 0
+    ? Math.round(producto.precio * (1 - producto.descuento / 100))
+    : producto.precio

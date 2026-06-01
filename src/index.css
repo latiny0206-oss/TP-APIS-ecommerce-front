@@ -1,0 +1,185 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    background: #1c1c1a;
+    color: #fbf9f0;
+    overflow-x: hidden;
+  }
+
+  .font-display {
+    font-stretch: 125%;
+  }
+}
+
+@layer utilities {
+  .tracking-tightest {
+    letter-spacing: -0.04em;
+  }
+  .tracking-widest-2 {
+    letter-spacing: 0.22em;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+}
+
+@layer components {
+  /* Film grain over hero */
+  .grain::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.45'/></svg>");
+    opacity: 0.08;
+    mix-blend-mode: overlay;
+    z-index: 1;
+  }
+
+  /* Topographic dot pattern */
+  .topo {
+    background-image: radial-gradient(rgba(251, 249, 240, 0.18) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  /* Product card image zoom */
+  .product-card:hover .product-img {
+    transform: scale(1.05);
+  }
+  .product-img {
+    transition: transform 0.7s cubic-bezier(0.2, 0.6, 0.2, 1);
+  }
+
+  /* Animated underline for links */
+  .link-underline {
+    position: relative;
+  }
+  .link-underline::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -4px;
+    width: 100%;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.4s cubic-bezier(0.7, 0, 0.3, 1);
+  }
+  .link-underline:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+
+  /* Input styles */
+  .input-base {
+    background: transparent;
+    border: 1px solid rgba(28, 28, 26, 0.18);
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    width: 100%;
+  }
+  .input-base:focus {
+    border-color: #2e5f3a;
+    background: rgba(46, 95, 58, 0.04);
+  }
+  .input-dark {
+    background: rgba(251, 249, 240, 0.04);
+    border-color: rgba(251, 249, 240, 0.15);
+    color: #fbf9f0;
+  }
+  .input-dark:focus {
+    border-color: #d9701a;
+    background: rgba(217, 112, 26, 0.06);
+  }
+}
+
+/* Scrolling marquee */
+.scrolling-marquee {
+  animation: marquee 28s linear infinite;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Rise animation (staggered fade-in-up) */
+.rise {
+  animation: rise 0.9s cubic-bezier(0.2, 0.6, 0.2, 1) both;
+}
+.rise-d1 {
+  animation-delay: 0.1s;
+}
+.rise-d2 {
+  animation-delay: 0.25s;
+}
+.rise-d3 {
+  animation-delay: 0.4s;
+}
+.rise-d4 {
+  animation-delay: 0.55s;
+}
+.rise-d5 {
+  animation-delay: 0.7s;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fade in */
+.fadein {
+  animation: fadein 0.4s ease-out both;
+}
+@keyframes fadein {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Barra de progreso del toast */
+@keyframes shrink {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  height: 1rem;
+  width: 1rem;
+  border: 2px solid rgba(251, 249, 240, 0.3);
+  border-top-color: #fbf9f0;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
