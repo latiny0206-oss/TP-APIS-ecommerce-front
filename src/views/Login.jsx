@@ -131,19 +131,6 @@ export default function Login() {
               </Button>
             </form>
 
-            {/* Hint de credenciales para demo */}
-            <div className="mt-6 p-4 border border-rock/10 bg-rock/[0.03]">
-              <p className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/45 mb-2">
-                Demo — credenciales de prueba:
-              </p>
-              <p className="font-mono text-xs text-rock/70">
-                <strong>Email:</strong> usuario@test.com
-              </p>
-              <p className="font-mono text-xs text-rock/70">
-                <strong>Contraseña:</strong> 123456
-              </p>
-            </div>
-
             <p className="mt-6 text-center font-mono text-[11px] tracking-widest-2 uppercase text-rock/55">
               ¿No tenés cuenta?{' '}
               <button
