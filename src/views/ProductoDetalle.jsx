@@ -49,6 +49,7 @@ export default function ProductoDetalle() {
         precio:    pf,
         imagen:    producto.imagen,
         talle:     talleSeleccionado ?? (producto.talles?.[0] ?? null),
+        qty:       cantidad,
       })
     )
     setAgregado(true)

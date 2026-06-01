@@ -31,9 +31,10 @@ const cartSlice = createSlice({
   reducers: {
     addToCart(state, { payload }) {
       const key = `p${payload.productId}-${payload.talle || 'unico'}`
+      const qty = payload.qty ?? 1
       const existing = state.items.find((i) => i.lineId === key)
       if (existing) {
-        existing.qty += 1
+        existing.qty += qty
       } else {
         state.items.push({
           lineId:    key,
@@ -42,7 +43,7 @@ const cartSlice = createSlice({
           precio:    payload.precio,
           imagen:    payload.imagen,
           talle:     payload.talle || null,
-          qty:       1,
+          qty,
         })
       }
       state.toast = { visible: true, productName: payload.nombre }
