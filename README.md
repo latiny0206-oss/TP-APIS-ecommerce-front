@@ -55,6 +55,8 @@ npm run preview
 | Email | `usuario@test.com` |
 | Contraseña | `123456` |
 
+Para un login fallido ingresar cualquier mail + contraseña que no sean los de arriba.
+
 ### Cupones de descuento
 
 | Código | Descuento |
