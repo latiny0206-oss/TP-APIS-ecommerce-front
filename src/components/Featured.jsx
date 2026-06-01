@@ -3,9 +3,25 @@ import { ArrowRight, Truck, Shield, Compass, Check } from 'lucide-react'
 import { navigate } from '../store/navigationSlice.js'
 import SectionHeader from './ui/SectionHeader.jsx'
 import ProductCard   from './ui/ProductCard.jsx'
-import { FEATURED_PRODUCTS, TRUST_ITEMS } from '../data/index.js'
+import { TRUST_ITEMS } from '../data/index.js'
+import { MOCK_PRODUCTOS, precioFinal } from '../mocks/data.js'
 
 const TRUST_ICONS = { truck: Truck, shield: Shield, compass: Compass, check: Check }
+
+// Toma los primeros 4 del mock y normaliza los campos que ProductCard espera
+const FEATURED_PRODUCTS = MOCK_PRODUCTOS.slice(0, 4).map((p) => {
+  const pf = precioFinal(p)
+  return {
+    ...p,
+    name:          p.nombre,
+    brand:         p.marca,
+    image:         p.imagen,
+    // precioBase = precio ya descontado; precioAnterior = precio original para tachar
+    precioBase:    pf,
+    precioAnterior: p.descuento > 0 ? p.precio : null,
+    descuentoPct:  0,           // el descuento ya está aplicado en precioBase
+  }
+})
 
 export default function Featured() {
   const dispatch = useDispatch()
