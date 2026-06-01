@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useSelector } from 'react-redux'
 
 // Layout
@@ -66,6 +67,10 @@ const ADMIN_VIEWS = ['admin-dashboard', 'admin-products', 'admin-photos', 'admin
 // ─── Router ────────────────────────────────────────────────────────────────
 export default function App() {
   const view = useSelector((s) => s.navigation.currentView)
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [view])
 
   const isAdmin = ADMIN_VIEWS.includes(view)
 
