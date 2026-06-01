@@ -254,11 +254,11 @@ export const FOOTER_COLUMNS = [
   {
     title: 'Soporte',
     links: [
-      { label: 'Envíos & devoluciones', view: null },
-      { label: 'Guía de tallas',        view: null },
+      { label: 'Envíos & devoluciones', view: 'faq' },
+      { label: 'Guía de tallas',        view: 'faq' },
       { label: 'Garantía de por vida',  view: null },
       { label: 'Estado de mi orden',    view: null },
-      { label: 'Contacto',              view: null },
+      { label: 'Contacto',              view: 'contacto' },
     ],
   },
   {

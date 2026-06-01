@@ -1,13 +1,7 @@
 import { useDispatch } from 'react-redux'
-import { Mountain, Instagram, Youtube, Activity } from 'lucide-react'
+import { Mountain } from 'lucide-react'
 import { navigate } from '../store/navigationSlice.js'
 import { FOOTER_COLUMNS, FOOTER_LEGAL_LINKS } from '../data/index.js'
-
-const SOCIAL_LINKS = [
-  { Icon: Instagram, label: '@cumbreoutdoor', href: '#' },
-  { Icon: Youtube,   label: '/cumbre',         href: '#' },
-  { Icon: Activity,  label: 'Club Cumbre',     href: '#' },
-]
 
 export default function Footer() {
   const dispatch = useDispatch()
@@ -39,22 +33,6 @@ export default function Footer() {
               Cumbre Expedition Equipment provee a guías profesionales y aventureros
               serios desde 2014. Diseñado en Bariloche. Probado en los Andes.
             </p>
-
-            {/* Social links */}
-            <div className="flex flex-wrap items-center gap-2 mt-8">
-              {SOCIAL_LINKS.map(({ Icon, label, href }, i) => (
-                <a
-                  key={i}
-                  href={href}
-                  className="group inline-flex items-center gap-2 px-3 h-10 border border-ivory/15 hover:border-alpenglow hover:text-alpenglow transition-colors"
-                >
-                  <Icon size={16} />
-                  <span className="font-mono text-[10px] tracking-widest-2 uppercase">
-                    {label}
-                  </span>
-                </a>
-              ))}
-            </div>
           </div>
 
           {/* Nav columns */}
@@ -67,7 +45,6 @@ export default function Footer() {
                 <ul className="space-y-3">
                   {col.links.map(({ label, view }) =>
                     view ? (
-                      // Link navegable → botón que usa el router Redux
                       <li key={label}>
                         <button
                           onClick={() => dispatch(navigate(view))}
@@ -77,7 +54,6 @@ export default function Footer() {
                         </button>
                       </li>
                     ) : (
-                      // Link decorativo → ancla sin destino real
                       <li key={label}>
                         <a
                           href="#"
@@ -99,10 +75,7 @@ export default function Footer() {
         <div className="relative -mx-6 lg:-mx-10 border-t border-ivory/10 overflow-hidden">
           <div
             className="font-display font-black tracking-tightest uppercase leading-none text-[24vw] text-center select-none py-[4vw]"
-            style={{
-              WebkitTextStroke: '1px rgba(242,236,224,0.18)',
-              color: 'transparent',
-            }}
+            style={{ WebkitTextStroke: '1px rgba(242,236,224,0.18)', color: 'transparent' }}
           >
             CUMBRE
           </div>

@@ -1,7 +1,8 @@
 // ─── Usuarios ────────────────────────────────────────────────────────────────
 export const MOCK_USERS = [
-  { id: 1, nombre: 'Ana García',  email: 'usuario@test.com', password: '123456' },
-  { id: 2, nombre: 'Luis Torres', email: 'luis@test.com',    password: 'test1234' },
+  { id: 1, nombre: 'Ana García',      email: 'usuario@test.com', password: '123456',  rol: 'cliente' },
+  { id: 2, nombre: 'Luis Torres',     email: 'luis@test.com',    password: 'test1234', rol: 'cliente' },
+  { id: 3, nombre: 'Administrador',   email: 'admin@cumbre.com', password: 'admin123', rol: 'admin' },
 ]
 
 // ─── Cupones ──────────────────────────────────────────────────────────────────

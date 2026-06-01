@@ -58,8 +58,11 @@ export function loginThunk(email, password) {
     }
     const { password: _, ...safeUser } = user
     dispatch(loginSuccess(safeUser))
-    const returnTo = getState().auth.returnTo || 'home'
-    dispatch(navigate(returnTo))
+    // Usuarios con rol admin van directo al dashboard
+    const destination = safeUser.rol === 'admin'
+      ? 'admin-dashboard'
+      : (getState().auth.returnTo || 'home')
+    dispatch(navigate(destination))
   }
 }
 
