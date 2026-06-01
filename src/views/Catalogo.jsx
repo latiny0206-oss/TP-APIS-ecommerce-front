@@ -13,7 +13,7 @@ import Button from '../components/ui/Button.jsx'
 const CATEGORIAS_OPTS = [
   { value: 'indumentaria', label: 'Indumentaria' },
   { value: 'calzado',      label: 'Calzado' },
-  { value: 'accesorios',   label: 'Accesorios' },
+  { value: 'equipamiento', label: 'Equipamiento' },
 ]
 const MARCAS_OPTS     = [...new Set(MOCK_PRODUCTOS.map((p) => p.marca))].sort()
 const TEMPORADAS_OPTS = ['Invierno', 'Verano', '4 Estaciones']
@@ -22,7 +22,7 @@ const PRECIO_GLOBAL_MAX = Math.max(...MOCK_PRODUCTOS.map((p) => precioFinal(p)))
 const TITLES = {
   indumentaria: { title: 'Indumentaria', sub: 'Chaquetas, pantalones y capas técnicas' },
   calzado:      { title: 'Calzado',      sub: 'Botas, zapatillas y sandalia de montaña' },
-  accesorios:   { title: 'Accesorios',   sub: 'Mochilas, linternas, bastones y más' },
+  equipamiento: { title: 'Equipamiento', sub: 'Mochilas, linternas, bastones y más' },
 }
 
 // ─── Checkbox con estilo del sitio ────────────────────────────────────────────

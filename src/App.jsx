@@ -105,7 +105,9 @@ export default function App() {
 
       {view === 'indumentaria' && <ShellPage><Catalogo categoria="indumentaria" /></ShellPage>}
       {view === 'calzado'      && <ShellPage><Catalogo categoria="calzado" /></ShellPage>}
-      {view === 'accesorios'   && <ShellPage><Catalogo categoria="accesorios" /></ShellPage>}
+      {view === 'equipamiento' && <ShellPage><Catalogo categoria="equipamiento" /></ShellPage>}
+      {/* Redirige la URL legacy /accesorios a equipamiento sin romper nada */}
+      {view === 'accesorios'   && <ShellPage><Catalogo categoria="equipamiento" /></ShellPage>}
       {view === 'producto'     && <ShellPage><ProductoDetalle /></ShellPage>}
       {view === 'carrito'      && <ShellPage><Carrito /></ShellPage>}
       {view === 'checkout'     && <Checkout />}
@@ -113,7 +115,7 @@ export default function App() {
       {view === 'faq'          && <ShellPage><FAQ /></ShellPage>}
 
       {/* Fallback a home si la vista no está registrada */}
-      {!['home','indumentaria','calzado','accesorios','producto','carrito','checkout','contacto','faq'].includes(view) && (
+      {!['home','indumentaria','calzado','equipamiento','accesorios','producto','carrito','checkout','contacto','faq'].includes(view) && (
         <LandingPage />
       )}
     </div>

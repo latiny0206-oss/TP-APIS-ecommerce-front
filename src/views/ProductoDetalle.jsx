@@ -9,7 +9,7 @@ import Button from '../components/ui/Button.jsx'
 const CATEGORIA_LABELS = {
   indumentaria: 'Indumentaria',
   calzado:      'Calzado',
-  accesorios:   'Accesorios',
+  equipamiento: 'Equipamiento',
 }
 
 export default function ProductoDetalle() {

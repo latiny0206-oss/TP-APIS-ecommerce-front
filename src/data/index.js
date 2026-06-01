@@ -2,7 +2,7 @@
 export const NAV_ITEMS = [
   { label: 'Indumentaria', view: 'indumentaria' },
   { label: 'Calzado',      view: 'calzado' },
-  { label: 'Accesorios',   view: 'accesorios' },
+  { label: 'Equipamiento', view: 'equipamiento' },
 ]
 
 export const MARQUEE_ITEMS = [
@@ -32,9 +32,9 @@ export const CATEGORY_CHIPS = [
 
 export const CATEGORIES = [
   {
-    id: 'campamento',
-    title: 'Campamento',
-    sub: '24 productos · Carpas, sacos, esterillas',
+    id: 'equipamiento',
+    title: 'Equipamiento',
+    sub: '24 productos · Mochilas, linternas, bastones y más',
     img: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=1400&q=70',
     iconKey: 'tent',
   },
@@ -244,9 +244,8 @@ export const FOOTER_COLUMNS = [
     title: 'Tienda',
     links: [
       { label: 'Indumentaria',       view: 'indumentaria' },
-      { label: 'Equipamiento',       view: 'calzado' },
+      { label: 'Equipamiento',       view: 'equipamiento' },
       { label: 'Calzado',            view: 'calzado' },
-      { label: 'Accesorios',         view: 'accesorios' },
       { label: 'Outlet · 40% OFF',   view: null },
       { label: 'Tarjetas de regalo', view: null },
     ],

@@ -6,7 +6,7 @@ import SectionHeader from './ui/SectionHeader.jsx'
 
 const ICON_MAP     = { tent: Tent, boot: Footprints, jacket: Shirt }
 // Mapeo de id de categoría al view name del router
-const VIEW_MAP     = { campamento: 'accesorios', calzado: 'calzado', ropa: 'indumentaria' }
+const VIEW_MAP     = { equipamiento: 'equipamiento', calzado: 'calzado', ropa: 'indumentaria' }
 
 export default function Categories() {
   const dispatch = useDispatch()
