@@ -196,7 +196,10 @@ export default function Checkout() {
   const [cardErrors, setCardErrors] = useState({})
   const [processing, setProcessing] = useState(false)
 
-  const sF = (field) => (e) => setShip({ ...ship, [field]: e.target.value })
+  const sF = (field, filter) => (e) => {
+    const v = filter ? filter(e.target.value) : e.target.value
+    setShip({ ...ship, [field]: v })
+  }
 
   const goStep2 = () => {
     const e = validateShip(ship)
@@ -272,7 +275,7 @@ export default function Checkout() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <label className="sm:col-span-2 block">
                     <Label>Nombre completo</Label>
-                    <TInput value={ship.nombre} onChange={sF('nombre')} placeholder="Ana García" error={shipErrors.nombre} />
+                    <TInput value={ship.nombre} onChange={sF('nombre', (v) => v.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ''))} placeholder="Ana García" error={shipErrors.nombre} />
                   </label>
                   <label className="sm:col-span-2 block">
                     <Label>Dirección</Label>
@@ -292,7 +295,7 @@ export default function Checkout() {
                   </label>
                   <label className="block">
                     <Label>Teléfono</Label>
-                    <TInput value={ship.telefono} onChange={sF('telefono')} placeholder="+54 9 11 1234-5678" error={shipErrors.telefono} />
+                    <TInput type="tel" value={ship.telefono} onChange={sF('telefono', (v) => v.replace(/[^0-9+\-\s]/g, ''))} placeholder="+54 9 11 1234-5678" error={shipErrors.telefono} />
                   </label>
                 </div>
                 <div className="flex gap-3 mt-8">

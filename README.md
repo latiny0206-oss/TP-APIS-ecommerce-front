@@ -48,12 +48,20 @@ npm run preview
 
 ## Credenciales de prueba
 
-### Login
+### Login — Usuario
 
 | Campo | Valor |
 |---|---|
 | Email | `usuario@test.com` |
 | Contraseña | `123456` |
+
+### Login — Administrador
+
+| Campo | Valor |
+|---|---|
+| Email | `admin@cumbre.com` |
+| Contraseña | `admin123` |
+| Rol | Administrador → accede al panel en `/admin` |
 
 Para un login fallido ingresar cualquier mail + contraseña que no sean los de arriba.
 

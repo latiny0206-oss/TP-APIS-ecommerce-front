@@ -254,6 +254,41 @@ export const getProductosByCategoria = (categoria) =>
 export const getProductoById = (id) =>
   MOCK_PRODUCTOS.find((p) => p.id === Number(id)) ?? null
 
+// ─── Pedidos mock ─────────────────────────────────────────────────────────────
+export const MOCK_PEDIDOS = [
+  {
+    id: '#ORD-10234',
+    userId: 1,
+    fecha: '2025-05-12',
+    estado: 'Entregado',
+    items: [
+      { nombre: 'Chaqueta Hardshell Cumbre Pro', qty: 1, precio: 129990 },
+      { nombre: 'Base Layer Merino 200',          qty: 2, precio: 59990 },
+    ],
+    total: 249970,
+  },
+  {
+    id: '#ORD-10187',
+    userId: 1,
+    fecha: '2025-04-03',
+    estado: 'Entregado',
+    items: [
+      { nombre: 'Bastones Trekking Carbon Pro', qty: 1, precio: 44990 },
+    ],
+    total: 44990,
+  },
+  {
+    id: '#ORD-10298',
+    userId: 2,
+    fecha: '2025-05-28',
+    estado: 'En camino',
+    items: [
+      { nombre: 'Zapatillas Trail Apex GTX', qty: 1, precio: 154990 },
+    ],
+    total: 154990,
+  },
+]
+
 export const fmtPrice = (n) =>
   '$' + Math.round(n).toLocaleString('es-CL').replaceAll(',', '.')
 

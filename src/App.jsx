@@ -20,6 +20,7 @@ import Carrito         from './views/Carrito.jsx'
 import Checkout        from './views/Checkout.jsx'
 import Contacto        from './views/Contacto.jsx'
 import FAQ             from './views/FAQ.jsx'
+import Perfil          from './views/Perfil.jsx'
 
 // Admin views
 import AdminLayout    from './views/admin/AdminLayout.jsx'
@@ -113,9 +114,10 @@ export default function App() {
       {view === 'checkout'     && <Checkout />}
       {view === 'contacto'     && <ShellPage><Contacto /></ShellPage>}
       {view === 'faq'          && <ShellPage><FAQ /></ShellPage>}
+      {view === 'perfil'       && <ShellPage><Perfil /></ShellPage>}
 
       {/* Fallback a home si la vista no está registrada */}
-      {!['home','indumentaria','calzado','equipamiento','accesorios','producto','carrito','checkout','contacto','faq'].includes(view) && (
+      {!['home','indumentaria','calzado','equipamiento','accesorios','producto','carrito','checkout','contacto','faq','perfil'].includes(view) && (
         <LandingPage />
       )}
     </div>
