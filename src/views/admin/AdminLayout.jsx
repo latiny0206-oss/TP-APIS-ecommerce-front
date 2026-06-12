@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from 'react-redux'
 import {
-  Mountain, LayoutDashboard, Package, Image, Tag,
+  Mountain, LayoutDashboard, Package, Layers, Sliders,
   Ticket, ClipboardList, Users, Plus, Settings, LogOut, ChevronRight,
 } from 'lucide-react'
 import { navigate } from '../../store/navigationSlice.js'
@@ -9,13 +9,19 @@ import Button from '../../components/ui/Button.jsx'
 
 // Cambio 6: "Imágenes" está en la sidebar con ícono Image
 const ADMIN_NAV = [
-  { id: 'admin-dashboard', label: 'Tablero',   Icon: LayoutDashboard },
-  { id: 'admin-products',  label: 'Productos', Icon: Package },
-  { id: 'admin-photos',    label: 'Imágenes',  Icon: Image },
+  { id: 'admin-dashboard', label: 'Tablero',    Icon: LayoutDashboard },
+  { id: 'admin-products',  label: 'Productos',  Icon: Package },
+  { id: 'admin-variants',  label: 'Variantes',  Icon: Sliders },
+  { id: 'admin-catalog',   label: 'Catálogo',   Icon: Layers },
   { id: 'admin-discounts', label: 'Descuentos', Icon: Ticket },
-  { id: 'admin-orders',    label: 'Órdenes',   Icon: ClipboardList },
-  { id: 'admin-users',     label: 'Usuarios',  Icon: Users },
+  { id: 'admin-orders',    label: 'Órdenes',    Icon: ClipboardList },
+  { id: 'admin-users',     label: 'Usuarios',   Icon: Users },
 ]
+
+const VIEW_LABELS = {
+  'admin-photos': 'Imágenes',
+  ...Object.fromEntries(ADMIN_NAV.map((n) => [n.id, n.label])),
+}
 
 function weekdayDate() {
   return new Date().toLocaleDateString('es-AR', {
@@ -26,7 +32,7 @@ function weekdayDate() {
 export default function AdminLayout({ children }) {
   const dispatch     = useDispatch()
   const currentView  = useSelector((s) => s.navigation.currentView)
-  const currentLabel = ADMIN_NAV.find((n) => n.id === currentView)?.label ?? 'Tablero'
+  const currentLabel = VIEW_LABELS[currentView] ?? 'Tablero'
 
   return (
     <div className="bg-ivory text-rock min-h-screen flex">
