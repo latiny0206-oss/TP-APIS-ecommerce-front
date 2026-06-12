@@ -21,11 +21,13 @@ export default function Categories() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4 mt-12 lg:mt-16">
           {CATEGORIES.map((cat, i) => {
             const Ico   = ICON_MAP[cat.iconKey] || Box
-            const view  = VIEW_MAP[cat.id] || 'indumentaria'
             const count = MOCK_PRODUCTOS.filter((p) => p.categoria === cat.categoriaKey).length
             const subText = `${count} producto${count !== 1 ? 's' : ''} · ${cat.sub}`
             return (
-              <button key={cat.id} onClick={() => navigate(view)}
+              <button key={cat.id} onClick={() => {
+                sessionStorage.setItem('catalogoState', JSON.stringify({ backView: 'catalogo', categorias: [cat.categoriaKey] }))
+                navigate('catalogo')
+              }}
                 className="group relative overflow-hidden aspect-[4/5] md:aspect-[3/5] lg:aspect-[3/4] bg-rock-700 text-left">
                 <img src={cat.img} alt={cat.title}
                   className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"

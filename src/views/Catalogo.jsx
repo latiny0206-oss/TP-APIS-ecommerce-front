@@ -216,7 +216,7 @@ function ProductoCard({ producto, onNavigate }) {
 
 export default function Catalogo({ categoria }) {
   const { navigate } = useNavigation()
-  const { title, sub } = (categoria && TITLES[categoria]) || { title: 'Catálogo', sub: 'Todos los productos disponibles' }
+  const { title, sub } = (categoria && TITLES[categoria]) || { title: 'PRODUCTOS', sub: 'Todos los productos disponibles' }
 
   const [busqueda,   setBusqueda]   = useState('')
   const [categorias, setCategorias] = useState(categoria ? [categoria] : [])
