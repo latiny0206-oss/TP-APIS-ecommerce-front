@@ -40,9 +40,12 @@ export const store = configureStore({
 
 store.dispatch(hydrate(PRODUCTS_SEED))
 
+let prevCart = store.getState().cart
 store.subscribe(() => {
   try {
-    const { items, coupon } = store.getState().cart
-    localStorage.setItem('cumbre_cart', JSON.stringify({ items, coupon }))
+    const { cart } = store.getState()
+    if (cart === prevCart) return
+    prevCart = cart
+    localStorage.setItem('cumbre_cart', JSON.stringify({ items: cart.items, coupon: cart.coupon }))
   } catch {}
 })
