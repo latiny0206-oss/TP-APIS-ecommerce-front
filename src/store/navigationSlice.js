@@ -4,8 +4,8 @@ const KNOWN_VIEWS = new Set([
   'home', 'indumentaria', 'calzado', 'equipamiento', 'accesorios',
   'producto', 'carrito', 'checkout', 'contacto', 'faq', 'perfil', 'guia-tallas',
   'login', 'registro',
-  'admin-dashboard', 'admin-products', 'admin-photos',
-  'admin-discounts', 'admin-orders', 'admin-users',
+  'admin-dashboard', 'admin-products', 'admin-photos', 'admin-variants',
+  'admin-catalog', 'admin-discounts', 'admin-orders', 'admin-users',
 ])
 
 function viewFromPath() {

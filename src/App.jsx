@@ -29,6 +29,11 @@ const AdminLayout    = lazy(() => import('./views/admin/AdminLayout.jsx'))
 const AdminDashboard = lazy(() => import('./views/admin/AdminDashboard.jsx'))
 const AdminProducts  = lazy(() => import('./views/admin/AdminProducts.jsx'))
 const AdminPhotos    = lazy(() => import('./views/admin/AdminPhotos.jsx'))
+const AdminVariants  = lazy(() => import('./views/admin/AdminVariants.jsx'))
+const AdminOrders    = lazy(() => import('./views/admin/AdminOrders.jsx'))
+const AdminDiscounts = lazy(() => import('./views/admin/AdminDiscounts.jsx'))
+const AdminUsers     = lazy(() => import('./views/admin/AdminUsers.jsx'))
+const AdminCatalog   = lazy(() => import('./views/admin/AdminCatalog.jsx'))
 
 // ─── Landing page ──────────────────────────────────────────────────────────
 function LandingPage() {
@@ -67,7 +72,7 @@ function AdminPlaceholder({ view }) {
   )
 }
 
-const ADMIN_VIEWS = ['admin-dashboard', 'admin-products', 'admin-photos', 'admin-discounts', 'admin-orders', 'admin-users']
+const ADMIN_VIEWS = ['admin-dashboard', 'admin-products', 'admin-photos', 'admin-variants', 'admin-catalog', 'admin-discounts', 'admin-orders', 'admin-users']
 
 function PageLoader() {
   return (
@@ -114,9 +119,11 @@ export default function App() {
           {view === 'admin-dashboard' && <AdminDashboard />}
           {view === 'admin-products'  && <AdminProducts />}
           {view === 'admin-photos'    && <AdminPhotos />}
-          {['admin-discounts', 'admin-orders', 'admin-users'].includes(view) && (
-            <AdminPlaceholder view={view} />
-          )}
+          {view === 'admin-variants'  && <AdminVariants />}
+          {view === 'admin-orders'    && <AdminOrders />}
+          {view === 'admin-catalog'   && <AdminCatalog />}
+          {view === 'admin-discounts' && <AdminDiscounts />}
+          {view === 'admin-users'     && <AdminUsers />}
         </AdminLayout>
       </Suspense>
     )
