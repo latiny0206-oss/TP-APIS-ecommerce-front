@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
 import {
   Mountain, ShoppingCart, Menu, X, ArrowUpRight, LogOut, UserCircle,
 } from 'lucide-react'
-import { toggleMobileMenu, closeMobileMenu } from '../store/landingSlice.js'
-import { navigate }   from '../store/navigationSlice.js'
-import { logout }     from '../store/authSlice.js'
+import { useNavigation } from '../context/NavigationContext.jsx'
+import { useAuth }       from '../context/AuthContext.jsx'
+import { useCart }       from '../context/CartContext.jsx'
 import { NAV_ITEMS, MARQUEE_ITEMS } from '../data/index.js'
 
 function PromoMarquee() {
@@ -33,12 +32,13 @@ function IconButton({ children, className = '', ...props }) {
 }
 
 export default function Navbar() {
-  const dispatch   = useDispatch()
-  const mobileOpen = useSelector((s) => s.landing.mobileMenuOpen)
-  const cartCount  = useSelector((s) => s.cart.items.reduce((n, i) => n + i.qty, 0))
-  const { isLoggedIn, user } = useSelector((s) => s.auth)
-  const currentView = useSelector((s) => s.navigation.currentView)
-  const [scrolled, setScrolled] = useState(false)
+  const { view: currentView, navigate } = useNavigation()
+  const { isLoggedIn, user, logout }    = useAuth()
+  const { totals }                      = useCart()
+  const cartCount = totals.itemCount
+
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [scrolled,   setScrolled]   = useState(false)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 30)
@@ -46,23 +46,22 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Navbar sólido en vistas que no son home
   const isHome = currentView === 'home'
-  const navBg = !isHome
+  const navBg  = !isHome
     ? 'bg-rock border-b border-ivory/10'
     : scrolled
       ? 'bg-rock/90 backdrop-blur-md border-b border-ivory/10'
       : 'bg-transparent border-b border-ivory/5'
 
   const go = (view) => {
-    dispatch(navigate(view))
-    dispatch(closeMobileMenu())
+    navigate(view)
+    setMobileOpen(false)
   }
 
   const handleLogout = () => {
-    dispatch(logout())
-    dispatch(navigate('home'))
-    dispatch(closeMobileMenu())
+    logout()
+    navigate('home')
+    setMobileOpen(false)
   }
 
   return (
@@ -136,7 +135,7 @@ export default function Navbar() {
 
               {/* Hamburger */}
               <button
-                onClick={() => dispatch(toggleMobileMenu())}
+                onClick={() => setMobileOpen((v) => !v)}
                 className="lg:hidden ml-1 h-10 w-10 grid place-items-center rounded-sm border border-ivory/15 hover:bg-ivory/5 text-ivory transition-colors"
                 aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
               >

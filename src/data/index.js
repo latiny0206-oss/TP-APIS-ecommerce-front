@@ -7,7 +7,7 @@ export const NAV_ITEMS = [
 
 export const MARQUEE_ITEMS = [
   'ENVÍO GRATIS DESDE $80.000',
-  'GARANTÍA DE POR VIDA',
+  'GARANTÍA DE POR VIDA EN LÍNEA PRO',
   '12 CUOTAS SIN INTERÉS',
   'DESPACHO 48H A TODO EL PAÍS',
   'CAMBIO POR TALLA SIN COSTO',
@@ -34,23 +34,26 @@ export const CATEGORIES = [
   {
     id: 'equipamiento',
     title: 'Equipamiento',
-    sub: '24 productos · Mochilas, linternas, bastones y más',
+    sub: 'Mochilas, Linternas, Bastones',
     img: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=1400&q=70',
     iconKey: 'tent',
+    categoriaKey: 'equipamiento',
   },
   {
     id: 'calzado',
-    title: 'Calzado Técnico',
-    sub: '38 productos · Botas, crampones, aproximación',
+    title: 'Calzado',
+    sub: 'Botas, Zapatillas, Sandalias',
     img: 'https://images.unsplash.com/photo-1606471191009-63994c53433b?auto=format&fit=crop&w=1400&q=70',
     iconKey: 'boot',
+    categoriaKey: 'calzado',
   },
   {
     id: 'ropa',
-    title: 'Ropa Técnica',
-    sub: '86 productos · Capas, hardshell, plumas',
+    title: 'Indumentaria',
+    sub: 'Chaquetas, Pantalones, Bases',
     img: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=1400&q=70',
     iconKey: 'jacket',
+    categoriaKey: 'indumentaria',
   },
 ]
 
@@ -259,8 +262,7 @@ export const FOOTER_COLUMNS = [
 ]
 
 export const FOOTER_LEGAL_LINKS = [
-  { label: 'Información de envío', view: 'faq' },
-  { label: 'Contacto',             view: 'contacto' },
+  { label: 'Contacto', view: 'contacto' },
 ]
 
 // ─── Trust strip ──────────────────────────────────────────────────────────────

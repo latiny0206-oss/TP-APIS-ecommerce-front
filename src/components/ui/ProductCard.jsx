@@ -1,29 +1,25 @@
-import { useDispatch } from 'react-redux'
 import { ShoppingCart, Star } from 'lucide-react'
-import { addToCart } from '../../store/cartSlice.js'
-import { navigate }  from '../../store/navigationSlice.js'
+import { useNavigation } from '../../context/NavigationContext.jsx'
+import { useCart }       from '../../context/CartContext.jsx'
 import StatusBadge from './StatusBadge.jsx'
 import { fmt, computePrice } from '../../data/index.js'
 
 export default function ProductCard({ product, dark = false }) {
-  const dispatch = useDispatch()
+  const { navigate }  = useNavigation()
+  const { addToCart } = useCart()
   const { price, oldPrice } = computePrice(product)
 
   const handleAdd = (e) => {
     e.stopPropagation()
     const variant = product.variants?.find((v) => v.stock > 0) || product.variants?.[0]
-    dispatch(
-      addToCart({
-        variantId: variant?.id ?? product.id * 100,
-        productId: product.id,
-        name:      product.name || product.nombre,
-        brand:     product.brand,
-        color:     variant?.color ?? '-',
-        talla:     variant?.talla ?? '-',
-        unitPrice: variant?.precio ?? price,
-        image:     product.image || product.images?.[0],
-      })
-    )
+    addToCart({
+      variantId: variant?.id ?? product.id * 100,
+      productId: product.id,
+      nombre:    product.name || product.nombre,
+      precio:    variant?.precio ?? price,
+      imagen:    product.image || product.images?.[0],
+      talle:     variant?.talla ?? '-',
+    })
   }
 
   const outOfStock = product.stock === 0
@@ -31,7 +27,7 @@ export default function ProductCard({ product, dark = false }) {
   return (
     <article
       className="product-card group flex flex-col relative cursor-pointer"
-      onClick={() => dispatch(navigate({ view: 'producto', params: { id: product.id } }))}
+      onClick={() => navigate({ view: 'producto', params: { id: product.id } })}
     >
       <div
         className="relative aspect-[4/5] overflow-hidden"
@@ -42,6 +38,7 @@ export default function ProductCard({ product, dark = false }) {
             src={product.image || product.images[0]}
             alt={product.name || product.nombre}
             className="product-img absolute inset-0 w-full h-full object-cover opacity-95"
+            loading="lazy"
             onError={(e) => { e.currentTarget.style.display = 'none' }}
           />
         )}
@@ -58,7 +55,6 @@ export default function ProductCard({ product, dark = false }) {
           </div>
         )}
 
-        {/* Quick add — visible on hover */}
         {!outOfStock && (
           <button
             onClick={handleAdd}

@@ -1,10 +1,9 @@
-import { useDispatch } from 'react-redux'
 import { Mountain } from 'lucide-react'
-import { navigate } from '../store/navigationSlice.js'
+import { useNavigation } from '../context/NavigationContext.jsx'
 import { FOOTER_COLUMNS, FOOTER_LEGAL_LINKS } from '../data/index.js'
 
 export default function Footer() {
-  const dispatch = useDispatch()
+  const { navigate } = useNavigation()
 
   return (
     <footer
@@ -19,7 +18,7 @@ export default function Footer() {
           {/* Brand column */}
           <div>
             <button
-              onClick={() => dispatch(navigate('home'))}
+              onClick={() => navigate('home')}
               className="inline-flex items-center gap-3 mb-6"
             >
               <span className="flex h-9 w-9 items-center justify-center rounded-sm bg-alpenglow text-ivory">
@@ -47,7 +46,7 @@ export default function Footer() {
                     view ? (
                       <li key={label}>
                         <button
-                          onClick={() => dispatch(navigate(view))}
+                          onClick={() => navigate(view)}
                           className="text-sm lg:text-base text-ivory/85 hover:text-alpenglow link-underline transition-colors text-left"
                         >
                           {label}
@@ -80,7 +79,7 @@ export default function Footer() {
             {FOOTER_LEGAL_LINKS.map(({ label, view }) => (
               <button
                 key={label}
-                onClick={() => dispatch(navigate(view))}
+                onClick={() => navigate(view)}
                 className="hover:text-ivory transition-colors"
               >
                 {label}

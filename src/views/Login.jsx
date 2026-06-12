@@ -1,37 +1,31 @@
 import { useState, useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
 import { Mountain, Eye, EyeOff, AlertTriangle } from 'lucide-react'
-import { loginThunk, clearError } from '../store/authSlice.js'
-import { navigate }               from '../store/navigationSlice.js'
+import { useNavigation } from '../context/NavigationContext.jsx'
+import { useAuth }       from '../context/AuthContext.jsx'
 import Button from '../components/ui/Button.jsx'
 
 export default function Login() {
-  const dispatch   = useDispatch()
-  const { status, error } = useSelector((s) => s.auth)
+  const { navigate }                 = useNavigation()
+  const { login, status, error, clearError } = useAuth()
 
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
   const [showPwd,  setShowPwd]  = useState(false)
 
-  // Limpiar error al cambiar campos
   useEffect(() => {
-    if (error) dispatch(clearError())
+    if (error) clearError()
   }, [email, password]) // eslint-disable-line
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    dispatch(loginThunk(email, password))
+    login(email, password, navigate)
   }
 
   return (
     <div className="min-h-screen bg-rock flex flex-col">
 
-      {/* Logo top */}
       <div className="flex items-center justify-center pt-10 pb-8">
-        <button
-          onClick={() => dispatch(navigate('home'))}
-          className="flex items-center gap-2.5"
-        >
+        <button onClick={() => navigate('home')} className="flex items-center gap-2.5">
           <span className="flex h-8 w-8 items-center justify-center rounded-sm bg-alpenglow text-ivory">
             <Mountain size={16} strokeWidth={2.2} />
           </span>
@@ -41,7 +35,6 @@ export default function Login() {
         </button>
       </div>
 
-      {/* Card */}
       <div className="flex-1 flex items-start justify-center px-4 pb-16">
         <div className="w-full max-w-md">
           <div className="bg-ivory text-rock p-8 lg:p-10">
@@ -55,7 +48,6 @@ export default function Login() {
               </h1>
             </div>
 
-            {/* Error inline */}
             {error && (
               <div className="flex items-center gap-2.5 bg-red-50 border border-red-200 text-red-700 px-4 py-3 mb-6">
                 <AlertTriangle size={14} strokeWidth={2} className="shrink-0" />
@@ -64,67 +56,35 @@ export default function Login() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-
               <label className="block">
-                <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 block mb-1.5">
-                  Email
-                </span>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu@correo.com"
-                  required
-                  className="input-base w-full"
-                  autoComplete="email"
-                />
+                <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 block mb-1.5">Email</span>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  placeholder="tu@correo.com" required className="input-base w-full" autoComplete="email" />
               </label>
 
               <label className="block">
-                <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 block mb-1.5">
-                  Contraseña
-                </span>
+                <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 block mb-1.5">Contraseña</span>
                 <div className="relative">
-                  <input
-                    type={showPwd ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••"
-                    required
-                    className="input-base w-full pr-11"
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPwd((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-rock/40 hover:text-rock"
-                    tabIndex={-1}
-                  >
+                  <input type={showPwd ? 'text' : 'password'} value={password}
+                    onChange={(e) => setPassword(e.target.value)} placeholder="••••••" required
+                    className="input-base w-full pr-11" autoComplete="current-password" />
+                  <button type="button" onClick={() => setShowPwd((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-rock/40 hover:text-rock" tabIndex={-1}>
                     {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </label>
 
               <div className="flex justify-end">
-                <button
-                  type="button"
-                  className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 hover:text-alpenglow transition-colors"
-                >
+                <button type="button"
+                  className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 hover:text-alpenglow transition-colors">
                   Olvidé mi contraseña
                 </button>
               </div>
 
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                className="w-full"
-                disabled={status === 'loading'}
-              >
+              <Button type="submit" variant="primary" size="lg" className="w-full" disabled={status === 'loading'}>
                 {status === 'loading' ? (
-                  <span className="flex items-center gap-2">
-                    <span className="spinner" /> Verificando…
-                  </span>
+                  <span className="flex items-center gap-2"><span className="spinner" /> Verificando…</span>
                 ) : (
                   'Iniciar sesión'
                 )}
@@ -133,10 +93,8 @@ export default function Login() {
 
             <p className="mt-6 text-center font-mono text-[11px] tracking-widest-2 uppercase text-rock/55">
               ¿No tenés cuenta?{' '}
-              <button
-                onClick={() => dispatch(navigate('registro'))}
-                className="text-pine hover:text-pine-700 font-bold transition-colors"
-              >
+              <button onClick={() => navigate('registro')}
+                className="text-pine hover:text-pine-700 font-bold transition-colors">
                 Registrate
               </button>
             </p>

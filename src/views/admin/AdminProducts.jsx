@@ -1,13 +1,10 @@
 import { useState } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
 import { Search, Plus, Edit2, Image, Trash2, X, Check, Percent } from 'lucide-react'
-import { navigate } from '../../store/navigationSlice.js'
-import { openDrawer, closeDrawer } from '../../store/adminSlice.js'
-import { upsert, remove } from '../../store/productsSlice.js'
+import { useNavigation }  from '../../context/NavigationContext.jsx'
+import { useProducts }    from '../../context/ProductsContext.jsx'
 import { fmt, computePrice, MARCAS, CATEGORIAS } from '../../data/index.js'
 import Button from '../../components/ui/Button.jsx'
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function FieldLabel({ children }) {
   return <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 block mb-1.5">{children}</span>
 }
@@ -16,10 +13,9 @@ function AdminInput({ className = '', ...props }) {
   return <input {...props} className={`input-base w-full ${className}`} />
 }
 
-// ─── Drawer: formulario alta/edición ─────────────────────────────────────────
 function ProductDrawer({ productId, onClose }) {
-  const dispatch  = useDispatch()
-  const existing  = useSelector((s) => productId ? s.products.byId[productId] : null)
+  const { byId, upsert } = useProducts()
+  const existing = productId ? byId[productId] : null
 
   const [form, setForm] = useState(() =>
     existing
@@ -31,13 +27,9 @@ function ProductDrawer({ productId, onClose }) {
           precioBase:  existing.precioBase,
           estado:      existing.estado || 'ACTIVO',
           tag:         existing.tag || '',
-          // Cambio 5: campo de descuento
           descuentoPct: existing.descuentoPct ?? 0,
         }
-      : {
-          nombre: '', descripcion: '', marcaId: 1, categoriaId: 1,
-          precioBase: 0, estado: 'ACTIVO', tag: '', descuentoPct: 0,
-        }
+      : { nombre: '', descripcion: '', marcaId: 1, categoriaId: 1, precioBase: 0, estado: 'ACTIVO', tag: '', descuentoPct: 0 }
   )
   const [errors, setErrors] = useState({})
 
@@ -54,12 +46,10 @@ function ProductDrawer({ productId, onClose }) {
     const e = validate()
     if (Object.keys(e).length > 0) { setErrors(e); return }
 
-    const marca    = MARCAS.find((m) => m.id === Number(form.marcaId))
-    const cat      = CATEGORIAS.find((c) => c.id === Number(form.categoriaId))
+    const marca      = MARCAS.find((m) => m.id === Number(form.marcaId))
+    const cat        = CATEGORIAS.find((c) => c.id === Number(form.categoriaId))
     const precioBase = Number(form.precioBase)
     const descuentoPct = Number(form.descuentoPct)
-
-    // Cambio 5: calcular precioAnterior si hay descuento
     const precioAnterior = descuentoPct > 0 ? precioBase : (existing?.precioAnterior ?? null)
 
     const next = {
@@ -75,36 +65,31 @@ function ProductDrawer({ productId, onClose }) {
       precioBase,
       precioAnterior,
       descuentoPct,
-      // price/oldPrice se derivan con computePrice() en la UI
-      price:       descuentoPct > 0 ? Math.round(precioBase * (1 - descuentoPct / 100)) : precioBase,
-      oldPrice:    precioAnterior,
-      estado:      form.estado,
-      tag:         form.tag || null,
-      rating:      existing?.rating ?? 0,
-      color:       existing?.color ?? '#454338',
-      images:      existing?.images ?? [],
-      image:       existing?.image ?? '',
-      variants:    existing?.variants ?? [],
-      stock:       existing?.stock ?? 0,
+      price:    descuentoPct > 0 ? Math.round(precioBase * (1 - descuentoPct / 100)) : precioBase,
+      oldPrice: precioAnterior,
+      estado:   form.estado,
+      tag:      form.tag || null,
+      rating:   existing?.rating ?? 0,
+      color:    existing?.color ?? '#454338',
+      images:   existing?.images ?? [],
+      image:    existing?.image ?? '',
+      variants: existing?.variants ?? [],
+      stock:    existing?.stock ?? 0,
     }
 
-    dispatch(upsert(next))
+    upsert(next)
     onClose()
   }
 
   const f = (field) => (e) => setForm({ ...form, [field]: e.target.value })
 
-  // Previsualización de precio con descuento
-  const precioBase   = Number(form.precioBase) || 0
-  const descuentoPct = Number(form.descuentoPct) || 0
-  const precioFinal  = descuentoPct > 0 ? Math.round(precioBase * (1 - descuentoPct / 100)) : precioBase
+  const precioBase_   = Number(form.precioBase) || 0
+  const descuentoPct_ = Number(form.descuentoPct) || 0
+  const precioFinal   = descuentoPct_ > 0 ? Math.round(precioBase_ * (1 - descuentoPct_ / 100)) : precioBase_
 
   return (
     <>
-      {/* Backdrop */}
       <div className="fixed inset-0 bg-rock/60 z-40 fadein" onClick={onClose} />
-
-      {/* Panel */}
       <aside className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-ivory text-rock z-50 shadow-2xl flex flex-col fadein">
         <header className="flex items-center justify-between p-5 border-b border-rock/10">
           <div>
@@ -121,15 +106,12 @@ function ProductDrawer({ productId, onClose }) {
         </header>
 
         <div className="flex-1 overflow-auto p-5 space-y-4">
-
-          {/* nombre */}
           <label className="block">
             <FieldLabel>Nombre</FieldLabel>
             <AdminInput value={form.nombre} onChange={f('nombre')} placeholder="Mochila Atmos AG 65" />
             {errors.nombre && <p className="font-mono text-[10px] text-red-600 mt-1">{errors.nombre}</p>}
           </label>
 
-          {/* marca + categoría */}
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <FieldLabel>Marca</FieldLabel>
@@ -145,59 +127,41 @@ function ProductDrawer({ productId, onClose }) {
             </label>
           </div>
 
-          {/* precio + descuento (Cambio 5) */}
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <FieldLabel>Precio base ($)</FieldLabel>
-              <AdminInput
-                type="number"
-                min="0"
-                value={form.precioBase}
-                onChange={f('precioBase')}
-              />
+              <AdminInput type="number" min="0" value={form.precioBase} onChange={f('precioBase')} />
               {errors.precioBase && <p className="font-mono text-[10px] text-red-600 mt-1">{errors.precioBase}</p>}
             </label>
             <label className="block">
               <FieldLabel>Descuento (%)</FieldLabel>
               <div className="relative">
-                <AdminInput
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={form.descuentoPct}
-                  onChange={f('descuentoPct')}
-                  placeholder="0"
-                  className="pr-8"
-                />
+                <AdminInput type="number" min="0" max="100" value={form.descuentoPct} onChange={f('descuentoPct')} placeholder="0" className="pr-8" />
                 <Percent size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-rock/40 pointer-events-none" />
               </div>
               {errors.descuentoPct && <p className="font-mono text-[10px] text-red-600 mt-1">{errors.descuentoPct}</p>}
             </label>
           </div>
 
-          {/* Preview de precio final */}
-          {precioBase > 0 && (
+          {precioBase_ > 0 && (
             <div className="bg-rock/[0.04] border border-rock/10 px-4 py-3 flex items-center justify-between">
               <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55">
                 Precio que verá el cliente
               </span>
               <div className="flex items-center gap-2">
-                {descuentoPct > 0 && (
-                  <span className="font-mono text-xs text-rock/35 line-through">{fmt(precioBase)}</span>
+                {descuentoPct_ > 0 && (
+                  <span className="font-mono text-xs text-rock/35 line-through">{fmt(precioBase_)}</span>
                 )}
-                <span className="font-display font-black tracking-tightest text-lg text-rock">
-                  {fmt(precioFinal)}
-                </span>
-                {descuentoPct > 0 && (
+                <span className="font-display font-black tracking-tightest text-lg text-rock">{fmt(precioFinal)}</span>
+                {descuentoPct_ > 0 && (
                   <span className="bg-alpenglow text-ivory font-mono text-[10px] px-1.5 py-0.5">
-                    -{descuentoPct}%
+                    -{descuentoPct_}%
                   </span>
                 )}
               </div>
             </div>
           )}
 
-          {/* estado + tag */}
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <FieldLabel>Estado</FieldLabel>
@@ -218,30 +182,17 @@ function ProductDrawer({ productId, onClose }) {
             </label>
           </div>
 
-          {/* descripción */}
           <label className="block">
             <FieldLabel>Descripción</FieldLabel>
-            <textarea
-              value={form.descripcion}
-              onChange={f('descripcion')}
-              rows={4}
-              placeholder="Contá la historia del producto…"
-              className="input-base w-full resize-none"
-            />
+            <textarea value={form.descripcion} onChange={f('descripcion')} rows={4}
+              placeholder="Contá la historia del producto…" className="input-base w-full resize-none" />
           </label>
         </div>
 
         <footer className="border-t border-rock/10 p-5 flex gap-3">
-          <Button variant="ghost-light" size="md" className="flex-1" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            variant="primary"
-            size="md"
-            className="flex-1"
-            onClick={save}
-            iconRight={<Check size={14} strokeWidth={2.6} />}
-          >
+          <Button variant="ghost-light" size="md" className="flex-1" onClick={onClose}>Cancelar</Button>
+          <Button variant="primary" size="md" className="flex-1" onClick={save}
+            iconRight={<Check size={14} strokeWidth={2.6} />}>
             {existing ? 'Guardar' : 'Crear producto'}
           </Button>
         </footer>
@@ -250,43 +201,34 @@ function ProductDrawer({ productId, onClose }) {
   )
 }
 
-// ─── Vista principal ──────────────────────────────────────────────────────────
 export default function AdminProducts() {
-  const dispatch     = useDispatch()
-  const productIds   = useSelector((s) => s.products.ids)
-  const productsById = useSelector((s) => s.products.byId)
-  const drawerOpen   = useSelector((s) => s.admin.drawerOpen)
-  const editId       = useSelector((s) => s.admin.editProductId)
-  const [query, setQuery] = useState('')
+  const { navigate }             = useNavigation()
+  const { ids, byId, remove }    = useProducts()
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editId, setEditId]         = useState(null)
+  const [query, setQuery]           = useState('')
 
-  const products = productIds
-    .map((id) => productsById[id])
+  const products = ids
+    .map((id) => byId[id])
     .filter((p) => !query || (p.nombre + ' ' + p.brand).toLowerCase().includes(query.toLowerCase()))
+
+  const openDrawer = (id = null) => { setEditId(id); setDrawerOpen(true) }
+  const closeDrawer = () => { setDrawerOpen(false); setEditId(null) }
 
   return (
     <div className="space-y-6">
 
-      {/* Barra de búsqueda + nuevo producto */}
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
         <div className="relative flex-1 max-w-md">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-rock/40" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por nombre o marca…"
-            className="input-base w-full pl-10"
-          />
+          <input value={query} onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar por nombre o marca…" className="input-base w-full pl-10" />
         </div>
-        <Button
-          variant="primary"
-          icon={<Plus size={14} strokeWidth={2.2} />}
-          onClick={() => dispatch(openDrawer())}
-        >
+        <Button variant="primary" icon={<Plus size={14} strokeWidth={2.2} />} onClick={() => openDrawer()}>
           Nuevo producto
         </Button>
       </div>
 
-      {/* Tabla */}
       <div className="bg-white border border-rock/10 overflow-x-auto">
         <table className="w-full text-sm min-w-[700px]">
           <thead>
@@ -301,8 +243,6 @@ export default function AdminProducts() {
               const { price, oldPrice } = computePrice(p)
               return (
                 <tr key={p.id} className="border-t border-rock/10 hover:bg-rock/[0.02]">
-
-                  {/* Producto */}
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
                       <div className="h-12 w-12 overflow-hidden shrink-0" style={{ backgroundColor: p.color }}>
@@ -312,18 +252,13 @@ export default function AdminProducts() {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <div className="font-narrow font-bold uppercase tracking-tight text-sm truncate max-w-[200px]">
-                          {p.nombre}
-                        </div>
+                        <div className="font-narrow font-bold uppercase tracking-tight text-sm truncate max-w-[200px]">{p.nombre}</div>
                         <div className="font-mono text-[10px] text-rock/45">#{p.id}</div>
                       </div>
                     </div>
                   </td>
-
                   <td className="px-5 py-3 font-mono text-xs text-rock/75">{p.brand}</td>
                   <td className="px-5 py-3 text-xs">{p.category}</td>
-
-                  {/* Stock */}
                   <td className="px-5 py-3">
                     <span className={`font-mono text-xs font-bold ${
                       p.stock === 0 ? 'text-red-700' : p.stock <= 3 ? 'text-alpenglow' : 'text-pine'
@@ -331,18 +266,12 @@ export default function AdminProducts() {
                       {p.stock}
                     </span>
                   </td>
-
-                  {/* Precio con descuento (Cambio 5) */}
                   <td className="px-5 py-3">
                     <div className="flex flex-col">
                       <span className="font-mono text-xs font-bold">{fmt(price)}</span>
-                      {oldPrice && (
-                        <span className="font-mono text-[10px] text-rock/40 line-through">{fmt(oldPrice)}</span>
-                      )}
+                      {oldPrice && <span className="font-mono text-[10px] text-rock/40 line-through">{fmt(oldPrice)}</span>}
                     </div>
                   </td>
-
-                  {/* % descuento */}
                   <td className="px-5 py-3">
                     {(p.descuentoPct ?? 0) > 0 ? (
                       <span className="inline-flex items-center gap-1 bg-alpenglow/15 text-alpenglow font-mono text-[10px] px-2 py-0.5 tracking-widest-2">
@@ -352,38 +281,24 @@ export default function AdminProducts() {
                       <span className="font-mono text-[10px] text-rock/30">—</span>
                     )}
                   </td>
-
-                  {/* Estado */}
                   <td className="px-5 py-3">
-                    <span className={`font-mono text-[10px] tracking-widest-2 uppercase ${
-                      p.estado === 'ACTIVO' ? 'text-pine' : 'text-rock/45'
-                    }`}>
+                    <span className={`font-mono text-[10px] tracking-widest-2 uppercase ${p.estado === 'ACTIVO' ? 'text-pine' : 'text-rock/45'}`}>
                       {p.estado || 'ACTIVO'}
                     </span>
                   </td>
-
-                  {/* Acciones */}
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => dispatch(openDrawer(p.id))}
-                        className="h-8 w-8 grid place-items-center text-rock/55 hover:text-pine border border-rock/15 transition-colors"
-                        title="Editar"
-                      >
+                      <button onClick={() => openDrawer(p.id)}
+                        className="h-8 w-8 grid place-items-center text-rock/55 hover:text-pine border border-rock/15 transition-colors" title="Editar">
                         <Edit2 size={13} />
                       </button>
                       <button
-                        onClick={() => dispatch(navigate({ view: 'admin-photos', params: { productId: p.id } }))}
-                        className="h-8 w-8 grid place-items-center text-rock/55 hover:text-pine border border-rock/15 transition-colors"
-                        title="Imágenes"
-                      >
+                        onClick={() => navigate({ view: 'admin-photos', params: { productId: p.id } })}
+                        className="h-8 w-8 grid place-items-center text-rock/55 hover:text-pine border border-rock/15 transition-colors" title="Imágenes">
                         <Image size={13} />
                       </button>
-                      <button
-                        onClick={() => dispatch(remove(p.id))}
-                        className="h-8 w-8 grid place-items-center text-rock/55 hover:text-red-700 border border-rock/15 transition-colors"
-                        title="Eliminar"
-                      >
+                      <button onClick={() => remove(p.id)}
+                        className="h-8 w-8 grid place-items-center text-rock/55 hover:text-red-700 border border-rock/15 transition-colors" title="Eliminar">
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -400,9 +315,7 @@ export default function AdminProducts() {
         )}
       </div>
 
-      {drawerOpen && (
-        <ProductDrawer productId={editId} onClose={() => dispatch(closeDrawer())} />
-      )}
+      {drawerOpen && <ProductDrawer productId={editId} onClose={closeDrawer} />}
     </div>
   )
 }

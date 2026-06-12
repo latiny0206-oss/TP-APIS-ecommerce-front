@@ -287,6 +287,37 @@ export const MOCK_PEDIDOS = [
     ],
     total: 154990,
   },
+  {
+    id: '#ORD-10301',
+    userId: 1,
+    fecha: '2026-05-10',
+    estado: 'Pendiente',
+    items: [
+      { nombre: 'Pantalón Trekking Strider', qty: 1, precio: 89990 },
+    ],
+    total: 89990,
+  },
+  {
+    id: '#ORD-10315',
+    userId: 1,
+    fecha: '2026-05-22',
+    estado: 'Confirmado',
+    items: [
+      { nombre: 'Bota Summit GTX High',            qty: 1, precio: 189990 },
+      { nombre: 'Guantes Escalada Dedo Completo',  qty: 1, precio: 49990 },
+    ],
+    total: 239980,
+  },
+  {
+    id: '#ORD-10328',
+    userId: 1,
+    fecha: '2026-06-01',
+    estado: 'Entregado',
+    items: [
+      { nombre: 'Cortaviento Ultralight', qty: 1, precio: 79990 },
+    ],
+    total: 79990,
+  },
 ]
 
 export const fmtPrice = (n) =>

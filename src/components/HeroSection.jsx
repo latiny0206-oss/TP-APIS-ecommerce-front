@@ -1,26 +1,21 @@
-import { useSelector, useDispatch } from 'react-redux'
+import { useState } from 'react'
 import { ArrowRight, Check } from 'lucide-react'
-import { navigate } from '../store/navigationSlice.js'
+import { useNavigation } from '../context/NavigationContext.jsx'
 import Button from './ui/Button.jsx'
 import { HERO_IMAGES } from '../data/index.js'
+import { MOCK_PRODUCTOS } from '../mocks/data.js'
 
-function StatCell({ label, value, mono, accent, badge }) {
+function StatCell({ label, value, mono, accent, sub }) {
   return (
     <div>
       <div className="font-mono text-[10px] tracking-widest-2 uppercase text-ivory/45 mb-1.5">{label}</div>
       <div className={`${mono ? 'font-mono' : 'font-narrow font-semibold'} ${accent ? 'text-alpenglow' : 'text-ivory'} text-base lg:text-lg`}>
         {value}
       </div>
-      {badge && (
-        <div className="mt-3">
-          <span className="font-mono text-[9px] tracking-widest-2 uppercase text-ivory/35 block mb-1.5">
-            aplicado en checkout
-          </span>
-          <div className="inline-flex items-center gap-2 bg-ivory text-rock px-3 py-1.5">
-            <Check size={12} strokeWidth={2.6} className="text-pine" />
-            <span className="font-mono font-bold tracking-widest-2 text-xs">INVIERNO24</span>
-            <span className="text-rock/50 text-[11px]">−20%</span>
-          </div>
+      {sub && (
+        <div className="mt-1.5 font-mono text-[9px] tracking-widest-2 uppercase text-ivory/35 flex items-center gap-1.5">
+          <Check size={10} strokeWidth={2.6} className="text-pine shrink-0" />
+          {sub}
         </div>
       )}
     </div>
@@ -28,9 +23,10 @@ function StatCell({ label, value, mono, accent, badge }) {
 }
 
 export default function HeroSection() {
-  const dispatch = useDispatch()
-  const variant  = useSelector((s) => s.landing.heroVariant)
-  const imgSrc   = HERO_IMAGES[variant] || HERO_IMAGES.midnight
+  const { navigate } = useNavigation()
+  const [variant]    = useState('midnight')
+  const imgSrc       = HERO_IMAGES[variant] || HERO_IMAGES.midnight
+  const totalStock   = MOCK_PRODUCTOS.length
 
   return (
     <section className="relative grain overflow-hidden bg-rock">
@@ -68,12 +64,12 @@ export default function HeroSection() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 lg:gap-4">
             <Button variant="primary" size="lg"
-              onClick={() => dispatch(navigate('indumentaria'))}
+              onClick={() => navigate('indumentaria')}
               iconRight={<ArrowRight size={18} strokeWidth={2.2} />}>
               Ver indumentaria
             </Button>
             <Button variant="ghost-dark" size="lg"
-              onClick={() => dispatch(navigate('calzado'))}
+              onClick={() => navigate('calzado')}
               iconRight={<ArrowRight size={16} />}>
               Ver calzado
             </Button>
@@ -82,10 +78,10 @@ export default function HeroSection() {
 
         {/* Stats */}
         <div className="rise rise-d4 mt-16 lg:mt-24 border-t border-ivory/10 pt-6 grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-10">
-          <StatCell label="Código activo"        value="INVIERNO24" mono accent badge />
-          <StatCell label="Productos en stock"   value="1.482" />
+          <StatCell label="Código activo" value="INVIERNO24 · 20% OFF" mono accent sub="Aplicado en checkout" />
+          <StatCell label="Productos en stock" value={totalStock.toLocaleString('es-CL')} />
           <StatCell label="Garantía de por vida" value="Toda la línea Pro" />
-          <StatCell label="Envío express"        value="48 horas" />
+          <StatCell label="Envío express" value="48 horas" />
         </div>
       </div>
 

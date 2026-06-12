@@ -1,16 +1,13 @@
 import { useState } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
 import { Upload, Check, Trash2, ChevronRight } from 'lucide-react'
-import { navigate } from '../../store/navigationSlice.js'
+import { useNavigation } from '../../context/NavigationContext.jsx'
+import { useProducts }   from '../../context/ProductsContext.jsx'
 
 export default function AdminPhotos() {
-  const dispatch     = useDispatch()
-  const productIds   = useSelector((s) => s.products.ids)
-  const productsById = useSelector((s) => s.products.byId)
-  const paramId      = useSelector((s) => s.navigation.params.productId)
-
-  // Producto seleccionado: el del parámetro o el primero de la lista
-  const product = productsById[paramId] ?? productsById[productIds[0]]
+  const { params, navigate } = useNavigation()
+  const { ids, byId }        = useProducts()
+  const paramId  = params.productId
+  const product  = byId[paramId] ?? byId[ids[0]]
 
   const [photos, setPhotos] = useState(() =>
     (product?.images || []).map((src, i) => ({
@@ -19,7 +16,7 @@ export default function AdminPhotos() {
   )
 
   const [queue, setQueue] = useState([
-    { id: 'q1', name: 'detalle_correa.webp',  size: '2.4 MB', progress: 100, done: true },
+    { id: 'q1', name: 'detalle_correa.webp',   size: '2.4 MB', progress: 100, done: true },
     { id: 'q2', name: 'lifestyle_trekking.jpg', size: '5.1 MB', progress: 100, done: true },
   ])
 
@@ -27,8 +24,8 @@ export default function AdminPhotos() {
 
   const fakeUpload = (files) => {
     ;[...(files || [])].forEach((file, i) => {
-      const id   = `q-${Date.now()}-${i}`
-      const name = file.name || `upload_${Date.now()}.jpg`
+      const id     = `q-${Date.now()}-${i}`
+      const name   = file.name || `upload_${Date.now()}.jpg`
       const sizeMb = ((file.size || 2 * 1024 * 1024) / 1024 / 1024).toFixed(1)
       setQueue((q) => [...q, { id, name, size: `${sizeMb} MB`, progress: 0, done: false }])
 
@@ -60,12 +57,8 @@ export default function AdminPhotos() {
   return (
     <div className="space-y-6">
 
-      {/* Breadcrumb */}
       <nav className="flex items-center gap-2 font-mono text-[11px] tracking-widest-2 uppercase text-rock/55">
-        <button
-          onClick={() => dispatch(navigate('admin-products'))}
-          className="hover:text-pine transition-colors"
-        >
+        <button onClick={() => navigate('admin-products')} className="hover:text-pine transition-colors">
           Productos
         </button>
         <ChevronRight size={10} className="text-rock/30" />
@@ -74,7 +67,6 @@ export default function AdminPhotos() {
         <span className="text-rock">Imágenes</span>
       </nav>
 
-      {/* Cabecera */}
       <div className="flex items-end justify-between">
         <div>
           <div className="font-mono text-[11px] tracking-widest-2 uppercase text-alpenglow mb-2">
@@ -91,7 +83,6 @@ export default function AdminPhotos() {
 
       <div className="grid lg:grid-cols-2 gap-6">
 
-        {/* Fotos actuales */}
         <section className="bg-white border border-rock/10">
           <header className="p-5 border-b border-rock/10 flex items-center justify-between">
             <h3 className="font-display font-black tracking-tightest uppercase text-lg">Fotos actuales</h3>
@@ -99,7 +90,6 @@ export default function AdminPhotos() {
               {photos.length} imágenes
             </span>
           </header>
-
           <div className="p-5">
             {photos.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -115,8 +105,7 @@ export default function AdminPhotos() {
                     </div>
                     <button
                       onClick={() => setPhotos((ps) => ps.filter((p) => p.id !== ph.id))}
-                      className="absolute top-2 right-2 h-6 w-6 grid place-items-center bg-rock/80 text-ivory hover:bg-red-700 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
+                      className="absolute top-2 right-2 h-6 w-6 grid place-items-center bg-rock/80 text-ivory hover:bg-red-700 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Trash2 size={11} />
                     </button>
                   </div>
@@ -130,12 +119,10 @@ export default function AdminPhotos() {
           </div>
         </section>
 
-        {/* Zona de subida */}
         <section className="bg-white border border-rock/10">
           <header className="p-5 border-b border-rock/10">
             <h3 className="font-display font-black tracking-tightest uppercase text-lg">Subir nuevas fotos</h3>
           </header>
-
           <div className="p-5">
             <div
               onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
@@ -150,13 +137,8 @@ export default function AdminPhotos() {
                 Arrastrá imágenes aquí o{' '}
                 <label className="text-pine underline cursor-pointer">
                   seleccioná archivos
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    className="sr-only"
-                    onChange={(e) => fakeUpload(e.target.files)}
-                  />
+                  <input type="file" multiple accept="image/*" className="sr-only"
+                    onChange={(e) => fakeUpload(e.target.files)} />
                 </label>
               </div>
               <p className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/45">
@@ -164,7 +146,6 @@ export default function AdminPhotos() {
               </p>
             </div>
 
-            {/* Cola de subida */}
             <div className="mt-5">
               <div className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 mb-3 flex items-center gap-2">
                 <span>Cola de subida</span>

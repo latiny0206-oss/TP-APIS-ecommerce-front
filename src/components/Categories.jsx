@@ -1,15 +1,14 @@
-import { useDispatch } from 'react-redux'
 import { ArrowRight, Tent, Footprints, Shirt, Box } from 'lucide-react'
-import { navigate } from '../store/navigationSlice.js'
+import { useNavigation } from '../context/NavigationContext.jsx'
 import { CATEGORIES } from '../data/index.js'
+import { MOCK_PRODUCTOS } from '../mocks/data.js'
 import SectionHeader from './ui/SectionHeader.jsx'
 
-const ICON_MAP     = { tent: Tent, boot: Footprints, jacket: Shirt }
-// Mapeo de id de categoría al view name del router
-const VIEW_MAP     = { equipamiento: 'equipamiento', calzado: 'calzado', ropa: 'indumentaria' }
+const ICON_MAP = { tent: Tent, boot: Footprints, jacket: Shirt }
+const VIEW_MAP = { equipamiento: 'equipamiento', calzado: 'calzado', ropa: 'indumentaria' }
 
 export default function Categories() {
-  const dispatch = useDispatch()
+  const { navigate } = useNavigation()
 
   return (
     <section id="catalogo" className="relative bg-rock py-20 lg:py-28">
@@ -21,10 +20,12 @@ export default function Categories() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4 mt-12 lg:mt-16">
           {CATEGORIES.map((cat, i) => {
-            const Ico = ICON_MAP[cat.iconKey] || Box
-            const view = VIEW_MAP[cat.id] || 'indumentaria'
+            const Ico   = ICON_MAP[cat.iconKey] || Box
+            const view  = VIEW_MAP[cat.id] || 'indumentaria'
+            const count = MOCK_PRODUCTOS.filter((p) => p.categoria === cat.categoriaKey).length
+            const subText = `${count} producto${count !== 1 ? 's' : ''} · ${cat.sub}`
             return (
-              <button key={cat.id} onClick={() => dispatch(navigate(view))}
+              <button key={cat.id} onClick={() => navigate(view)}
                 className="group relative overflow-hidden aspect-[4/5] md:aspect-[3/5] lg:aspect-[3/4] bg-rock-700 text-left">
                 <img src={cat.img} alt={cat.title}
                   className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
@@ -43,7 +44,7 @@ export default function Categories() {
                     {cat.title}
                   </h3>
                   <div className="flex items-center justify-between">
-                    <p className="text-xs lg:text-sm text-ivory/60">{cat.sub}</p>
+                    <p className="text-xs lg:text-sm text-ivory/60">{subText}</p>
                     <span className="h-9 w-9 grid place-items-center rounded-full bg-ivory text-rock group-hover:bg-pine group-hover:text-ivory group-hover:rotate-45 transition-all duration-300">
                       <ArrowRight size={16} strokeWidth={2.2} />
                     </span>

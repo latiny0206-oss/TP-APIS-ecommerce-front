@@ -1,6 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
-import { navigateSilent } from './store/navigationSlice.js'
+import { useNavigation } from './context/NavigationContext.jsx'
 
 // Layout — always needed, load eagerly
 import Navbar  from './components/Navbar.jsx'
@@ -61,17 +60,6 @@ function ShellPage({ children }) {
   )
 }
 
-// ─── Admin placeholder ──────────────────────────────────────────────────────
-function AdminPlaceholder({ view }) {
-  const label = view.replace('admin-', '').replace(/-/g, ' ')
-  return (
-    <div className="bg-white border border-rock/10 p-10 text-center">
-      <div className="font-display font-black tracking-tightest uppercase text-2xl mb-2 capitalize">{label}</div>
-      <div className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/55">Próximamente</div>
-    </div>
-  )
-}
-
 const ADMIN_VIEWS = ['admin-dashboard', 'admin-products', 'admin-photos', 'admin-variants', 'admin-catalog', 'admin-discounts', 'admin-orders', 'admin-users']
 
 function PageLoader() {
@@ -84,29 +72,12 @@ function PageLoader() {
 
 // ─── Router ────────────────────────────────────────────────────────────────
 export default function App() {
-  const dispatch = useDispatch()
-  const view     = useSelector((s) => s.navigation.currentView)
+  const { view } = useNavigation()
 
   // Scroll to top on every view change
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [view])
-
-  // Sync browser history ↔ Redux navigation
-  useEffect(() => {
-    // Stamp the initial history entry so popstate always has a state object
-    const initialPath = view === 'home' ? '/' : `/${view}`
-    window.history.replaceState({ view, params: {} }, '', initialPath)
-
-    const handlePopState = (e) => {
-      const histView   = e.state?.view   || 'home'
-      const histParams = e.state?.params || {}
-      dispatch(navigateSilent({ view: histView, params: histParams }))
-    }
-
-    window.addEventListener('popstate', handlePopState)
-    return () => window.removeEventListener('popstate', handlePopState)
-  }, [dispatch]) // dispatch es estable; el listener se registra una sola vez
 
   const isAdmin = ADMIN_VIEWS.includes(view)
 
@@ -143,6 +114,7 @@ export default function App() {
         {view === 'indumentaria' && <ShellPage><Catalogo categoria="indumentaria" /></ShellPage>}
         {view === 'calzado'      && <ShellPage><Catalogo categoria="calzado" /></ShellPage>}
         {view === 'equipamiento' && <ShellPage><Catalogo categoria="equipamiento" /></ShellPage>}
+        {view === 'catalogo'     && <ShellPage><Catalogo categoria={null} /></ShellPage>}
         {/* Redirige la URL legacy /accesorios a equipamiento sin romper nada */}
         {view === 'accesorios'   && <ShellPage><Catalogo categoria="equipamiento" /></ShellPage>}
         {view === 'producto'     && <ShellPage><ProductoDetalle /></ShellPage>}
@@ -154,7 +126,7 @@ export default function App() {
         {view === 'guia-tallas'  && <ShellPage><GuiaTallas /></ShellPage>}
 
         {/* Fallback a home si la vista no está registrada */}
-        {!['home','indumentaria','calzado','equipamiento','accesorios','producto','carrito','checkout','contacto','faq','perfil','guia-tallas'].includes(view) && (
+        {!['home','indumentaria','calzado','equipamiento','accesorios','catalogo','producto','carrito','checkout','contacto','faq','perfil','guia-tallas'].includes(view) && (
           <LandingPage />
         )}
       </Suspense>

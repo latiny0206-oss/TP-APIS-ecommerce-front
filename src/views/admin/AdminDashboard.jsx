@@ -1,5 +1,5 @@
-import { useSelector } from 'react-redux'
 import { Package, ClipboardList, Ticket, Users, AlertTriangle, TrendingUp, Clock } from 'lucide-react'
+import { useProducts } from '../../context/ProductsContext.jsx'
 import { fmt } from '../../data/index.js'
 
 const RECENT_ORDERS = [
@@ -35,25 +35,22 @@ function KpiCard({ Icon, label, value, accentClass }) {
 }
 
 export default function AdminDashboard() {
-  const productIds  = useSelector((s) => s.products.ids)
-  const productsById = useSelector((s) => s.products.byId)
-  const products    = productIds.map((id) => productsById[id])
-  const lowStock    = products.filter((p) => p.stock > 0 && p.stock <= 3)
+  const { ids, byId } = useProducts()
+  const products      = ids.map((id) => byId[id])
+  const lowStock      = products.filter((p) => p.stock > 0 && p.stock <= 3)
 
   return (
     <div className="space-y-8">
 
-      {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard Icon={Package}      label="Productos activos"    value={products.length} accentClass="bg-pine/15 text-pine" />
-        <KpiCard Icon={ClipboardList} label="Órdenes pendientes"  value="3"               accentClass="bg-alpenglow/15 text-alpenglow" />
-        <KpiCard Icon={Ticket}       label="Descuentos activos"   value="3"               accentClass="bg-rock/10 text-rock" />
-        <KpiCard Icon={Users}        label="Clientes registrados" value="1.247"           accentClass="bg-pine/15 text-pine" />
+        <KpiCard Icon={Package}       label="Productos activos"    value={products.length} accentClass="bg-pine/15 text-pine" />
+        <KpiCard Icon={ClipboardList} label="Órdenes pendientes"   value="3"               accentClass="bg-alpenglow/15 text-alpenglow" />
+        <KpiCard Icon={Ticket}        label="Descuentos activos"   value="3"               accentClass="bg-rock/10 text-rock" />
+        <KpiCard Icon={Users}         label="Clientes registrados" value="1.247"           accentClass="bg-pine/15 text-pine" />
       </div>
 
       <div className="grid lg:grid-cols-[1.4fr_1fr] gap-6">
 
-        {/* Órdenes recientes */}
         <section className="bg-white border border-rock/10">
           <div className="flex items-center justify-between p-5 border-b border-rock/10">
             <h2 className="font-display font-black tracking-tightest uppercase text-xl">Últimas órdenes</h2>
@@ -89,10 +86,7 @@ export default function AdminDashboard() {
           </table>
         </section>
 
-        {/* Alertas */}
         <div className="space-y-4">
-
-          {/* Stock bajo */}
           <section className="bg-white border border-rock/10">
             <div className="flex items-center justify-between p-5 border-b border-rock/10">
               <div className="flex items-center gap-2.5">
@@ -127,7 +121,6 @@ export default function AdminDashboard() {
             </ul>
           </section>
 
-          {/* Descuentos por vencer */}
           <section className="bg-white border border-rock/10">
             <div className="flex items-center gap-2.5 p-5 border-b border-rock/10">
               <span className="h-8 w-8 grid place-items-center bg-pine/15 text-pine">
@@ -148,7 +141,6 @@ export default function AdminDashboard() {
             </ul>
           </section>
 
-          {/* Tendencia */}
           <section className="bg-rock text-ivory p-5">
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp size={14} className="text-pine-300" />
