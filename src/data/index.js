@@ -243,40 +243,24 @@ export const FOOTER_COLUMNS = [
   {
     title: 'Tienda',
     links: [
-      { label: 'Indumentaria',       view: 'indumentaria' },
-      { label: 'Equipamiento',       view: 'equipamiento' },
-      { label: 'Calzado',            view: 'calzado' },
-      { label: 'Outlet · 40% OFF',   view: null },
-      { label: 'Tarjetas de regalo', view: null },
+      { label: 'Indumentaria', view: 'indumentaria' },
+      { label: 'Equipamiento', view: 'equipamiento' },
+      { label: 'Calzado',      view: 'calzado' },
     ],
   },
   {
     title: 'Soporte',
     links: [
-      { label: 'Envíos & devoluciones', view: 'faq' },
-      { label: 'Guía de tallas',        view: 'faq' },
-      { label: 'Garantía de por vida',  view: null },
-      { label: 'Estado de mi orden',    view: null },
-      { label: 'Contacto',              view: 'contacto' },
-    ],
-  },
-  {
-    title: 'Cumbre',
-    links: [
-      { label: 'Nuestra historia',          view: null },
-      { label: 'Embajadores',               view: null },
-      { label: 'Expediciones patrocinadas',  view: null },
-      { label: 'Trabaja con nosotros',       view: null },
-      { label: 'Prensa',                     view: null },
+      { label: 'Preguntas Frecuentes', view: 'faq' },
+      { label: 'Guía de tallas',       view: 'guia-tallas' },
+      { label: 'Estado de mi orden',   view: 'perfil' },
     ],
   },
 ]
 
 export const FOOTER_LEGAL_LINKS = [
-  'Política de privacidad',
-  'Términos de servicio',
-  'Información de envío',
-  'Contacto',
+  { label: 'Información de envío', view: 'faq' },
+  { label: 'Contacto',             view: 'contacto' },
 ]
 
 // ─── Trust strip ──────────────────────────────────────────────────────────────

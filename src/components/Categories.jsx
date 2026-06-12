@@ -39,7 +39,7 @@ export default function Categories() {
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-8">
-                  <h3 className="font-display font-black tracking-tightest uppercase text-3xl lg:text-4xl mb-2 leading-none text-ivory">
+                  <h3 className="font-display font-black tracking-tightest uppercase text-xl sm:text-2xl md:text-lg lg:text-3xl xl:text-4xl mb-2 leading-none text-ivory">
                     {cat.title}
                   </h3>
                   <div className="flex items-center justify-between">

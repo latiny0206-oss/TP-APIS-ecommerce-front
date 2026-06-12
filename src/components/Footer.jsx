@@ -71,31 +71,20 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Oversize ghost wordmark */}
-        <div className="relative -mx-6 lg:-mx-10 border-t border-ivory/10 overflow-hidden">
-          <div
-            className="font-display font-black tracking-tightest uppercase leading-none text-[24vw] text-center select-none py-[4vw]"
-            style={{ WebkitTextStroke: '1px rgba(242,236,224,0.18)', color: 'transparent' }}
-          >
-            CUMBRE
-          </div>
-        </div>
-
         {/* Bottom strip */}
         <div className="border-t border-ivory/10 py-6 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           <div className="font-mono text-[11px] tracking-widest-2 uppercase text-ivory/55">
             © 2026 Cumbre Expedition Equipment · Construido para las cumbres.
           </div>
           <div className="flex flex-wrap items-center gap-x-7 gap-y-2 font-mono text-[11px] tracking-widest-2 uppercase text-ivory/55">
-            {FOOTER_LEGAL_LINKS.map((l) => (
-              <a
-                key={l}
-                href="#"
-                onClick={(e) => e.preventDefault()}
+            {FOOTER_LEGAL_LINKS.map(({ label, view }) => (
+              <button
+                key={label}
+                onClick={() => dispatch(navigate(view))}
                 className="hover:text-ivory transition-colors"
               >
-                {l}
-              </a>
+                {label}
+              </button>
             ))}
           </div>
         </div>
