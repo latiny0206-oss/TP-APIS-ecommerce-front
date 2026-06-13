@@ -1,4 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react'
+import { ArrowRight } from 'lucide-react'
 import { useNavigation } from './context/NavigationContext.jsx'
 
 // Layout — always needed, load eagerly
@@ -34,6 +35,33 @@ const AdminDiscounts = lazy(() => import('./views/admin/AdminDiscounts.jsx'))
 const AdminUsers     = lazy(() => import('./views/admin/AdminUsers.jsx'))
 const AdminCatalog   = lazy(() => import('./views/admin/AdminCatalog.jsx'))
 
+// ─── Sección descubrimiento — debajo de Featured ──────────────────────────
+function DiscoverSection() {
+  const { navigate } = useNavigation()
+  const goAll = () => {
+    sessionStorage.removeItem('catalogoState')
+    sessionStorage.removeItem('catalogoReturnFilters')
+    navigate('catalogo')
+  }
+  return (
+    <section className="py-20 lg:py-24 bg-rock text-ivory">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-10 text-center">
+        <span className="font-mono text-[11px] tracking-widest-2 uppercase text-ivory/45 block mb-5">
+          Tienda completa
+        </span>
+        <h2 className="font-display font-black tracking-tightest uppercase text-4xl lg:text-6xl leading-[0.9] mb-8">
+          Descubrí todo<br/>nuestros productos
+        </h2>
+        <button onClick={goAll}
+          className="inline-flex items-center gap-2 bg-alpenglow text-ivory px-8 py-4 font-narrow font-bold uppercase tracking-widest-2 text-sm hover:bg-alpenglow/80 transition-colors">
+          Ver catálogo completo
+          <ArrowRight size={16} strokeWidth={2.2} />
+        </button>
+      </div>
+    </section>
+  )
+}
+
 // ─── Landing page ──────────────────────────────────────────────────────────
 function LandingPage() {
   return (
@@ -43,6 +71,7 @@ function LandingPage() {
         <HeroSection />
         <Categories />
         <Featured />
+        <DiscoverSection />
       </main>
       <Footer />
     </>

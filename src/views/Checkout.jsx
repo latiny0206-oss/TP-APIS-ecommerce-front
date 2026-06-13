@@ -64,22 +64,56 @@ const fmtExp  = (v) => { const d = v.replace(/\D/g, '').slice(0, 4); return d.le
 
 function validateShip(s) {
   const e = {}
-  if (!s.nombre.trim())    e.nombre    = 'Requerido'
-  if (!s.direccion.trim()) e.direccion = 'Requerido'
-  if (!s.ciudad.trim())    e.ciudad    = 'Requerido'
-  if (!s.provincia.trim()) e.provincia = 'Requerido'
-  if (!s.cp.trim())        e.cp        = 'Requerido'
-  if (!s.telefono.trim())  e.telefono  = 'Requerido'
+  if (!s.nombre.trim()) {
+    e.nombre = 'Requerido'
+  }
+  if (!s.direccion.trim()) {
+    e.direccion = 'Requerido'
+  } else if (!/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(s.direccion)) {
+    e.direccion = 'Debe contener letras'
+  } else if (!/\d/.test(s.direccion)) {
+    e.direccion = 'Debe incluir número de calle'
+  }
+  if (!s.ciudad.trim()) {
+    e.ciudad = 'Requerido'
+  } else if (/\d/.test(s.ciudad)) {
+    e.ciudad = 'Solo letras permitidas'
+  }
+  if (!s.provincia.trim()) {
+    e.provincia = 'Requerido'
+  } else if (/\d/.test(s.provincia)) {
+    e.provincia = 'Solo letras permitidas'
+  }
+  if (!s.cp.trim()) {
+    e.cp = 'Requerido'
+  } else if (!/^\d+$/.test(s.cp)) {
+    e.cp = 'Solo números'
+  }
+  if (!s.telefono.trim()) {
+    e.telefono = 'Requerido'
+  } else if (!/^\d+$/.test(s.telefono)) {
+    e.telefono = 'Solo números'
+  } else if (s.telefono.length < 8) {
+    e.telefono = 'Mínimo 8 dígitos'
+  }
   return e
 }
 
 function validateCard(c) {
   const e = {}
   const d = c.numero.replace(/\s/g, '')
-  if (!/^\d{16}$/.test(d))            e.numero  = '16 dígitos requeridos'
-  if (!c.titular.trim())              e.titular = 'Requerido'
-  if (!/^\d{2}\/\d{2}$/.test(c.exp)) e.exp     = 'Formato MM/AA'
-  if (!/^\d{3,4}$/.test(c.cvv))      e.cvv     = 'CVV inválido'
+  if (!/^\d{16}$/.test(d)) {
+    e.numero = '16 dígitos requeridos'
+  }
+  if (!c.titular.trim()) {
+    e.titular = 'Requerido'
+  } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(c.titular)) {
+    e.titular = 'Solo letras permitidas'
+  } else if (c.titular.trim().split(/\s+/).filter(Boolean).length < 2) {
+    e.titular = 'Ingresá nombre y apellido'
+  }
+  if (!/^\d{2}\/\d{2}$/.test(c.exp)) e.exp = 'Formato MM/AA'
+  if (!/^\d{3,4}$/.test(c.cvv))      e.cvv = 'CVV inválido'
   return e
 }
 
@@ -245,19 +279,19 @@ export default function Checkout() {
                   </label>
                   <label className="block">
                     <Label>Ciudad</Label>
-                    <TInput value={ship.ciudad} onChange={sF('ciudad')} placeholder="Bariloche" error={shipErrors.ciudad} />
+                    <TInput value={ship.ciudad} onChange={sF('ciudad', (v) => v.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-]/g, ''))} placeholder="Bariloche" error={shipErrors.ciudad} />
                   </label>
                   <label className="block">
                     <Label>Provincia</Label>
-                    <TInput value={ship.provincia} onChange={sF('provincia')} placeholder="Río Negro" error={shipErrors.provincia} />
+                    <TInput value={ship.provincia} onChange={sF('provincia', (v) => v.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-]/g, ''))} placeholder="Río Negro" error={shipErrors.provincia} />
                   </label>
                   <label className="block">
                     <Label>Código postal</Label>
-                    <TInput value={ship.cp} onChange={sF('cp')} placeholder="8400" error={shipErrors.cp} />
+                    <TInput value={ship.cp} onChange={sF('cp', (v) => v.replace(/\D/g, ''))} placeholder="8400" inputMode="numeric" error={shipErrors.cp} />
                   </label>
                   <label className="block">
                     <Label>Teléfono</Label>
-                    <TInput type="tel" value={ship.telefono} onChange={sF('telefono', (v) => v.replace(/[^0-9+\-\s]/g, ''))} placeholder="+54 9 11 1234-5678" error={shipErrors.telefono} />
+                    <TInput type="tel" value={ship.telefono} onChange={sF('telefono', (v) => v.replace(/\D/g, ''))} placeholder="1112345678" inputMode="numeric" error={shipErrors.telefono} />
                   </label>
                 </div>
                 <div className="flex gap-3 mt-8">
@@ -298,7 +332,9 @@ export default function Checkout() {
                     </label>
                     <label className="sm:col-span-2 block">
                       <Label>Titular de la tarjeta</Label>
-                      <TInput value={card.titular} onChange={(e) => setCard({ ...card, titular: e.target.value.toUpperCase() })} placeholder="NOMBRE APELLIDO" error={cardErrors.titular} />
+                      <TInput value={card.titular}
+                        onChange={(e) => setCard({ ...card, titular: e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, '').toUpperCase() })}
+                        placeholder="NOMBRE APELLIDO" error={cardErrors.titular} />
                     </label>
                     <label className="block">
                       <Label>Vencimiento (MM/AA)</Label>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft, ShoppingCart, Minus, Plus, Check } from 'lucide-react'
+import { ArrowLeft, ShoppingCart, Minus, Plus, Check, X } from 'lucide-react'
 import { useNavigation } from '../context/NavigationContext.jsx'
 import { useCart }       from '../context/CartContext.jsx'
 import { getProductoById, fmtPrice, precioFinal } from '../mocks/data.js'
@@ -40,7 +40,12 @@ export default function ProductoDetalle() {
   const categoriaLabel = CATEGORIA_LABELS[producto.categoria] || producto.categoria
 
   const getStockParaTalle = (talle) => {
-    if (!hayTalles || !talle) return producto.stock
+    if (!hayTalles) return producto.stock
+    // Use explicit per-size stock data when available
+    if (producto.stockPorTalle) {
+      return talle ? (producto.stockPorTalle[talle] ?? 0) : producto.stock
+    }
+    if (!talle) return producto.stock
     const idx = producto.talles.indexOf(talle)
     const n   = producto.talles.length
     if (n <= 1) return producto.stock
@@ -142,16 +147,32 @@ export default function ProductoDetalle() {
                   Talle {talleSeleccionado ? `— ${talleSeleccionado}` : '— Seleccioná uno'}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {producto.talles.map((t) => (
-                    <button key={t} onClick={() => handleTalleSelect(t)}
-                      className={`h-10 min-w-[40px] px-3 border font-mono text-xs font-bold tracking-widest-2 transition-all ${
-                        talleSeleccionado === t ? 'bg-rock text-ivory border-rock' : 'border-rock/20 text-rock hover:border-rock'
-                      }`}>
-                      {t}
-                    </button>
-                  ))}
+                  {producto.talles.map((t) => {
+                    const stockT  = getStockParaTalle(t)
+                    const agotado = stockT === 0
+                    return (
+                      <button key={t}
+                        onClick={() => !agotado && handleTalleSelect(t)}
+                        disabled={agotado}
+                        title={agotado ? 'Sin stock' : undefined}
+                        className={`relative h-10 min-w-[40px] px-3 border font-mono text-xs font-bold tracking-widest-2 transition-all overflow-hidden ${
+                          agotado
+                            ? 'border-rock/10 text-rock/25 cursor-not-allowed bg-rock/3 select-none'
+                            : talleSeleccionado === t
+                              ? 'bg-rock text-ivory border-rock'
+                              : 'border-rock/20 text-rock hover:border-rock'
+                        }`}>
+                        <span className={agotado ? 'opacity-40' : ''}>{t}</span>
+                        {agotado && (
+                          <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <X size={14} strokeWidth={2} className="text-rock/40" />
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
-                {hayTalles && !talleSeleccionado && (
+                {!talleSeleccionado && (
                   <p className="font-mono text-[10px] text-alpenglow mt-2 tracking-widest-2 uppercase">
                     Seleccioná un talle para continuar
                   </p>
@@ -172,9 +193,11 @@ export default function ProductoDetalle() {
                   <Plus size={14} strokeWidth={2} />
                 </button>
               </div>
-              <span className="ml-4 font-mono text-[10px] tracking-widest-2 uppercase text-rock/45">
-                {stockActual} disponibles
-              </span>
+              {talleSeleccionado && (
+                <span className="ml-4 font-mono text-[10px] tracking-widest-2 uppercase text-rock/45">
+                  {stockActual} disponibles
+                </span>
+              )}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">

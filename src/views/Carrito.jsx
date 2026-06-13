@@ -196,7 +196,18 @@ export default function Carrito() {
                 Ir al checkout
               </Button>
               <Button variant="ghost-dark" size="md" className="w-full mt-3"
-                onClick={() => navigate('indumentaria')}>
+                onClick={() => {
+                  try {
+                    const raw = sessionStorage.getItem('catalogoReturnFilters')
+                    if (raw) {
+                      sessionStorage.setItem('catalogoState', JSON.stringify({
+                        ...JSON.parse(raw),
+                        backView: 'catalogo',
+                      }))
+                    }
+                  } catch {}
+                  navigate('catalogo')
+                }}>
                 Continuar comprando
               </Button>
               <p className="mt-4 font-mono text-[10px] tracking-widest-2 uppercase text-ivory/35 text-center">

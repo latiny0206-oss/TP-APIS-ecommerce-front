@@ -1,5 +1,5 @@
 # Integrante 4 — Panel de Administración (ABM / CRUD)
-**Pantallas clave:** AdminLayout · AdminDashboard · AdminProducts · AdminUsers + resumen de módulos secundarios  
+**Pantallas clave:** AdminLayout · AdminDashboard · AdminProducts · AdminUsers + módulos secundarios  
 **Tiempo de exposición:** 3 minutos 45 segundos
 
 ---
@@ -12,20 +12,20 @@
 
 **Demo en vivo — guía paso a paso:**
 
-1. **Cambio de layout al entrar al admin** → Iniciamos sesión con `admin@cumbre.com` / `admin123`. El `authReducer` detecta `rol === 'admin'` y navega a `'admin-dashboard'`. En `App.jsx`, las vistas admin se renderizan **sin** `<ShellPage>` (sin Navbar ni Footer públicos) — van directo a `<AdminLayout>`. Este es el cambio de layout que queremos mostrar.
+1. **Cambio de layout al entrar al admin** → Iniciamos sesión con `admin@cumbre.com` / `admin123`. El `authReducer` detecta `rol === 'admin'` y navega a `'admin-dashboard'`. En `App.jsx`, las vistas admin se renderizan **sin** `<ShellPage>` (sin Navbar ni Footer públicos) — van directo a `<AdminLayout>`. Este cambio de layout se produce porque `ADMIN_VIEWS.includes(view)` es true, y el bloque if devuelve el panel en lugar del shell público.
 
-2. **AdminLayout** → Es el shell del admin: sidebar fijo a la izquierda con `overflow-y-auto` y área de contenido a la derecha con scroll independiente. El logo del sidebar navega a `'admin-dashboard'` (no al home público — eso fue un bug que corregimos). El botón 'Salir' sí va al `'home'` público.
+2. **AdminLayout** → Shell del admin: sidebar fijo con `overflow-y-auto` independiente y área de contenido con scroll propio. El logo navega a `'admin-dashboard'` (no al home público). El botón 'Salir' llama a `logout()` del `AuthContext` y luego navega a `'home'` — limpia completamente el estado de auth y redirige al sitio público.
 
-3. **Dashboard** → `AdminDashboard.jsx` usa `useProducts()` para leer el catálogo real y calcular: cuántos productos activos hay, cuáles tienen stock bajo (≤ 3 unidades). Las órdenes recientes son datos mock hardcodeados. El gráfico de tendencia es un SVG puro — sin librerías externas.
+3. **Dashboard** → `AdminDashboard.jsx` usa `useProducts()` para leer el catálogo real del `ProductsContext` y calcular: cuántos productos activos hay, cuáles tienen stock bajo (≤ 3 unidades). Las órdenes recientes son datos mock. El gráfico de tendencia es un SVG puro — sin librerías externas.
 
-4. **AdminProducts — ABM completo** → Mostramos la tabla de productos con búsqueda. Click en 'Nuevo producto' → abre un **drawer** (panel lateral). El drawer es un `ProductDrawer` que recibe `productId` (null = nuevo, número = edición). Llenamos el formulario, validamos y hacemos 'Guardar'. `upsert(next)` del `ProductsContext` actualiza el catálogo en memoria — el nuevo producto aparece en la tabla inmediatamente.
+4. **AdminProducts — ABM completo** → Tabla de productos con búsqueda. Click en 'Nuevo producto' → abre un **drawer** (panel lateral). El `ProductDrawer` recibe `productId` (null = nuevo, número = edición). Llenamos el formulario, validamos y guardamos. `upsert(next)` del `ProductsContext` actualiza el catálogo en memoria — el nuevo producto aparece en la tabla inmediatamente.
 
 5. **AdminUsers** → Tabla de usuarios con búsqueda, toggle de roles y drawer de edición.
 
-6. **Tour rápido de módulos secundarios** → Variantes (stock por color/talle), Catálogo visual, Descuentos (ABM de cupones), Órdenes (listado), Fotos (cola de subida simulada)."
+6. **Tour de módulos secundarios** → Variantes (stock por color/talle), Catálogo visual, Descuentos (ABM de cupones), Órdenes (listado), Fotos (cola de subida simulada)."
 
 > **Cierre del grupo:**
-"Con eso terminamos el recorrido completo de Cumbre — desde que un usuario descubre un producto hasta que el admin lo gestiona desde el panel. Quedamos a disposición para preguntas."
+"Con eso terminamos el recorrido completo de Cumbre — desde que un usuario descubre un producto hasta que el admin lo gestiona. Quedamos a disposición para preguntas."
 
 ---
 
@@ -47,35 +47,36 @@ export default function AdminLayout({ children }) {
   return (
     <div className="h-screen flex">
       <aside>...sidebar...</aside>
-      <main>{children}</main>  {/* ← aquí va la vista activa */}
+      <main>{children}</main>
     </div>
   )
 }
 ```
 
-Es el mismo concepto que el `<Outlet />` de React Router, pero implementado manualmente. Permite que la vista cambie sin desmontar el sidebar — lo que evita re-renders innecesarios y mantiene el scroll del sidebar estable.
+Es el mismo concepto que el `<Outlet />` de React Router, pero implementado manualmente. El sidebar no se desmonta al cambiar de vista — evita re-renders innecesarios y mantiene el scroll del sidebar estable.
 
 ### Inmutabilidad del estado en operaciones CRUD
 
-**Por qué nunca debemos mutar el estado directamente:**
+**Por qué nunca mutamos el estado directamente:**
 
 ```jsx
-// ❌ INCORRECTO — muta el estado directamente
-state.items.push(newProduct)
+// ❌ INCORRECTO — React no detecta el cambio (misma referencia)
+state.ids.push(newId)
 
-// ✅ CORRECTO — retorna un nuevo array (inmutable)
-return { ...state, items: [...state.items, newProduct] }
+// ✅ CORRECTO — retorna nuevo array (nueva referencia)
+return { ...state, ids: [...state.ids, newId] }
 ```
 
-React detecta cambios de estado **por referencia** — si el objeto es el mismo en memoria, React asume que no cambió y no re-renderiza. Al mutar directamente, el objeto tiene la misma referencia aunque su contenido cambió → el componente no se actualiza → bug difícil de rastrear.
+React detecta cambios de estado **por referencia de objeto**. Si el objeto es el mismo en memoria, React asume que no hubo cambio y no re-renderiza. Al mutar directamente, el objeto tiene la misma referencia aunque su contenido cambió → el componente no se actualiza → bug silencioso.
 
-En nuestro `ProductsContext`, el reducer `'UPSERT'` nunca toca el array existente:
+En nuestro `ProductsContext`, el reducer `'UPSERT'` nunca modifica el estado existente:
 ```js
 case 'UPSERT': {
-  const hit = state.ids.find(id => id === product.id)
-  return hit
-    ? { ...state, byId: { ...state.byId, [product.id]: product } }  // nuevo objeto byId
-    : { ...state, ids: [...state.ids, product.id], byId: { ...state.byId, [product.id]: product } }
+  const isNew = !state.byId[action.payload.id]
+  return {
+    byId: { ...state.byId, [action.payload.id]: { ...state.byId[action.payload.id], ...action.payload } },
+    ids:  isNew ? [action.payload.id, ...state.ids] : state.ids,
+  }
 }
 ```
 
@@ -84,11 +85,28 @@ case 'UPSERT': {
 `ProductsContext` guarda los productos en forma **normalizada**:
 ```js
 {
-  ids: [101, 102, 103, ...],     // orden
-  byId: { 101: {...}, 102: {...} } // acceso O(1) por id
+  ids:  [101, 102, 103, ...],      // orden → O(1) para saber cuántos hay
+  byId: { 101: {...}, 102: {...} } // búsqueda por ID → O(1)
 }
 ```
-Alternativa ingenua: array plano `[{id:101,...}, {id:102,...}]`. El problema: para buscar un producto tenés que recorrer el array entero → O(n). Con el mapa `byId`, la búsqueda es `byId[id]` → O(1). En una tabla con 500+ productos, la diferencia se nota.
+
+**Alternativa ingenua:** array plano `[{id:101,...}, {id:102,...}]`. Para buscar un producto habría que recorrer el array entero → O(n). Con el mapa `byId`, la búsqueda es `byId[id]` → O(1). En una tabla con 500+ productos, la diferencia impacta directamente en la fluidez de la UI.
+
+### ¿Por qué `ProductsContext` solo vive dentro de `AdminLayout`?
+
+```jsx
+export default function AdminLayout({ children }) {
+  return (
+    <ProductsProvider>   {/* solo para el admin */}
+      <div className="h-screen flex">
+        ...{children}...
+      </div>
+    </ProductsProvider>
+  )
+}
+```
+
+El usuario público del e-commerce **nunca** necesita el catálogo editable del admin. Si pusiéramos `ProductsProvider` en `main.jsx`, el contexto se inicializaría para todos los usuarios, cargando datos que el 99% de las visitas nunca usarán. Al colocarlo solo en `AdminLayout`, el contexto existe únicamente cuando se accede al panel — es lazy loading de estado global.
 
 ---
 
@@ -98,104 +116,71 @@ Alternativa ingenua: array plano `[{id:101,...}, {id:102,...}]`. El problema: pa
 
 | Elemento | Para qué sirve |
 |---|---|
-| `useReducer(productsReducer, initialState)` | Estado mutable del catálogo admin |
-| `ids: PRODUCTS_SEED.map(p => p.id)` | Array de IDs que define el orden de la tabla |
+| `useReducer(reducer, PRODUCTS_SEED, init)` | Inicializa el catálogo con todos los productos del seed; el tercer argumento es una función init lazy |
+| `ids: products.map(p => p.id)` | Array de IDs que define el orden de la tabla |
 | `byId: Object.fromEntries(...)` | Mapa ID → producto para acceso O(1) |
-| `action 'UPSERT'` | Crea o actualiza un producto sin mutar el estado — retorna nuevos objetos |
-| `action 'REMOVE'` | Filtra el array de ids y elimina del mapa byId |
-| `useProducts()` — hook custom | Abstraen `useContext(ProductsContext)` — cualquier componente admin consume el catálogo |
+| `action 'UPSERT'` | Crea o actualiza un producto sin mutar el estado — retorna nuevos objetos con spread |
+| `action 'REMOVE'` | Destruyendo con rest `{ [id]: _, ...byId }` elimina del mapa; filtra el array de ids |
+| `useProducts()` — hook custom | Abstrae `useContext(ProductsContext)` — interfaz limpia para los consumers |
 
 ### AdminLayout.jsx
 
 | Elemento | Para qué sirve |
 |---|---|
-| `useNavigation()` — `currentView` | Sabe qué vista está activa para marcar el botón del sidebar como active |
+| `useNavigation()` — `currentView` | Sabe qué vista está activa para marcar el botón del sidebar como activo |
 | `h-screen overflow-hidden flex` | El contenedor ocupa exactamente el viewport — no hay scroll del body |
-| `overflow-y-auto` en sidebar | El sidebar scrollea internamente si hay muchos items de nav |
-| `overflow-y-auto flex flex-col` en main | El área de contenido scrollea independientemente del sidebar |
+| `overflow-y-auto` en sidebar | El sidebar scrollea internamente si hay muchos items |
+| `overflow-y-auto` en main | El área de contenido scrollea independientemente del sidebar |
 | `sticky top-0` en el header interno | El header del admin se queda fijo al hacer scroll del contenido |
-| `onClick={() => navigate('admin-dashboard')}` en logo | Redirige al dashboard admin, no al home público |
-| `onClick={() => navigate('home')}` en botón Salir | Salida al sitio público |
+| `onClick={() => { logout(); navigate('home') }}` en Salir | Limpia el estado de auth y redirige al sitio público |
 
 ### AdminDashboard.jsx
 
 | Elemento | Para qué sirve |
 |---|---|
-| `useProducts()` | Lee el catálogo para calcular KPIs reales |
-| `products.filter(p => p.stock > 0 && p.stock <= 3)` | Detecta productos con stock bajo para las alertas |
-| `KpiCard` | Componente reutilizable: recibe Icon, label, value, accentClass — 4 instancias |
-| `RECENT_ORDERS.map(o => <tr key={o.id}>)` | Tabla de órdenes recientes con `key` por ID de orden |
-| `SVG` puro para el gráfico | Sin librerías de charts externas — polyline con puntos hardcodeados |
+| `useProducts()` | Lee el catálogo real para calcular KPIs en tiempo real |
+| `products.filter(p => p.stock > 0 && p.stock <= 3)` | Detecta productos con stock bajo para alertas |
+| `KpiCard` | Componente reutilizable: Icon + label + value + accentClass — 4 instancias |
+| SVG puro para el gráfico | Sin librerías de charts — polyline con puntos hardcodeados, demuestra conocimiento de SVG |
 
 ### AdminProducts.jsx — Drawer de edición
 
 | Elemento | Para qué sirve |
 |---|---|
-| `useState(null)` — `editingId` | null = sin drawer abierto; número = edición; `'new'` = creación |
+| `useState(null)` — `editingId` | null = drawer cerrado; `'new'` = creación; número = edición de ese ID |
 | `ProductDrawer({ productId, onClose })` | Componente de formulario que recibe el ID o null |
-| `useState(() => existing ? {...existing} : defaultValues)` | Inicialización lazy del form — solo se ejecuta una vez al montar el drawer |
-| `useState({})` — `errors` | Errores de validación del form del drawer |
-| `validate()` | Valida nombre, precio y descuento antes de guardar |
-| `save()` → `upsert(next)` | Construye el objeto producto completo y lo envía al contexto |
-| `onChange={(e) => setForm({...form, [field]: e.target.value})}` | Input controlado con computed property name |
-| `key={editingId}` en `ProductDrawer` | Fuerza remontaje del drawer cuando cambia el producto en edición — limpia el form |
+| `useState(() => existing ? {...existing} : defaults)` | Inicialización lazy — el cálculo del form inicial corre solo una vez al montar el drawer |
+| `useState({})` — `errors` | Errores de validación del form |
+| `key={editingId}` en `ProductDrawer` | Fuerza remontaje del drawer cuando cambia el producto — garantiza que el form se limpie |
+| `save()` → `upsert(next)` | Construye el objeto producto completo y lo envía al contexto; el cambio se propaga inmediatamente a la tabla |
 
-### AdminUsers.jsx — patrón similar
+### AdminUsers.jsx
 
 | Elemento | Para qué sirve |
 |---|---|
 | `useState(MOCK_USERS)` | Copia local de usuarios para CRUD sin modificar los mocks originales |
 | `useState('')` — `search` | Filtro de búsqueda por nombre o email |
-| `users.filter(u => ...)` | Filtra en el render — no hay estado separado para los resultados |
-| `toggle(u.id)` | Alterna el rol entre `'cliente'` y `'admin'` — retorna nuevo array |
+| `users.filter(u => ...)` | Filtra en el render — sin estado separado para los resultados (derivado, no almacenado) |
+| `toggle(u.id)` | Alterna el rol entre `'cliente'` y `'admin'` — retorna nuevo array (inmutable) |
 
 ---
 
-## 4. Defensa de la Arquitectura (El punto fuerte ante el profesor)
+## 4. Defensa de la Arquitectura
 
 ### Por qué el admin tiene su propio layout y contexto
 
-El admin es un **dominio completamente separado** del site público:
+El admin es un **dominio completamente separado** del sitio público:
 - Layout diferente (sin Navbar, sin Footer, sidebar propio)
-- Estado diferente (catálogo editable, vs catálogo de solo lectura del público)
-- Usuarios diferentes (solo acceden admins)
+- Estado diferente (catálogo editable vs catálogo de solo lectura)
+- Usuarios diferentes (solo acceden admins autenticados)
 
-Por eso:
-- `AdminLayout` es independiente de `ShellPage`
-- `ProductsContext` lo provee solo `AdminLayout` (no está en `main.jsx`) → solo se inicializa cuando se accede al panel admin, el usuario común no carga ese contexto nunca
+Esta separación se refleja en la estructura de carpetas (`views/admin/`), en el condicional de `App.jsx` (`if (isAdmin) return <AdminLayout>`) y en el `ProductsProvider` localizado en `AdminLayout`.
 
-```jsx
-// AdminLayout.jsx envuelve con su propio Provider
-export default function AdminLayout({ children }) {
-  return (
-    <ProductsProvider>   {/* ← solo para el admin */}
-      <div className="h-screen flex">
-        ...
-      </div>
-    </ProductsProvider>
-  )
-}
-```
-
-### Cómo el admin está dividido en docenas de sub-componentes
-
-**Vista en VS Code de AdminProducts.jsx:** El archivo contiene múltiples componentes definidos localmente:
-- `FieldLabel` — wrapper de label de formulario (1 prop)
-- `AdminInput` — wrapper de input con estilos del admin (1 prop extra)
-- `ProductDrawer` — el panel lateral completo de edición
-- `ProductRow` — fila de la tabla con acciones (editar, fotos, eliminar)
-
-Esto mantiene la función `AdminProducts()` principal limpia — solo orquesta el estado y el renderizado de alto nivel. Cada sub-componente tiene una sola responsabilidad.
-
-**Pregunta del profesor:** "¿Por qué no extraen `ProductDrawer` a su propio archivo?"
-
-**Respuesta:** Porque `ProductDrawer` está **fuertemente acoplado** a `AdminProducts` — usa `useProducts()` directamente, recibe `onClose` que modifica estado del padre. Extraerlo a un archivo separado no agregaría reusabilidad (no lo usa nadie más) y sí agregaría fricción de importaciones. La modularización tiene un costo — solo vale la pena cuando hay reutilización real.
-
-### Tabla de módulos del admin — visión de conjunto
+### Tabla de módulos del admin
 
 | Vista | Responsabilidad | Estado principal |
 |---|---|---|
-| `AdminDashboard` | KPIs + órdenes recientes + alertas | `useProducts()` (derivado) |
+| `AdminDashboard` | KPIs + órdenes + alertas | `useProducts()` (derivado, solo lectura) |
 | `AdminProducts` | ABM completo de productos | `useState` local + `upsert/remove` del contexto |
 | `AdminVariants` | Stock por variante (color+talle) | `useState` local |
 | `AdminCatalog` | Vista visual del catálogo | `useProducts()` (solo lectura) |
@@ -204,4 +189,8 @@ Esto mantiene la función `AdminProducts()` principal limpia — solo orquesta e
 | `AdminUsers` | Gestión de usuarios y roles | `useState` local (copia de mocks) |
 | `AdminPhotos` | Cola de subida de imágenes | `useState` local |
 
-Todos comparten el mismo `AdminLayout` (sidebar + header) y el mismo `ProductsContext` para el catálogo. El estado específico de cada ABM es local al componente — no necesita ser global porque ningún otro módulo lo consume.
+Todos comparten el mismo `AdminLayout` y el `ProductsContext`. El estado específico de cada ABM es local al componente — ningún otro módulo lo consume, por lo que no necesita ser global.
+
+### ¿Por qué no extraer `ProductDrawer` a su propio archivo?
+
+Porque `ProductDrawer` está **fuertemente acoplado** a `AdminProducts` — usa `useProducts()` directamente, recibe `onClose` que modifica estado del padre, y no existe en ningún otro contexto del sistema. Extraerlo agregaría una importación cruzada sin ningún beneficio de reutilización. La regla es: extraer solo cuando hay reutilización real. Modularización innecesaria es deuda técnica disfrazada de organización.

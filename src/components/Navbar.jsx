@@ -58,6 +58,13 @@ export default function Navbar() {
     setMobileOpen(false)
   }
 
+  const goAllProducts = () => {
+    sessionStorage.removeItem('catalogoState')
+    sessionStorage.removeItem('catalogoReturnFilters')
+    navigate('catalogo')
+    setMobileOpen(false)
+  }
+
   const handleLogout = () => {
     logout()
     navigate('home')
@@ -83,6 +90,12 @@ export default function Navbar() {
 
             {/* Desktop nav */}
             <nav className="hidden lg:flex items-center gap-9">
+              <button onClick={goAllProducts}
+                className={`text-[13px] tracking-widest-2 uppercase font-medium link-underline transition-colors ${
+                  currentView === 'catalogo' ? 'text-ivory' : 'text-ivory/75 hover:text-ivory'
+                }`}>
+                Productos
+              </button>
               {NAV_ITEMS.map((item) => (
                 <button key={item.label}
                   onClick={() => go(item.view)}
@@ -148,6 +161,11 @@ export default function Navbar() {
         {/* Mobile menu */}
         <div className={`lg:hidden overflow-hidden border-t border-ivory/10 transition-[max-height] duration-500 ease-out ${mobileOpen ? 'max-h-[600px]' : 'max-h-0'}`}>
           <div className="bg-rock-800 px-6 py-6 flex flex-col gap-1">
+            <button onClick={goAllProducts}
+              className="flex items-center justify-between py-3 border-b border-ivory/5 text-ivory hover:text-alpenglow transition-colors">
+              <span className="font-narrow font-bold uppercase tracking-widest-2 text-sm">Productos</span>
+              <ArrowUpRight size={16} />
+            </button>
             {NAV_ITEMS.map((item) => (
               <button key={item.label} onClick={() => go(item.view)}
                 className="flex items-center justify-between py-3 border-b border-ivory/5 text-ivory hover:text-alpenglow transition-colors">

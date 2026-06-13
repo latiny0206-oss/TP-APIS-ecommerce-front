@@ -8,19 +8,19 @@
 
 > **Arranque natural — primeras palabras frente al profesor:**
 
-"Buenas, mi nombre es [nombre]. Vamos a presentar **Cumbre**, una aplicación de e-commerce para equipamiento de expedición, construida íntegramente en React con Vite como bundler y Context API para el estado global — sin Redux, sin librerías de ruteo externas.
+"Buenas, mi nombre es [nombre]. Les presento **Cumbre**, una aplicación de e-commerce para equipamiento de expedición, construida íntegramente en React con Vite como bundler y Context API para el estado global — sin Redux, sin librerías de ruteo externas.
 
 Yo me ocupo del flujo de **descubrimiento**: cómo el usuario llega al sitio, navega el catálogo y entra al detalle de un producto.
 
 **Demo en vivo — guía paso a paso:**
 
-1. **Home** → Mostramos el `HeroSection`, la sección `Categories` con los conteos dinámicos de productos, y `Featured` con los primeros cuatro ítems del mock. Todo el home es el componente `LandingPage` en `App.jsx` — tres secciones compuestas.
+1. **Home** → Mostramos el `HeroSection`, la sección `Categories` con los conteos dinámicos de productos, `Featured` con los productos de la línea Cumbre Pro, y la sección de descubrimiento que lleva al catálogo completo. Todo el home es la función `LandingPage` en `App.jsx` — cuatro secciones compuestas.
 
-2. **Catálogo** → Click en 'Indumentaria'. Se monta `Catalogo.jsx` con `categoria='indumentaria'`. Los filtros de categoría, marca, temporada y precio están en estado local con `useState`. Mostramos cómo tildar 'Calzado' también activa esa categoría — los `useMemo` recalculan los `filtrados` en tiempo real.
+2. **Catálogo** → Click en 'Productos' del menú. Se monta `Catalogo.jsx` sin categoría inicial. El título es siempre 'PRODUCTOS'. Los filtros de categoría, marca, temporada y precio están en estado local con `useState`. Al tildar 'Calzado' y 'Indumentaria' al mismo tiempo, los `useMemo` recalculan `filtrados` en tiempo real.
 
-3. **Filtros** → Mostramos que al hacer click tanto en el texto como en el ícono del checkbox se activa el filtro. La función `toggle` es un higher-order function que envuelve `setState`.
+3. **Filtros y Reset** → Mostramos que el botón 'Limpiar filtros' resetea absolutamente todos los filtros activos, devolviendo el catálogo completo. No mantiene ninguna categoría pre-seleccionada.
 
-4. **Detalle** → Click en un producto. Se navega con `navigate({ view: 'producto', params: { id: 1001 } })`. En `ProductoDetalle.jsx` el stock cambia según el talle seleccionado — `getStockParaTalle` distribuye el stock proporcionalmente. El botón 'Volver a Productos' restaura los filtros desde `sessionStorage`."
+4. **Detalle** → Click en un producto con talles. La selección de talle activa la visualización de stock disponible (antes de seleccionar talle, el stock no se muestra). Los talles sin stock aparecen marcados con una cruz (✕) y no se pueden seleccionar. El botón 'Volver a Productos' restaura los filtros desde `sessionStorage`."
 
 > **Cierre de tu bloque:**
 "Dejo la posta a [integrante 2] que les muestra cómo a partir del detalle se agrega al carrito y se completa la compra."
@@ -37,7 +37,7 @@ Yo me ocupo del flujo de **descubrimiento**: cómo el usuario llega al sitio, na
 
 React mantiene una copia del DOM en memoria (el Virtual DOM). Cuando cambia el estado:
 1. Genera un nuevo Virtual DOM
-2. Lo **compara** con el anterior (algoritmo de *diffing*)
+2. Lo **compara** con el anterior (algoritmo de *diffing* o *reconciliation*)
 3. Solo actualiza **los nodos que cambiaron** en el DOM real
 
 **Ejemplo concreto del proyecto:** Cuando tildás un filtro en `Catalogo.jsx`, `setCategorias([...])` dispara un re-render. React recalcula solo la lista de productos (`filtrados`) y actualiza esos nodos — no redibuja el sidebar ni el header.
@@ -47,7 +47,7 @@ React mantiene una copia del DOM en memoria (el Virtual DOM). Cuando cambia el e
 Cadena de eventos cuando cambia un checkbox:
 ```
 onClick en <label> → onChange() → toggle(setCategorias)(value)
-→ setCategorias(nueva array) → React detecta nuevo estado
+→ setCategorias(nuevo array) → React detecta nuevo estado
 → re-render de Catalogo → useMemo recalcula filtrados
 → React actualiza solo la grilla de productos en el DOM
 ```
@@ -56,45 +56,59 @@ onClick en <label> → onChange() → toggle(setCategorias)(value)
 
 ### Routing por estado (sin React Router)
 
-`NavigationContext.jsx` es nuestro router casero. `navigate('indumentaria')` hace dos cosas:
-1. `dispatch({ payload: 'indumentaria' })` → actualiza `currentView` en el contexto
+`NavigationContext.jsx` es nuestro router propio. `navigate('catalogo')` hace dos cosas:
+1. `dispatch({ payload: 'catalogo' })` → actualiza `currentView` en el contexto
 2. `window.history.pushState(...)` → sincroniza la URL del navegador
 
 `App.jsx` lee `view` y renderiza condicionalmente:
 ```jsx
-{view === 'indumentaria' && <Catalogo categoria="indumentaria" />}
+{view === 'catalogo' && <Catalogo />}
 ```
 Es renderizado condicional puro — no hay `<Route>` ni `<Switch>`.
+
+### Persistencia de filtros con sessionStorage
+
+Cuando el usuario navega del catálogo al detalle de producto, la app guarda el estado de filtros en `sessionStorage` bajo la clave `catalogoState`. Al volver desde el detalle, `Catalogo.jsx` lee esa clave en un `useEffect` de montaje y restaura exactamente los mismos filtros. Esto evita que el usuario tenga que volver a filtrar desde cero.
+
+El mismo mecanismo se usa cuando el usuario regresa desde el carrito con el botón "Continuar comprando".
+
+### Talles con stock cero — UX defensiva
+
+Para evitar que un usuario seleccione un talle sin stock (lo que generaría un pedido inválido), la UI:
+1. Muestra el talle con texto atenuado y una cruz `✕` superpuesta
+2. Desactiva el botón con `disabled={agotado}` — el navegador lo marca como no interactuable
+3. Oculta el contador de stock hasta que se selecciona un talle disponible
 
 ---
 
 ## 3. Auditoría de Código — Hooks y Eventos Reales
 
 ### HeroSection.jsx
-| Hook / Función | Línea | Para qué sirve |
-|---|---|---|
-| `useState('midnight')` | L32 | Guarda la variante de imagen del hero (preparado para cambios dinámicos) |
-| `MOCK_PRODUCTOS.length` | L35 | Conteo dinámico de stock en tiempo real desde el array mock |
+| Hook / Función | Para qué sirve |
+|---|---|
+| `MOCK_PRODUCTOS.length` | Conteo dinámico de stock en tiempo real desde el array mock |
+| `useNavigation()` | Para el botón CTA que navega al catálogo |
 
 ### Categories.jsx
 | Hook / Función | Para qué sirve |
 |---|---|
-| `MOCK_PRODUCTOS.filter(p => p.categoria === cat.categoriaKey).length` | Computa el total de productos por categoría en cada render |
-| `onClick={() => navigate(view)}` | Navega al catálogo de la categoría clickeada |
+| `MOCK_PRODUCTOS.filter(p => p.categoria === cat.categoriaKey).length` | Computa el total de productos por categoría |
+| `sessionStorage.setItem('catalogoState', ...)` | Guarda el filtro de categoría antes de navegar al catálogo |
+| `navigate('catalogo')` | Siempre va a `/catalogo` (no a la ruta de categoría separada) |
 
 ### Catalogo.jsx
-| Hook / Función | Línea aprox. | Para qué sirve |
-|---|---|---|
-| `useState('')` — `busqueda` | L51 | Texto del buscador |
-| `useState([categoria])` — `categorias` | L52 | Array de categorías activas |
-| `useState([])` — `marcas` | L53 | Array de marcas activas |
-| `useState([])` — `temporadas` | L54 | Array de temporadas activas |
-| `useState(0)` / `useState(PRECIO_GLOBAL_MAX)` | L55-56 | Rango de precios |
-| `useEffect(() => {...}, [])` | L61-74 | Restaura filtros desde `sessionStorage` al volver del detalle |
-| `useMemo(() => filtrar, [deps])` | L105-116 | Recalcula los productos filtrados solo cuando cambian las dependencias |
-| `toggle(setter)(value)` | L78-79 | Higher-order function: agrega o quita un valor de un array de filtros |
-| `resetFilters()` | L83-89 | Limpia todos los filtros a valores iniciales |
-| `handleProductNavigate(id)` | L91-96 | Guarda estado en `sessionStorage` y navega al detalle |
+| Hook / Función | Para qué sirve |
+|---|---|
+| `useState('')` — `busqueda` | Texto del buscador |
+| `useState([])` — `categorias` | Array de categorías activas (siempre empieza vacío) |
+| `useState([])` — `marcas` | Array de marcas activas |
+| `useState([])` — `temporadas` | Array de temporadas activas |
+| `useState(0)` / `useState(PRECIO_GLOBAL_MAX)` | Rango de precios |
+| `useEffect(() => {...}, [])` | Restaura filtros desde `sessionStorage` al montar |
+| `useEffect([busqueda, ...])` | Guarda estado actual en `catalogoReturnFilters` para el carrito |
+| `useMemo(() => filtrar, [deps])` | Recalcula los filtrados solo cuando cambian las dependencias |
+| `toggle(setter)(value)` | Higher-order function: agrega o quita un valor de un array de filtros |
+| `resetFilters()` | Limpia **todos** los filtros incluyendo categorías (sin excepciones) |
 
 ### ProductoDetalle.jsx
 | Hook / Función | Para qué sirve |
@@ -102,52 +116,23 @@ Es renderizado condicional puro — no hay `<Route>` ni `<Switch>`.
 | `useState(null)` — `talleSeleccionado` | Guarda el talle elegido por el usuario |
 | `useState(1)` — `cantidad` | Cantidad a agregar al carrito |
 | `useState(false)` — `agregado` | Controla el estado temporal "¡Agregado!" del botón |
-| `getStockParaTalle(talle)` | Distribuye el stock total proporcionalmente según la posición del talle |
-| `handleTalleSelect(t)` | Actualiza talle Y resetea cantidad a 1 |
-| `handleAgregar()` | Llama a `addToCart()` del `CartContext` |
-| `handleBack()` | Lee `sessionStorage` para volver al catálogo con los filtros restaurados |
-
-### Evento onClick en Checkbox (Catalogo.jsx)
-```jsx
-// El <label> wrappea todo → un solo onClick activa el filtro
-// sin importar si clickeás el ícono check o el texto
-<label onClick={onChange} className="... cursor-pointer select-none">
-  <div className="visual-checkbox">{checked && <Check />}</div>
-  <span>{label}</span>
-</label>
-```
+| `getStockParaTalle(talle)` | Retorna stock del talle: usa `stockPorTalle[talle]` si el producto tiene el campo, si no distribuye proporcionalmente |
+| `talleSeleccionado && <span>{stockActual} disponibles</span>` | El stock solo se muestra una vez que hay un talle seleccionado |
+| `disabled={agotado}` en botón de talle | Impide seleccionar un talle sin stock |
+| `handleBack()` | Lee `sessionStorage.catalogoState` para volver al catálogo con filtros restaurados |
 
 ---
 
 ## 4. Defensa de la Arquitectura
 
-### Estructura `src/` — por qué está bien organizada
+### ¿Por qué `ShellPage` y `LandingPage` viven en `App.jsx`?
 
-```
-src/
-├── components/          ← Bloques reutilizables (se usan en múltiples vistas)
-│   ├── Navbar.jsx       ← Aparece en TODAS las vistas con shell
-│   ├── HeroSection.jsx  ← Sección del home
-│   ├── Categories.jsx   ← Sección del home
-│   ├── Featured.jsx     ← Sección del home
-│   ├── Footer.jsx       ← Aparece en TODAS las vistas con shell
-│   └── ui/              ← Átomos: Button, ProductCard, Toast, etc.
-│
-├── context/             ← Estado global compartido entre vistas
-│
-├── views/               ← Una vista = una pantalla completa
-│   ├── Catalogo.jsx
-│   ├── ProductoDetalle.jsx
-│   └── ...
-│
-├── mocks/               ← Datos de prueba centralizados
-└── data/                ← Constantes de UI (textos, listas, configuración)
-```
+Son layouts livianos de 5-8 líneas que actúan como "armadores" de Navbar + contenido + Footer. Extraerlos a archivos separados agregaría complejidad de importaciones sin ningún beneficio real — son demasiado simples para justificar su propio archivo. En React, el criterio para extraer un componente a su propio archivo es: ¿lo van a importar más de una vista? Si no, queda inline.
 
-**Pregunta trampa del profesor:** "¿Por qué `HeroSection`, `Categories` y `Featured` están en `components/` y no en `views/`?"
+### ¿Por qué el catálogo siempre muestra "PRODUCTOS" y no el nombre de la categoría?
 
-**Respuesta:** Porque no son vistas completas — son **secciones** que se componen dentro de `LandingPage` (que vive en `App.jsx`). Son reutilizables y no tienen conciencia de la URL. Si mañana quisiera mostrar `Categories` en otra pantalla, puedo importarla directamente. Una vista (`views/`) representa una pantalla entera; un componente (`components/`) es un bloque que puede existir dentro de cualquier pantalla.
+La decisión de arquitectura fue centralizar toda la lista de productos en una única ruta `/catalogo`. Las rutas `/indumentaria`, `/calzado` y `/equipamiento` siguen existiendo para compatibilidad, pero todas renderizan el mismo componente `<Catalogo>` y el título siempre es "PRODUCTOS". Los filtros de categoría se aplican vía estado reactivo, no vía rutas distintas. Esto simplifica el componente y hace que la experiencia de "limpiar filtros" sea consistente: siempre muestra el catálogo completo sin importar cómo llegó el usuario.
 
-**Pregunta trampa:** "¿Por qué `ShellPage` y `LandingPage` viven en `App.jsx` y no en archivos separados?"
+### ¿Por qué usamos `sessionStorage` en lugar de un Context para los filtros del catálogo?
 
-**Respuesta:** Son layouts livianos de solo 5-8 líneas que actúan como "armadores" del Navbar + content + Footer. Extraerlos a archivos separados agregaría complejidad de importaciones sin ningún beneficio real — son demasiado simples para justificar un archivo propio.
+El estado de los filtros del catálogo es efímero — solo importa mientras el usuario navega entre catálogo, detalle y carrito en la misma sesión. `sessionStorage` es el storage apropiado para este caso: persiste entre navegaciones del mismo tab, pero se limpia cuando el usuario cierra el tab o el navegador. No tiene sentido meterlo en un Context global que viviría durante toda la sesión aunque el usuario no esté en el catálogo.

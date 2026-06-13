@@ -216,7 +216,6 @@ function ProductoCard({ producto, onNavigate }) {
 
 export default function Catalogo({ categoria }) {
   const { navigate } = useNavigation()
-  const { title, sub } = (categoria && TITLES[categoria]) || { title: 'PRODUCTOS', sub: 'Todos los productos disponibles' }
 
   const [busqueda,   setBusqueda]   = useState('')
   const [categorias, setCategorias] = useState(categoria ? [categoria] : [])
@@ -226,7 +225,7 @@ export default function Catalogo({ categoria }) {
   const [precioMax,  setPrecioMax]  = useState(PRECIO_GLOBAL_MAX)
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  // Restore filter state when returning from product detail
+  // Restore filter state when returning from product detail or from cart
   useEffect(() => {
     const raw = sessionStorage.getItem('catalogoState')
     if (!raw) return
@@ -244,6 +243,13 @@ export default function Catalogo({ categoria }) {
     } catch { /* ignore malformed state */ }
   }, []) // eslint-disable-line
 
+  // Persist filter state so "Continuar comprando" can restore it
+  useEffect(() => {
+    sessionStorage.setItem('catalogoReturnFilters', JSON.stringify({
+      busqueda, categorias, marcas, temporadas, precioMin, precioMax,
+    }))
+  }, [busqueda, categorias, marcas, temporadas, precioMin, precioMax])
+
   const toggle = (setter) => (value) =>
     setter((prev) => prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value])
 
@@ -252,15 +258,12 @@ export default function Catalogo({ categoria }) {
   const toggleTemporada = toggle(setTemporadas)
 
   const hasActiveFilters =
-    busqueda !== '' || marcas.length > 0 || temporadas.length > 0 ||
-    precioMin > 0 || precioMax < PRECIO_GLOBAL_MAX ||
-    (categoria
-      ? (categorias.length !== 1 || !categorias.includes(categoria))
-      : categorias.length > 0)
+    busqueda !== '' || categorias.length > 0 || marcas.length > 0 ||
+    temporadas.length > 0 || precioMin > 0 || precioMax < PRECIO_GLOBAL_MAX
 
   const resetFilters = () => {
     setBusqueda('')
-    setCategorias(categoria ? [categoria] : [])
+    setCategorias([])
     setMarcas([])
     setTemporadas([])
     setPrecioMin(0)
@@ -313,9 +316,8 @@ export default function Catalogo({ categoria }) {
               <span className="h-px w-12 bg-rock/20" />
             </div>
             <h1 className="font-display font-black tracking-tightest uppercase text-5xl lg:text-7xl leading-[0.9]">
-              {title}
+              PRODUCTOS
             </h1>
-            <p className="mt-3 text-rock/55 font-mono text-[11px] tracking-widest-2 uppercase">{sub}</p>
           </div>
           <button onClick={() => navigate('home')}
             className="inline-flex items-center gap-2 font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 hover:text-rock transition-colors self-start">

@@ -50,7 +50,7 @@ export const CATEGORIES = [
   {
     id: 'ropa',
     title: 'Indumentaria',
-    sub: 'Chaquetas, Pantalones, Bases',
+    sub: 'Chaquetas, Pantalones, Remeras',
     img: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=1400&q=70',
     iconKey: 'jacket',
     categoriaKey: 'indumentaria',
@@ -246,6 +246,7 @@ export const FOOTER_COLUMNS = [
   {
     title: 'Tienda',
     links: [
+      { label: 'Productos',    view: 'catalogo' },
       { label: 'Indumentaria', view: 'indumentaria' },
       { label: 'Equipamiento', view: 'equipamiento' },
       { label: 'Calzado',      view: 'calzado' },
