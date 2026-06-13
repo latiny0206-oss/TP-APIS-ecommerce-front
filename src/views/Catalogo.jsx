@@ -214,11 +214,12 @@ function ProductoCard({ producto, onNavigate }) {
   )
 }
 
-export default function Catalogo({ categoria }) {
-  const { navigate } = useNavigation()
+export default function Catalogo() {
+  const { navigate, params } = useNavigation()
+  const categoriaInicial = params.categoria ?? null
 
   const [busqueda,   setBusqueda]   = useState('')
-  const [categorias, setCategorias] = useState(categoria ? [categoria] : [])
+  const [categorias, setCategorias] = useState(categoriaInicial ? [categoriaInicial] : [])
   const [marcas,     setMarcas]     = useState([])
   const [temporadas, setTemporadas] = useState([])
   const [precioMin,  setPrecioMin]  = useState(0)
@@ -231,9 +232,9 @@ export default function Catalogo({ categoria }) {
     if (!raw) return
     try {
       const saved = JSON.parse(raw)
-      if (saved.backView === (categoria || 'catalogo')) {
+      if (saved.backView === 'catalogo') {
         setBusqueda(saved.busqueda ?? '')
-        setCategorias(saved.categorias ?? (categoria ? [categoria] : []))
+        setCategorias(saved.categorias ?? (categoriaInicial ? [categoriaInicial] : []))
         setMarcas(saved.marcas ?? [])
         setTemporadas(saved.temporadas ?? [])
         setPrecioMin(saved.precioMin ?? 0)
@@ -272,7 +273,7 @@ export default function Catalogo({ categoria }) {
 
   const handleProductNavigate = (productoId) => {
     sessionStorage.setItem('catalogoState', JSON.stringify({
-      backView: categoria || 'catalogo',
+      backView: 'catalogo',
       busqueda, categorias, marcas, temporadas, precioMin, precioMax,
     }))
     navigate({ view: 'producto', params: { id: productoId } })
@@ -283,6 +284,11 @@ export default function Catalogo({ categoria }) {
     marcas, toggleMarca, temporadas, toggleTemporada,
     precioMin, setPrecioMin, precioMax, setPrecioMax, hasActiveFilters,
   }
+
+  const breadcrumbLabel =
+    categorias.length === 1
+      ? (TITLES[categorias[0]]?.title || 'Catálogo')
+      : 'Catálogo'
 
   const filtrados = useMemo(
     () => MOCK_PRODUCTOS.filter((p) => {
@@ -306,7 +312,7 @@ export default function Catalogo({ categoria }) {
             Inicio
           </button>
           <span className="text-rock/30">›</span>
-          <span className="text-rock">{title}</span>
+          <span className="text-rock">{breadcrumbLabel}</span>
         </nav>
 
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">

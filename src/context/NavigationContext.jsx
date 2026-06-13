@@ -1,28 +1,53 @@
 import { createContext, useContext, useReducer, useEffect } from 'react'
 
 const KNOWN_VIEWS = new Set([
-  'home', 'indumentaria', 'calzado', 'equipamiento', 'accesorios', 'catalogo',
+  'home', 'catalogo',
   'producto', 'carrito', 'checkout', 'contacto', 'faq', 'perfil', 'guia-tallas',
   'login', 'registro',
   'admin-dashboard', 'admin-products', 'admin-photos', 'admin-variants',
   'admin-catalog', 'admin-discounts', 'admin-orders', 'admin-users',
 ])
 
+// Rutas legadas que mapean a /catalogo?categoria=X
+const LEGACY_CATEGORY_MAP = {
+  indumentaria: 'indumentaria',
+  calzado:      'calzado',
+  equipamiento: 'equipamiento',
+  accesorios:   'equipamiento',
+}
+
 function viewFromPath() {
   const segment = window.location.pathname.replace(/^\//, '').split('/')[0]
+  if (LEGACY_CATEGORY_MAP[segment]) return 'catalogo'
   return segment && KNOWN_VIEWS.has(segment) ? segment : 'home'
 }
 
-// Lee parámetros persistidos en la query string (?id=1001) para sobrevivir recargas de página
+// Lee parámetros persistidos en la query string para sobrevivir recargas de página
 function paramsFromUrl() {
-  const id = new URLSearchParams(window.location.search).get('id')
-  return id !== null ? { id: Number(id) } : {}
+  const search = new URLSearchParams(window.location.search)
+  const id = search.get('id')
+  const categoria = search.get('categoria')
+  // Compatibilidad con URLs legadas como /indumentaria
+  const segment = window.location.pathname.replace(/^\//, '').split('/')[0]
+  const legacyCategoria = LEGACY_CATEGORY_MAP[segment]
+  return {
+    ...(id !== null ? { id: Number(id) } : {}),
+    ...(categoria
+      ? { categoria }
+      : legacyCategoria
+        ? { categoria: legacyCategoria }
+        : {}),
+  }
 }
 
-// Construye la URL completa incluyendo el query param de id cuando aplica
+// Construye la URL completa con todos los query params relevantes
 function buildPath(view, params) {
   const base = view === 'home' ? '/' : `/${view}`
-  return params?.id != null ? `${base}?id=${params.id}` : base
+  const search = new URLSearchParams()
+  if (params?.id != null)    search.set('id',       String(params.id))
+  if (params?.categoria)     search.set('categoria', params.categoria)
+  const qs = search.toString()
+  return qs ? `${base}?${qs}` : base
 }
 
 function reducer(state, action) {
@@ -57,7 +82,6 @@ export function NavigationProvider({ children }) {
     const view   = typeof payload === 'string' ? payload : payload.view
     const params = typeof payload === 'object'  ? (payload.params ?? {}) : {}
     const path   = buildPath(view, params)
-    // Comparar la URL completa (pathname + search) para detectar cambios de producto
     if (window.location.pathname + window.location.search !== path) {
       if (options.replace) {
         window.history.replaceState({ view, params }, '', path)

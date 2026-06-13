@@ -42,11 +42,11 @@ export default function Footer() {
                   {col.title}
                 </div>
                 <ul className="space-y-3">
-                  {col.links.map(({ label, view }) =>
+                  {col.links.map(({ label, view, params: linkParams }) =>
                     view ? (
                       <li key={label}>
                         <button
-                          onClick={() => navigate(view)}
+                          onClick={() => navigate(linkParams ? { view, params: linkParams } : view)}
                           className="text-sm lg:text-base text-ivory/85 hover:text-alpenglow link-underline transition-colors text-left"
                         >
                           {label}

@@ -56,21 +56,25 @@ onClick en <label> → onChange() → toggle(setCategorias)(value)
 
 ### Routing por estado (sin React Router)
 
-`NavigationContext.jsx` es nuestro router propio. `navigate('catalogo')` hace dos cosas:
-1. `dispatch({ payload: 'catalogo' })` → actualiza `currentView` en el contexto
-2. `window.history.pushState(...)` → sincroniza la URL del navegador
+`NavigationContext.jsx` es nuestro router propio. `navigate({ view: 'catalogo', params: { categoria: 'indumentaria' } })` hace dos cosas:
+1. `dispatch({ payload })` → actualiza `currentView` y `params` en el contexto vía `useReducer`
+2. `window.history.pushState(...)` → sincroniza la URL a `/catalogo?categoria=indumentaria`
 
 `App.jsx` lee `view` y renderiza condicionalmente:
 ```jsx
-{view === 'catalogo' && <Catalogo />}
+{view === 'catalogo' && (
+  <ShellPage>
+    <Catalogo key={params.categoria ?? '__all__'} />
+  </ShellPage>
+)}
 ```
-Es renderizado condicional puro — no hay `<Route>` ni `<Switch>`.
+El prop `key` es la clave de la reactividad: cuando el usuario navega de `/catalogo?categoria=calzado` a `/catalogo?categoria=indumentaria`, React detecta que el `key` cambió y **fuerza el remonte** del componente `Catalogo`. Esto garantiza que el estado inicial (`useState`) y el `useEffect` de restauración de `sessionStorage` se ejecuten frescos para cada categoría, sin ningún efecto secundario de estado previo.
 
 ### Persistencia de filtros con sessionStorage
 
-Cuando el usuario navega del catálogo al detalle de producto, la app guarda el estado de filtros en `sessionStorage` bajo la clave `catalogoState`. Al volver desde el detalle, `Catalogo.jsx` lee esa clave en un `useEffect` de montaje y restaura exactamente los mismos filtros. Esto evita que el usuario tenga que volver a filtrar desde cero.
+Cuando el usuario navega del catálogo al detalle de producto, la app guarda el estado de filtros en `sessionStorage` bajo la clave `catalogoState` (con `backView: 'catalogo'`). Al volver desde el detalle, `Catalogo.jsx` lee esa clave en un `useEffect` de montaje y restaura exactamente los mismos filtros — búsqueda, categorías, marcas, temporadas y rango de precios. Esto evita que el usuario tenga que volver a filtrar desde cero.
 
-El mismo mecanismo se usa cuando el usuario regresa desde el carrito con el botón "Continuar comprando".
+El mismo mecanismo funciona cuando el usuario regresa desde el carrito con el botón "Continuar comprando". La unificación de la ruta a `/catalogo` simplificó la lógica: la condición `saved.backView === 'catalogo'` es ahora universal, sin necesidad de comparar contra nombres de vistas específicas de categoría.
 
 ### Talles con stock cero — UX defensiva
 
@@ -94,7 +98,14 @@ Para evitar que un usuario seleccione un talle sin stock (lo que generaría un p
 |---|---|
 | `MOCK_PRODUCTOS.filter(p => p.categoria === cat.categoriaKey).length` | Computa el total de productos por categoría |
 | `sessionStorage.setItem('catalogoState', ...)` | Guarda el filtro de categoría antes de navegar al catálogo |
-| `navigate('catalogo')` | Siempre va a `/catalogo` (no a la ruta de categoría separada) |
+| `navigate('catalogo')` | Siempre va a `/catalogo` — el filtro viaja en `sessionStorage`, no en la URL |
+
+### Navbar.jsx / data/index.js
+| Elemento | Para qué sirve |
+|---|---|
+| `NAV_ITEMS[i].params = { categoria: '...' }` | Los ítems del nav ahora llevan sus propios params; el componente los pasa a `navigate()` sin hardcodeo |
+| `isItemActive(item)` | Compara `currentView === item.view && params.categoria === item.params?.categoria` — el estado activo del link refleja el filtro, no solo la vista |
+| `go(view, navParams)` | Wrapper que construye el payload `{ view, params }` y cierra el menú móvil |
 
 ### Catalogo.jsx
 | Hook / Función | Para qué sirve |
@@ -129,10 +140,24 @@ Para evitar que un usuario seleccione un talle sin stock (lo que generaría un p
 
 Son layouts livianos de 5-8 líneas que actúan como "armadores" de Navbar + contenido + Footer. Extraerlos a archivos separados agregaría complejidad de importaciones sin ningún beneficio real — son demasiado simples para justificar su propio archivo. En React, el criterio para extraer un componente a su propio archivo es: ¿lo van a importar más de una vista? Si no, queda inline.
 
-### ¿Por qué el catálogo siempre muestra "PRODUCTOS" y no el nombre de la categoría?
+### ¿Por qué unificamos toda la navegación en la ruta única `/catalogo`?
 
-La decisión de arquitectura fue centralizar toda la lista de productos en una única ruta `/catalogo`. Las rutas `/indumentaria`, `/calzado` y `/equipamiento` siguen existiendo para compatibilidad, pero todas renderizan el mismo componente `<Catalogo>` y el título siempre es "PRODUCTOS". Los filtros de categoría se aplican vía estado reactivo, no vía rutas distintas. Esto simplifica el componente y hace que la experiencia de "limpiar filtros" sea consistente: siempre muestra el catálogo completo sin importar cómo llegó el usuario.
+La versión anterior tenía rutas separadas `/indumentaria`, `/calzado`, `/equipamiento` en el router. Cada una renderizaba `<Catalogo categoria="...">` y el componente recibía un prop estático para inicializar los filtros. Este diseño generaba tres problemas concretos:
+
+1. **Redirecciones rotas:** cualquier enlace que apuntara a `/indumentaria` en lugar de `/catalogo` era una ruta separada que el router debía conocer; un typo o un enlace mal actualizado producía una vista en blanco o el fallback al home.
+2. **Estado duplicado:** el componente `Catalogo` se montaba y desmontaba con cada cambio de categoría, perdiendo el estado de los filtros cruzados (por ejemplo, "Calzado de la marca Salomon").
+3. **Inconsistencia de URLs:** la URL `/indumentaria` no tenía query params y no era extensible; agregar un segundo filtro simultáneo era imposible sin rediseñar el router.
+
+La solución fue **centralizar en `/catalogo?categoria=X`**. La arquitectura resultante es:
+
+- `NavigationContext` extiende `buildPath()` para incluir `categoria` en la query string y `paramsFromUrl()` para leerlo al cargar. Las URLs legadas (`/indumentaria`) se mapean automáticamente a `{ view: 'catalogo', params: { categoria: 'indumentaria' } }` sin romper bookmarks.
+- `App.jsx` renderiza un único branch `{view === 'catalogo' && <Catalogo key={params.categoria ?? '__all__'} />}`. El `key` dinámico controla cuándo React remonta el componente: cambiar de categoría fuerza un remonte limpio; navegar a "Productos" (sin categoría) limpia todos los filtros.
+- `Catalogo.jsx` lee `params.categoria` del contexto para inicializar su estado local, sin depender de props externos.
+
+El título `"PRODUCTOS"` es invariante porque el catálogo es conceptualmente uno solo — la categoría es un filtro, no una vista distinta. El breadcrumb refleja la categoría activa cuando hay exactamente una seleccionada, usando el objeto `TITLES` del módulo.
 
 ### ¿Por qué usamos `sessionStorage` en lugar de un Context para los filtros del catálogo?
 
 El estado de los filtros del catálogo es efímero — solo importa mientras el usuario navega entre catálogo, detalle y carrito en la misma sesión. `sessionStorage` es el storage apropiado para este caso: persiste entre navegaciones del mismo tab, pero se limpia cuando el usuario cierra el tab o el navegador. No tiene sentido meterlo en un Context global que viviría durante toda la sesión aunque el usuario no esté en el catálogo.
+
+La decisión de usar `sessionStorage` en lugar de pasar los filtros como query params adicionales en la URL fue deliberada: los filtros complejos (múltiples categorías + marcas + rango de precios) generarían URLs muy largas y difíciles de compartir. `sessionStorage` los mantiene privados a la sesión de navegación, que es exactamente la semántica que necesitamos.
