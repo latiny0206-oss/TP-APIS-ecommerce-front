@@ -115,6 +115,42 @@ const toggleItem = (key, value) => {
 
 **Ventaja:** el botón "Volver" del navegador restaura automáticamente todos los filtros, ya que la URL anterior los contiene. Se eliminó completamente el sessionStorage.
 
+### Filtro de precio — estado local con validación diferida (`onBlur`)
+
+El filtro de precio es el **único filtro que no actualiza la URL en tiempo real** mientras el usuario escribe. Esto es intencional y se debe a cómo se manejan los inputs numéricos.
+
+**¿Por qué no se puede validar en `onChange`?**
+Si el usuario quiere escribir "155" en el campo máximo (estando el mínimo en 120), los valores intermedios son "1" y "15" — ambos menores al mínimo. Si se validara en cada tecla, el input quedaría bloqueado: la validación rechazaría "1" y el campo nunca se actualizaría.
+
+**Solución implementada: estado local de display + validación en `onBlur`**
+
+```jsx
+// Estado local que controla lo que muestra el input (sin validación)
+const [inputMin, setInputMin] = useState(String(precioMin))
+const [inputMax, setInputMax] = useState(String(precioMax))
+
+// onChange → solo actualiza el display, sin rechazar ningún valor intermedio
+onChange={(e) => setInputMax(e.target.value)}
+
+// onBlur → valida, clampea al rango permitido y sincroniza estado real + display
+onBlur={() => {
+  const parsed = parseInt(inputMax) || 0
+  const clamped = Math.min(Math.max(parsed, precioMin), PRECIO_GLOBAL_MAX)
+  setPrecioMax(clamped)   // actualiza el filtro real (y la URL si estuviera sincronizada)
+  setInputMax(String(clamped))  // sincroniza el display con el valor validado
+}}
+```
+
+**Flujo completo:**
+1. El usuario enfoca el campo máximo (muestra "159990").
+2. Escribe "155" de a una tecla → el input muestra "1", "15", "155" sin bloquearse.
+3. El usuario hace clic afuera o presiona Tab → `onBlur` valida: 155 ≥ precioMin → se aplica.
+4. Si el usuario escribe un valor menor al mínimo (ej: "50" con mínimo en 120) → `onBlur` lo corrige a 120 automáticamente.
+
+Este comportamiento también cubre los **botones spinner** del input numérico (▲▼), ya que el navegador dispara `onChange` y luego `onBlur` al usarlos.
+
+**Diferencia respecto a categoría y marca:** esos filtros usan `setSearchParams` directamente en el `onChange` del checkbox → la URL cambia en tiempo real con cada tilde. El precio en cambio tiene un estado de display intermedio y solo sincroniza al perder el foco.
+
 ### `navigate(-1)` — navegación basada en historial
 
 En `ProductoDetalle.jsx`, el botón "Volver a Productos" hace:

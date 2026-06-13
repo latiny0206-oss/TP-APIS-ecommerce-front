@@ -66,6 +66,9 @@ function FilterContent({ state, onReset }) {
     hasActiveFilters,
   } = state
 
+  const [inputMin, setInputMin] = useState(String(precioMin))
+  const [inputMax, setInputMax] = useState(String(precioMax))
+
   const countFor = (dimension, value) =>
     MOCK_PRODUCTOS.filter((p) => {
       const cats = dimension === 'categoria' ? [value] : (categorias.length ? categorias : null)
@@ -118,19 +121,27 @@ function FilterContent({ state, onReset }) {
           <div className="flex items-end gap-2">
             <div className="flex-1">
               <div className="font-mono text-[9px] tracking-widest-2 uppercase text-rock/40 mb-1">Mínimo</div>
-              <input type="number" value={precioMin}
-                onChange={(e) => { const newMin = parseInt(e.target.value) || 0; if (newMin <= precioMax) setPrecioMin(newMin); }}
-                onFocus={(e) => { if (precioMin === 0) e.target.value = ''; }}
-                onBlur={(e) => { if (e.target.value === '') setPrecioMin(0); }}
+              <input type="number" value={inputMin}
+                onChange={(e) => setInputMin(e.target.value)}
+                onBlur={() => {
+                  const parsed = parseInt(inputMin) || 0
+                  const clamped = Math.min(Math.max(parsed, 0), precioMax)
+                  setPrecioMin(clamped)
+                  setInputMin(String(clamped))
+                }}
                 min={0} max={precioMax} step={5000} className="input-base w-full text-sm" />
             </div>
             <span className="text-rock/30 pb-3 shrink-0">—</span>
             <div className="flex-1">
               <div className="font-mono text-[9px] tracking-widest-2 uppercase text-rock/40 mb-1">Máximo</div>
-              <input type="number" value={precioMax}
-                onChange={(e) => { const newMax = parseInt(e.target.value) || 0; if (newMax >= precioMin) setPrecioMax(newMax); }}
-                onFocus={(e) => { if (precioMax === 0) e.target.value = ''; }}
-                onBlur={(e) => { if (e.target.value === '') setPrecioMax(0); }}
+              <input type="number" value={inputMax}
+                onChange={(e) => setInputMax(e.target.value)}
+                onBlur={() => {
+                  const parsed = parseInt(inputMax) || 0
+                  const clamped = Math.min(Math.max(parsed, precioMin), PRECIO_GLOBAL_MAX)
+                  setPrecioMax(clamped)
+                  setInputMax(String(clamped))
+                }}
                 min={precioMin} max={PRECIO_GLOBAL_MAX} step={5000} className="input-base w-full text-sm" />
             </div>
           </div>
