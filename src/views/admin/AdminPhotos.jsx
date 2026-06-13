@@ -37,7 +37,7 @@ export default function AdminPhotos() {
           setQueue((q) => q.map((it) => it.id === id ? { ...it, progress: 100, done: true } : it))
           setPhotos((ph) => [
             ...ph,
-            { id, src: 'https://images.unsplash.com/photo-1622260614153-03223fb72052?auto=format&fit=crop&w=600&q=70', name, size: `${sizeMb} MB` },
+            { id, src: 'https://images.unsplash.com/photo-1739133303086-7ef752fffc53?auto=format&fit=crop&w=600&q=70', name, size: `${sizeMb} MB` },
           ])
         } else {
           setQueue((q) => q.map((it) => it.id === id ? { ...it, progress: Math.round(p) } : it))
