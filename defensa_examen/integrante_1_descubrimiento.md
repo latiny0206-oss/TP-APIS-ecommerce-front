@@ -14,7 +14,7 @@ Yo me ocupo del flujo de **descubrimiento**: cómo el usuario llega al sitio, na
 
 **Demo en vivo — guía paso a paso:**
 
-1. **Home** → Mostramos el `HeroSection`, la sección `Categories` con los conteos dinámicos de productos, `Featured` con los productos de la línea Cumbre Pro, y la sección de descubrimiento que lleva al catálogo completo. Todo el home es la función `LandingPage` en `App.jsx` — cuatro secciones compuestas.
+1. **Home** → Mostramos el `HeroSection`, la sección `Categories` con los conteos dinámicos de productos, `Featured` con los productos de la línea Cumbre Pro, y la sección de descubrimiento que lleva al catálogo completo. Todo el home es la función `LandingPage` en `App.jsx` — cuatro secciones compuestas. Al hacer click en una tarjeta de categoría, `navigate({ view: 'catalogo', params: { categoria: 'equipamiento' } })` lleva a `/catalogo?categoria=equipamiento` — el mismo mecanismo que usa el Navbar.
 
 2. **Catálogo** → Click en 'Productos' del menú. Se monta `Catalogo.jsx` sin categoría inicial. El título es siempre 'PRODUCTOS'. Los filtros de categoría, marca, temporada y precio están en estado local con `useState`. Al tildar 'Calzado' y 'Indumentaria' al mismo tiempo, los `useMemo` recalculan `filtrados` en tiempo real.
 
@@ -96,9 +96,8 @@ Para evitar que un usuario seleccione un talle sin stock (lo que generaría un p
 ### Categories.jsx
 | Hook / Función | Para qué sirve |
 |---|---|
-| `MOCK_PRODUCTOS.filter(p => p.categoria === cat.categoriaKey).length` | Computa el total de productos por categoría |
-| `sessionStorage.setItem('catalogoState', ...)` | Guarda el filtro de categoría antes de navegar al catálogo |
-| `navigate('catalogo')` | Siempre va a `/catalogo` — el filtro viaja en `sessionStorage`, no en la URL |
+| `MOCK_PRODUCTOS.filter(p => p.categoria === cat.categoriaKey).length` | Computa el total de productos por categoría en tiempo real desde el array mock |
+| `navigate({ view: 'catalogo', params: { categoria: cat.categoriaKey } })` | Navega a `/catalogo?categoria=equipamiento` — el filtro viaja en la URL como query param, igual que el Navbar |
 
 ### Navbar.jsx / data/index.js
 | Elemento | Para qué sirve |
