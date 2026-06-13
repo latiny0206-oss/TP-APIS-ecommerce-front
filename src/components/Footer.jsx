@@ -1,8 +1,15 @@
 import { Mountain } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { FOOTER_COLUMNS, FOOTER_LEGAL_LINKS } from '../data/index.js'
+import { useAuth } from '../context/AuthContext.jsx'
 
 export default function Footer() {
+  const { isLoggedIn } = useAuth()
+
+  const resolveLink = ({ to, requiresAuth }) => {
+    if (requiresAuth && !isLoggedIn) return '/login'
+    return to
+  }
 
   return (
     <footer
@@ -41,20 +48,20 @@ export default function Footer() {
                   {col.title}
                 </div>
                 <ul className="space-y-3">
-                  {col.links.map(({ label, to }) =>
-                    to ? (
-                      <li key={label}>
+                  {col.links.map((link) =>
+                    link.to ? (
+                      <li key={link.label}>
                         <Link
-                          to={to}
+                          to={resolveLink(link)}
                           className="text-sm lg:text-base text-ivory/85 hover:text-alpenglow link-underline transition-colors"
                         >
-                          {label}
+                          {link.label}
                         </Link>
                       </li>
                     ) : (
-                      <li key={label}>
+                      <li key={link.label}>
                         <span className="text-sm lg:text-base text-ivory/85 link-underline">
-                          {label}
+                          {link.label}
                         </span>
                       </li>
                     )

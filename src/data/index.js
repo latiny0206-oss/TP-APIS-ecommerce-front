@@ -257,7 +257,7 @@ export const FOOTER_COLUMNS = [
     links: [
       { label: 'Preguntas Frecuentes', to: '/faq' },
       { label: 'Guía de tallas',       to: '/guia-tallas' },
-      { label: 'Estado de mi orden',   to: '/perfil' },
+      { label: 'Estado de mi orden',   to: '/perfil', requiresAuth: true },
     ],
   },
 ]
