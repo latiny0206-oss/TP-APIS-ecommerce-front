@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Search, SlidersHorizontal, X, Check,
@@ -68,6 +68,9 @@ function FilterContent({ state, onReset }) {
 
   const [inputMin, setInputMin] = useState(String(precioMin))
   const [inputMax, setInputMax] = useState(String(precioMax))
+
+  useEffect(() => { setInputMin(String(precioMin)) }, [precioMin])
+  useEffect(() => { setInputMax(String(precioMax)) }, [precioMax])
 
   const countFor = (dimension, value) =>
     MOCK_PRODUCTOS.filter((p) => {
