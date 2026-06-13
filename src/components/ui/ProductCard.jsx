@@ -1,26 +1,11 @@
-import { ShoppingCart, Star } from 'lucide-react'
+import { ArrowRight, Star } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { useCart }     from '../../context/CartContext.jsx'
 import StatusBadge from './StatusBadge.jsx'
 import { fmt, computePrice } from '../../data/index.js'
 
 export default function ProductCard({ product, dark = false }) {
-  const navigate      = useNavigate()
-  const { addToCart } = useCart()
+  const navigate            = useNavigate()
   const { price, oldPrice } = computePrice(product)
-
-  const handleAdd = (e) => {
-    e.stopPropagation()
-    const variant = product.variants?.find((v) => v.stock > 0) || product.variants?.[0]
-    addToCart({
-      variantId: variant?.id ?? product.id * 100,
-      productId: product.id,
-      nombre:    product.name || product.nombre,
-      precio:    variant?.precio ?? price,
-      imagen:    product.image || product.images?.[0],
-      talle:     variant?.talla ?? '-',
-    })
-  }
 
   const outOfStock = product.stock === 0
 
@@ -57,11 +42,11 @@ export default function ProductCard({ product, dark = false }) {
 
         {!outOfStock && (
           <button
-            onClick={handleAdd}
+            onClick={(e) => { e.stopPropagation(); navigate(`/producto/${product.id}`) }}
             className="absolute left-3 right-3 bottom-3 z-10 py-3 bg-ivory hover:bg-pine hover:text-ivory text-rock font-narrow font-bold uppercase tracking-widest-2 text-xs transition-all translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 flex items-center justify-center gap-2"
           >
-            <ShoppingCart size={14} strokeWidth={2} />
-            Agregar al carrito
+            <ArrowRight size={14} strokeWidth={2} />
+            Ver más
           </button>
         )}
       </div>

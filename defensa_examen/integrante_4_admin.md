@@ -232,7 +232,22 @@ El `ProductsProvider` **no** está en `main.jsx`. Si estuviera ahí, inicializar
 
 ---
 
-## 5. Preguntas probables del examen
+## 5. Hooks utilizados
+
+| Hook | Tipo | Dónde se usa | Para qué |
+|---|---|---|---|
+| `useState` | React | AdminProducts, AdminPhotos, AdminUsers | Estado local: query, drawer abierto/cerrado, lista de usuarios, drag-over, cola de subida |
+| `useState(() => ...)` | React (lazy init) | ProductDrawer, AdminPhotos, AdminUsers drawer | Inicializar el form con datos del ítem a editar — el cálculo corre solo en el primer render |
+| `useEffect` | React | AdminUsers | Sincronizar el form del drawer cuando cambia el usuario en edición |
+| `useNavigate` | React Router DOM | AdminLayout, AdminProducts, AdminPhotos | Navegar al abrir/cerrar drawer, logout → `/`, volver a productos |
+| `useLocation` | React Router DOM | AdminLayout | Leer `pathname` para derivar el label del header |
+| `useParams` | React Router DOM | AdminProducts, AdminPhotos | Leer `:id` para auto-abrir el drawer; leer `:productId` para la breadcrumb |
+| `useProducts` | ProductsContext | AdminDashboard, AdminProducts, AdminPhotos | Leer y mutar el catálogo (`ids`, `byId`, `upsert`, `remove`) |
+| `useAuth` | AuthContext | AdminLayout | Obtener `logout()` para el botón Salir |
+
+---
+
+## 6. Preguntas probables del examen
 
 **P: ¿Qué diferencia hay entre `AccountGuard` y `AdminGuard`?**
 R: `AccountGuard` solo verifica `isLoggedIn` — cualquier usuario autenticado puede pasar. `AdminGuard` verifica además `user?.rol === 'admin'`. Un cliente logueado que accede a `/admin/dashboard` pasa `AccountGuard` pero no `AdminGuard`, que lo redirige a `/login`. Las condiciones son diferentes porque los dominios son diferentes: rutas de cuenta vs panel de control.

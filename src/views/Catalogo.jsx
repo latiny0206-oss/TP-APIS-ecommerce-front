@@ -2,9 +2,8 @@ import { useState, useMemo, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Search, SlidersHorizontal, X, Check,
-  ShoppingCart, ArrowLeft,
+  ArrowRight, ArrowLeft,
 } from 'lucide-react'
-import { useCart } from '../context/CartContext.jsx'
 import { MOCK_PRODUCTOS, fmtPrice, precioFinal } from '../mocks/data.js'
 import Button from '../components/ui/Button.jsx'
 
@@ -167,19 +166,7 @@ function FilterContent({ state, onReset }) {
 }
 
 function ProductoCard({ producto, onNavigate }) {
-  const { addToCart } = useCart()
   const pf = precioFinal(producto)
-
-  const handleAdd = (e) => {
-    e.stopPropagation()
-    addToCart({
-      productId: producto.id,
-      nombre:    producto.nombre,
-      precio:    pf,
-      imagen:    producto.imagen,
-      talle:     producto.talles?.[0] ?? null,
-    })
-  }
 
   return (
     <article
@@ -204,10 +191,10 @@ function ProductoCard({ producto, onNavigate }) {
             </span>
           </div>
         )}
-        <button onClick={handleAdd}
+        <button onClick={(e) => { e.stopPropagation(); onNavigate(producto.id) }}
           className="absolute left-3 right-3 bottom-3 z-10 py-3 bg-ivory hover:bg-pine hover:text-ivory text-rock font-narrow font-bold uppercase tracking-widest-2 text-xs transition-all translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 flex items-center justify-center gap-2">
-          <ShoppingCart size={14} strokeWidth={2} />
-          Agregar al carrito
+          <ArrowRight size={14} strokeWidth={2} />
+          Ver más
         </button>
       </div>
 
