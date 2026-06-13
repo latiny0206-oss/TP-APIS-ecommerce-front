@@ -119,7 +119,7 @@ function FilterContent({ state, onReset }) {
             <div className="flex-1">
               <div className="font-mono text-[9px] tracking-widest-2 uppercase text-rock/40 mb-1">Mínimo</div>
               <input type="number" value={precioMin}
-                onChange={(e) => setPrecioMin(Math.min(Number(e.target.value), precioMax))}
+                onChange={(e) => { const newMin = parseInt(e.target.value) || 0; if (newMin <= precioMax) setPrecioMin(newMin); }}
                 onFocus={(e) => { if (precioMin === 0) e.target.value = ''; }}
                 onBlur={(e) => { if (e.target.value === '') setPrecioMin(0); }}
                 min={0} max={precioMax} step={5000} className="input-base w-full text-sm" />
@@ -128,7 +128,7 @@ function FilterContent({ state, onReset }) {
             <div className="flex-1">
               <div className="font-mono text-[9px] tracking-widest-2 uppercase text-rock/40 mb-1">Máximo</div>
               <input type="number" value={precioMax}
-                onChange={(e) => setPrecioMax(Math.min(PRECIO_GLOBAL_MAX, Math.max(Number(e.target.value), precioMin)))}
+                onChange={(e) => { const newMax = parseInt(e.target.value) || 0; if (newMax >= precioMin) setPrecioMax(newMax); }}
                 onFocus={(e) => { if (precioMax === 0) e.target.value = ''; }}
                 onBlur={(e) => { if (e.target.value === '') setPrecioMax(0); }}
                 min={precioMin} max={PRECIO_GLOBAL_MAX} step={5000} className="input-base w-full text-sm" />
