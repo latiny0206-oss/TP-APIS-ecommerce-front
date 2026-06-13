@@ -1,6 +1,6 @@
 import {
   Mountain, LayoutDashboard, Package, Layers, Sliders,
-  Ticket, ClipboardList, Users, Plus, Settings, LogOut, ChevronRight,
+  Ticket, ClipboardList, Users, Plus, LogOut, ChevronRight,
 } from 'lucide-react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { ProductsProvider } from '../../context/ProductsContext.jsx'
@@ -92,10 +92,7 @@ export default function AdminLayout() {
               onClick={() => navigate('/admin/productos')}>
               Nuevo producto
             </Button>
-            <div className="flex items-center justify-between mt-3 px-2">
-              <button className="font-mono text-[10px] tracking-widest-2 uppercase text-ivory/55 hover:text-ivory flex items-center gap-1.5">
-                <Settings size={12} /> Ajustes
-              </button>
+            <div className="flex items-center justify-end mt-3 px-2">
               <button onClick={() => { logout(); navigate('/') }}
                 className="font-mono text-[10px] tracking-widest-2 uppercase text-ivory/55 hover:text-alpenglow flex items-center gap-1.5">
                 <LogOut size={12} /> Salir

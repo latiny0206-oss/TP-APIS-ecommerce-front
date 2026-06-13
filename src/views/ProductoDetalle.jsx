@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { ArrowLeft, ShoppingCart, Minus, Plus, Check, X } from 'lucide-react'
 import { useCart }       from '../context/CartContext.jsx'
 import { getProductoById, fmtPrice, precioFinal } from '../mocks/data.js'
@@ -13,7 +13,16 @@ const CATEGORIA_LABELS = {
 
 export default function ProductoDetalle() {
   const navigate      = useNavigate()
+  const location      = useLocation()
   const { id }        = useParams()
+
+  const handleVolver = () => {
+    if (location.state?.from === 'catalogo') {
+      navigate(-1)
+    } else {
+      navigate('/catalogo')
+    }
+  }
   const { addToCart } = useCart()
   const producto = getProductoById(Number(id))
 
@@ -85,7 +94,7 @@ export default function ProductoDetalle() {
             Inicio
           </Link>
           <span className="text-rock/30">›</span>
-          <button onClick={() => navigate(-1)} className="hover:text-alpenglow transition-colors">
+          <button onClick={handleVolver} className="hover:text-alpenglow transition-colors">
             {categoriaLabel}
           </button>
           <span className="text-rock/30">›</span>
@@ -200,7 +209,7 @@ export default function ProductoDetalle() {
             </div>
 
             <div className="mt-8 pt-8 border-t border-rock/10">
-              <button onClick={() => navigate(-1)}
+              <button onClick={handleVolver}
                 className="inline-flex items-center gap-2 font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 hover:text-rock transition-colors">
                 <ArrowLeft size={12} /> Volver a Productos
               </button>

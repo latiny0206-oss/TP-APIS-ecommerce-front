@@ -24,7 +24,7 @@
 
 3. **Filtros y Reset** → Mostrar que "Limpiar filtros" llama `setSearchParams({}, { replace: true })` y deja la URL en `/catalogo`. El rango de precio está en estado local (`useState`) y también se resetea.
 
-4. **Detalle** → Click en un producto. La URL pasa de `/catalogo?categoria=calzado` a `/producto/2001`. El componente lee el ID con `useParams()` — no con query params. Seleccionar un talle con stock, ver el conteo disponible. Seleccionar un talle sin stock (cruz roja, no clickeable). El botón "Volver a Productos" hace `navigate(-1)` — el navegador retrocede a `/catalogo?categoria=calzado` con todos los filtros intactos.
+4. **Detalle** → Click en un producto. La URL pasa de `/catalogo?categoria=calzado` a `/producto/2001`. El componente lee el ID con `useParams()` — no con query params. Seleccionar un talle con stock, ver el conteo disponible. Seleccionar un talle sin stock (cruz roja, no clickeable). El botón "Volver a Productos" usa `location.state?.from` para decidir cómo navegar: si el usuario vino desde el catálogo (`from === 'catalogo'`), hace `navigate(-1)` y restaura todos los filtros; si vino desde otro lado (Home, Featured, acceso directo), navega a `/catalogo` como fallback seguro.
 
 5. **Cierre del bloque:**
 > "Dejo la posta a [integrante 2] que les muestra cómo a partir del detalle se agrega al carrito y se completa la compra."
@@ -151,13 +151,29 @@ Este comportamiento también cubre los **botones spinner** del input numérico (
 
 **Diferencia respecto a categoría y marca:** esos filtros usan `setSearchParams` directamente en el `onChange` del checkbox → la URL cambia en tiempo real con cada tilde. El precio en cambio tiene un estado de display intermedio y solo sincroniza al perder el foco.
 
-### `navigate(-1)` — navegación basada en historial
+### `handleVolver` — navegación condicional basada en el origen
 
-En `ProductoDetalle.jsx`, el botón "Volver a Productos" hace:
+En `ProductoDetalle.jsx`, el botón "Volver a Productos" ya no usa `navigate(-1)` incondicionalmente. En cambio, lee `location.state?.from` para saber desde dónde llegó el usuario:
+
 ```jsx
-<button onClick={() => navigate(-1)}>Volver a Productos</button>
+const location = useLocation()
+
+const handleVolver = () => {
+  if (location.state?.from === 'catalogo') {
+    navigate(-1)  // restaura la URL con los filtros intactos
+  } else {
+    navigate('/catalogo')  // fallback seguro para cualquier otro origen
+  }
+}
 ```
-`navigate(-1)` es equivalente al botón "Atrás" del navegador. La URL anterior (con los filtros del catálogo) se restaura automáticamente desde el historial del navegador.
+
+**¿Por qué este cambio?** `navigate(-1)` funciona bien si la entrada anterior en el historial es el catálogo, pero si el usuario llegó al detalle desde la Home (sección Featured, Hero, etc.), el historial anterior es `/` — y el botón lo mandaría de vuelta a la Home en vez del catálogo.
+
+**¿Cómo se establece `from`?** En `Catalogo.jsx`, al hacer click en un producto se pasa el estado:
+```jsx
+navigate(`/producto/${productoId}`, { state: { from: 'catalogo' } })
+```
+Desde `Featured.jsx` y demás componentes de la Home no se pasa ningún estado (o se pasa `{ from: 'home' }`), con lo cual `location.state?.from` no es `'catalogo'` y se activa el fallback a `/catalogo`.
 
 ### Renderizado condicional en `ProductoDetalle.jsx`
 
@@ -188,7 +204,7 @@ R: Es un componente de React Router que actúa como "slot" dentro de un layout r
 R: Los route params son para recursos identificados por ID — son parte del recurso, no filtros opcionales. `/producto/1001` y `/producto/1002` son dos recursos distintos. Los query params son para filtros opcionales que se pueden combinar, como en `/catalogo?categoria=calzado&marca=Cumbre+Pro`.
 
 **P: ¿Cómo se restauran los filtros del catálogo al presionar "Volver" desde el detalle?**
-R: La URL `/catalogo?categoria=calzado&marca=Cumbre+Pro` queda en el historial del navegador cuando se navega a `/producto/1001`. Al hacer `navigate(-1)`, el navegador vuelve a esa URL y React Router vuelve a renderizar `Catalogo.jsx` con `searchParams` que ya contiene los filtros. No se necesita sessionStorage.
+R: Cuando el usuario navega a un producto desde el catálogo, `Catalogo.jsx` pasa `{ state: { from: 'catalogo' } }` en el `navigate`. Al llegar a `ProductoDetalle.jsx`, el botón "Volver a Productos" lee `location.state?.from`: si es `'catalogo'`, hace `navigate(-1)` y el navegador restaura la URL anterior (ej: `/catalogo?categoria=calzado&marca=Cumbre+Pro`) con todos los filtros intactos. Si el usuario llegó desde la Home u otro origen, el botón navega directamente a `/catalogo` como fallback seguro. No se necesita sessionStorage en ningún caso.
 
 **P: ¿Qué es `replace: true` en `setSearchParams`?**
 R: Hace que el cambio de URL reemplace la entrada actual del historial en lugar de agregar una nueva. Se usa en los filtros del catálogo para que tildar/destildar filtros no genere decenas de entradas en el historial — evita que el usuario tenga que presionar "Atrás" 15 veces para salir del catálogo.

@@ -278,7 +278,7 @@ export default function Catalogo() {
   }
 
   const handleProductNavigate = (productoId) => {
-    navigate(`/producto/${productoId}`)
+    navigate(`/producto/${productoId}`, { state: { from: 'catalogo' } })
   }
 
   const filterState = {
