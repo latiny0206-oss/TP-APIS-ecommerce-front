@@ -101,7 +101,7 @@ function PageLoader() {
 
 // ─── Router ────────────────────────────────────────────────────────────────
 export default function App() {
-  const { view } = useNavigation()
+  const { view, params } = useNavigation()
 
   // Scroll to top on every view change
   useEffect(() => {
@@ -140,12 +140,11 @@ export default function App() {
       {view === 'home' && <LandingPage />}
 
       <Suspense fallback={<PageLoader />}>
-        {view === 'indumentaria' && <ShellPage><Catalogo categoria="indumentaria" /></ShellPage>}
-        {view === 'calzado'      && <ShellPage><Catalogo categoria="calzado" /></ShellPage>}
-        {view === 'equipamiento' && <ShellPage><Catalogo categoria="equipamiento" /></ShellPage>}
-        {view === 'catalogo'     && <ShellPage><Catalogo categoria={null} /></ShellPage>}
-        {/* Redirige la URL legacy /accesorios a equipamiento sin romper nada */}
-        {view === 'accesorios'   && <ShellPage><Catalogo categoria="equipamiento" /></ShellPage>}
+        {view === 'catalogo' && (
+          <ShellPage>
+            <Catalogo key={params.categoria ?? '__all__'} />
+          </ShellPage>
+        )}
         {view === 'producto'     && <ShellPage><ProductoDetalle /></ShellPage>}
         {view === 'carrito'      && <ShellPage><Carrito /></ShellPage>}
         {view === 'checkout'     && <Checkout />}
@@ -155,7 +154,7 @@ export default function App() {
         {view === 'guia-tallas'  && <ShellPage><GuiaTallas /></ShellPage>}
 
         {/* Fallback a home si la vista no está registrada */}
-        {!['home','indumentaria','calzado','equipamiento','accesorios','catalogo','producto','carrito','checkout','contacto','faq','perfil','guia-tallas'].includes(view) && (
+        {!['home','catalogo','producto','carrito','checkout','contacto','faq','perfil','guia-tallas'].includes(view) && (
           <LandingPage />
         )}
       </Suspense>

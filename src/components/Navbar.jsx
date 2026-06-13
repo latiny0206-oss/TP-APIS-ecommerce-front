@@ -32,7 +32,7 @@ function IconButton({ children, className = '', ...props }) {
 }
 
 export default function Navbar() {
-  const { view: currentView, navigate } = useNavigation()
+  const { view: currentView, params, navigate } = useNavigation()
   const { isLoggedIn, user, logout }    = useAuth()
   const { totals }                      = useCart()
   const cartCount = totals.itemCount
@@ -53,10 +53,14 @@ export default function Navbar() {
       ? 'bg-rock/90 backdrop-blur-md border-b border-ivory/10'
       : 'bg-transparent border-b border-ivory/5'
 
-  const go = (view) => {
-    navigate(view)
+  const go = (view, navParams) => {
+    navigate(navParams ? { view, params: navParams } : view)
     setMobileOpen(false)
   }
+
+  const isItemActive = (item) =>
+    currentView === item.view &&
+    (!item.params?.categoria || params.categoria === item.params.categoria)
 
   const goAllProducts = () => {
     sessionStorage.removeItem('catalogoState')
@@ -92,15 +96,15 @@ export default function Navbar() {
             <nav className="hidden lg:flex items-center gap-9">
               <button onClick={goAllProducts}
                 className={`text-[13px] tracking-widest-2 uppercase font-medium link-underline transition-colors ${
-                  currentView === 'catalogo' ? 'text-ivory' : 'text-ivory/75 hover:text-ivory'
+                  currentView === 'catalogo' && !params.categoria ? 'text-ivory' : 'text-ivory/75 hover:text-ivory'
                 }`}>
                 Productos
               </button>
               {NAV_ITEMS.map((item) => (
                 <button key={item.label}
-                  onClick={() => go(item.view)}
+                  onClick={() => go(item.view, item.params)}
                   className={`text-[13px] tracking-widest-2 uppercase font-medium link-underline transition-colors ${
-                    currentView === item.view ? 'text-ivory' : 'text-ivory/75 hover:text-ivory'
+                    isItemActive(item) ? 'text-ivory' : 'text-ivory/75 hover:text-ivory'
                   }`}>
                   {item.label}
                 </button>
@@ -167,7 +171,7 @@ export default function Navbar() {
               <ArrowUpRight size={16} />
             </button>
             {NAV_ITEMS.map((item) => (
-              <button key={item.label} onClick={() => go(item.view)}
+              <button key={item.label} onClick={() => go(item.view, item.params)}
                 className="flex items-center justify-between py-3 border-b border-ivory/5 text-ivory hover:text-alpenglow transition-colors">
                 <span className="font-narrow font-bold uppercase tracking-widest-2 text-sm">{item.label}</span>
                 <ArrowUpRight size={16} />

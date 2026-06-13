@@ -1,8 +1,8 @@
 // ─── Navigation ───────────────────────────────────────────────────────────────
 export const NAV_ITEMS = [
-  { label: 'Indumentaria', view: 'indumentaria' },
-  { label: 'Calzado',      view: 'calzado' },
-  { label: 'Equipamiento', view: 'equipamiento' },
+  { label: 'Indumentaria', view: 'catalogo', params: { categoria: 'indumentaria' } },
+  { label: 'Calzado',      view: 'catalogo', params: { categoria: 'calzado' } },
+  { label: 'Equipamiento', view: 'catalogo', params: { categoria: 'equipamiento' } },
 ]
 
 export const MARQUEE_ITEMS = [
@@ -247,9 +247,9 @@ export const FOOTER_COLUMNS = [
     title: 'Tienda',
     links: [
       { label: 'Productos',    view: 'catalogo' },
-      { label: 'Indumentaria', view: 'indumentaria' },
-      { label: 'Equipamiento', view: 'equipamiento' },
-      { label: 'Calzado',      view: 'calzado' },
+      { label: 'Indumentaria', view: 'catalogo', params: { categoria: 'indumentaria' } },
+      { label: 'Equipamiento', view: 'catalogo', params: { categoria: 'equipamiento' } },
+      { label: 'Calzado',      view: 'catalogo', params: { categoria: 'calzado' } },
     ],
   },
   {
