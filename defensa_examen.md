@@ -218,7 +218,139 @@ const { params } = useNavigation()
 
 ---
 
-## 4. ARQUITECTURA DE CARPETAS
+## 4. ENRUTAMIENTO DINÁMICO — ARQUITECTURA Y CORRECCIÓN
+
+### ¿Cómo está implementado el sistema de rutas en Cumbre?
+
+Cumbre **no utiliza React Router** ni ninguna librería externa de navegación. El equipo implementó un router propio sobre la History API del navegador, encapsulado en `NavigationContext.jsx`. Esta decisión reduce el bundle final y elimina una dependencia que resultaría sobredimensionada para la cantidad de vistas del proyecto.
+
+El sistema tiene tres piezas clave:
+
+**1. Estado de navegación con `useReducer`**
+
+```jsx
+// NavigationContext.jsx
+const [state, dispatch] = useReducer(reducer, {
+  currentView: viewFromPath(),   // lee la URL actual al montar
+  params:      paramsFromUrl(),  // lee ?id=XXXX de la query string
+})
+```
+
+`currentView` determina qué vista renderiza `App.jsx`. `params` transporta el ID del producto seleccionado sin necesidad de path segments adicionales.
+
+**2. La función `navigate` como despacho + historial**
+
+```jsx
+const navigate = (payload, options = {}) => {
+  dispatch({ payload })                       // actualiza el contexto React
+  const path = buildPath(view, params)        // construye la URL con ?id si aplica
+  if (window.location.pathname + window.location.search !== path) {
+    window.history.pushState({ view, params }, '', path)  // sincroniza el historial
+  }
+}
+```
+
+El estado de la navegación vive en memoria (React Context) y se sincroniza con el historial del navegador vía `pushState`. El botón "atrás" dispara el evento `popstate`, que a su vez actualiza el contexto con los datos guardados en el historial.
+
+**3. Persistencia del ID de producto en la URL**
+
+La función auxiliar `buildPath` construye URLs del tipo `/producto?id=1001`, y `paramsFromUrl` las lee al cargar la página:
+
+```jsx
+function buildPath(view, params) {
+  const base = view === 'home' ? '/' : `/${view}`
+  return params?.id != null ? `${base}?id=${params.id}` : base
+}
+
+function paramsFromUrl() {
+  const id = new URLSearchParams(window.location.search).get('id')
+  return id !== null ? { id: Number(id) } : {}
+}
+```
+
+---
+
+### El bug de enrutamiento que existía y cómo se resolvió
+
+#### Diagnóstico
+
+El sistema de rutas tenía **tres defectos relacionados** que producían redirecciones rotas al navegar al detalle de un producto:
+
+**Defecto 1 — URL sin parámetro de producto (crítico)**
+La función `navigate` construía rutas sin incluir el ID del producto:
+```jsx
+// ANTES (bug): URL siempre era /producto sin importar qué producto
+const path = view === 'home' ? '/' : `/${view}`
+```
+Consecuencia: al recargar la página estando en `/producto`, el contexto se inicializaba con `params: {}`, `getProductoById(undefined)` devolvía `null`, y el componente `ProductoDetalle` mostraba la pantalla de error "Producto no encontrado".
+
+**Defecto 2 — Estado inicial sin lectura de query string**
+El estado inicial del contexto ignoraba la query string de la URL:
+```jsx
+// ANTES (bug): params siempre arrancaba vacío
+const [state, dispatch] = useReducer(reducer, {
+  currentView: viewFromPath(),
+  params: {},  // ← nunca leía ?id=1001 de la URL
+})
+```
+
+**Defecto 3 — Comparación incompleta de URL en `navigate`**
+La condición que decide si llamar a `pushState` comparaba solo el `pathname`, ignorando la query string:
+```jsx
+// ANTES (bug): /producto?id=1001 y /producto?id=1002 se consideraban la misma URL
+if (window.location.pathname !== path) { ... }
+```
+Consecuencia: navegar de un producto a otro sin cambiar de vista no generaba una nueva entrada en el historial del navegador.
+
+#### Corrección aplicada
+
+Se introdujeron tres funciones auxiliares en `NavigationContext.jsx` y se ajustaron las llamadas correspondientes:
+
+```jsx
+// Lee el ?id de la query string al cargar la app (sobrevive recarga de página)
+function paramsFromUrl() {
+  const id = new URLSearchParams(window.location.search).get('id')
+  return id !== null ? { id: Number(id) } : {}
+}
+
+// Construye la URL canónica incluyendo el query param cuando hay id
+function buildPath(view, params) {
+  const base = view === 'home' ? '/' : `/${view}`
+  return params?.id != null ? `${base}?id=${params.id}` : base
+}
+```
+
+Con estas correcciones:
+- La URL de un producto es `/producto?id=1001` — compartible, favoritable y sobrevive recarga.
+- El estado inicial lee el ID desde la URL: `params: paramsFromUrl()`.
+- La condición en `navigate` compara `pathname + search` completo, generando una entrada de historial independiente por cada producto visitado.
+- El botón "atrás" restaura correctamente el producto anterior porque `pushState` guarda el objeto `{ view, params }` en el historial, y `popstate` lo recupera.
+
+#### Flujo de navegación corregido (extremo a extremo)
+
+```
+Usuario hace clic en ProductCard (id: 1001)
+  → navigate({ view: 'producto', params: { id: 1001 } })
+    → dispatch() actualiza el contexto React
+    → buildPath() genera "/producto?id=1001"
+    → pushState({ view: 'producto', params: { id: 1001 } }, '', '/producto?id=1001')
+      → App.jsx re-renderiza → view === 'producto' → <ProductoDetalle />
+        → useNavigation() → params.id === 1001
+          → getProductoById(1001) → producto encontrado ✅
+
+Usuario recarga la página en /producto?id=1001
+  → viewFromPath() → 'producto'
+  → paramsFromUrl() → { id: 1001 }
+  → getProductoById(1001) → producto encontrado ✅
+
+Usuario presiona "Atrás" en el navegador
+  → popstate dispara con e.state = { view: 'catalogo', params: {} }
+  → dispatch() actualiza el contexto → vuelve al catálogo ✅
+```
+
+---
+
+## 5. ARQUITECTURA DE CARPETAS
 
 ```
 src/

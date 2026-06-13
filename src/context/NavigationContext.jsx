@@ -13,6 +13,18 @@ function viewFromPath() {
   return segment && KNOWN_VIEWS.has(segment) ? segment : 'home'
 }
 
+// Lee parámetros persistidos en la query string (?id=1001) para sobrevivir recargas de página
+function paramsFromUrl() {
+  const id = new URLSearchParams(window.location.search).get('id')
+  return id !== null ? { id: Number(id) } : {}
+}
+
+// Construye la URL completa incluyendo el query param de id cuando aplica
+function buildPath(view, params) {
+  const base = view === 'home' ? '/' : `/${view}`
+  return params?.id != null ? `${base}?id=${params.id}` : base
+}
+
 function reducer(state, action) {
   const { payload } = action
   return {
@@ -26,12 +38,12 @@ const NavigationContext = createContext(null)
 export function NavigationProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, {
     currentView: viewFromPath(),
-    params: {},
+    params: paramsFromUrl(),
   })
 
   useEffect(() => {
-    const path = state.currentView === 'home' ? '/' : `/${state.currentView}`
-    window.history.replaceState({ view: state.currentView, params: {} }, '', path)
+    const path = buildPath(state.currentView, state.params)
+    window.history.replaceState({ view: state.currentView, params: state.params }, '', path)
 
     const handlePopState = (e) => {
       dispatch({ payload: { view: e.state?.view || 'home', params: e.state?.params || {} } })
@@ -44,8 +56,9 @@ export function NavigationProvider({ children }) {
     dispatch({ payload })
     const view   = typeof payload === 'string' ? payload : payload.view
     const params = typeof payload === 'object'  ? (payload.params ?? {}) : {}
-    const path   = view === 'home' ? '/' : `/${view}`
-    if (window.location.pathname !== path) {
+    const path   = buildPath(view, params)
+    // Comparar la URL completa (pathname + search) para detectar cambios de producto
+    if (window.location.pathname + window.location.search !== path) {
       if (options.replace) {
         window.history.replaceState({ view, params }, '', path)
       } else {
