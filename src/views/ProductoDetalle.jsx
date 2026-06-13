@@ -81,11 +81,14 @@ export default function ProductoDetalle() {
     if (raw) {
       try {
         const saved = JSON.parse(raw)
-        navigate(saved.backView || producto.categoria)
-        return
+        if (saved.backView === 'catalogo') {
+          navigate('catalogo')
+          return
+        }
       } catch { /* ignore */ }
     }
-    navigate(producto.categoria)
+    // Sin historial del catálogo (ej. llegó desde el home): navega con filtro de categoría
+    navigate({ view: 'catalogo', params: { categoria: producto.categoria } })
   }
 
   return (
