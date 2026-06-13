@@ -293,7 +293,7 @@ export const MOCK_PEDIDOS = [
     id: '#ORD-10301',
     userId: 1,
     fecha: '2026-05-10',
-    estado: 'Pendiente',
+    estado: 'Procesando',
     items: [
       { nombre: 'Pantalón Trekking Strider', qty: 1, precio: 89990 },
     ],
@@ -303,7 +303,7 @@ export const MOCK_PEDIDOS = [
     id: '#ORD-10315',
     userId: 1,
     fecha: '2026-05-22',
-    estado: 'Confirmado',
+    estado: 'En camino',
     items: [
       { nombre: 'Bota Summit GTX High',            qty: 1, precio: 189990 },
       { nombre: 'Guantes Escalada Dedo Completo',  qty: 1, precio: 49990 },
