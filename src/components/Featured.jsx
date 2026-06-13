@@ -1,5 +1,5 @@
 import { ArrowRight } from 'lucide-react'
-import { useNavigation } from '../context/NavigationContext.jsx'
+import { useNavigate } from 'react-router-dom'
 import SectionHeader from './ui/SectionHeader.jsx'
 import ProductCard   from './ui/ProductCard.jsx'
 import { MOCK_PRODUCTOS, precioFinal } from '../mocks/data.js'
@@ -19,21 +19,8 @@ const CUMBRE_PRO_PRODUCTS = MOCK_PRODUCTOS
     }
   })
 
-function navigateCumbrePro(navigate) {
-  sessionStorage.setItem('catalogoState', JSON.stringify({
-    backView: 'catalogo',
-    busqueda: '',
-    categorias: [],
-    marcas: ['Cumbre Pro'],
-    temporadas: [],
-    precioMin: 0,
-    precioMax: 999999,
-  }))
-  navigate('catalogo')
-}
-
 export default function Featured() {
-  const { navigate } = useNavigation()
+  const navigate = useNavigate()
 
   return (
     <section className="relative py-20 lg:py-28 bg-ivory text-rock">
@@ -43,7 +30,7 @@ export default function Featured() {
           title={<>Equipamiento<br/>destacado</>}
           dark={false}
           action={
-            <button onClick={() => navigateCumbrePro(navigate)}
+            <button onClick={() => navigate('/catalogo?marca=Cumbre+Pro')}
               className="self-start lg:self-end inline-flex items-center gap-2 font-narrow font-bold uppercase tracking-widest-2 text-sm hover:text-alpenglow link-underline text-rock transition-colors">
               Ver línea Cumbre Pro
               <ArrowRight size={16} strokeWidth={2.2} />

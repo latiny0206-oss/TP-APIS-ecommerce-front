@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ArrowRight, Check } from 'lucide-react'
-import { useNavigation } from '../context/NavigationContext.jsx'
+import { useNavigate } from 'react-router-dom'
 import Button from './ui/Button.jsx'
 import { HERO_IMAGES } from '../data/index.js'
 import { MOCK_PRODUCTOS } from '../mocks/data.js'
@@ -23,7 +23,7 @@ function StatCell({ label, value, mono, accent, sub }) {
 }
 
 export default function HeroSection() {
-  const { navigate } = useNavigation()
+  const navigate     = useNavigate()
   const [variant]    = useState('midnight')
   const imgSrc       = HERO_IMAGES[variant] || HERO_IMAGES.midnight
   const totalStock   = MOCK_PRODUCTOS.length
@@ -64,18 +64,12 @@ export default function HeroSection() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 lg:gap-4">
             <Button variant="primary" size="lg"
-              onClick={() => {
-                sessionStorage.setItem('catalogoState', JSON.stringify({ backView: 'catalogo', categorias: ['indumentaria'] }))
-                navigate('catalogo')
-              }}
+              onClick={() => navigate('/catalogo?categoria=indumentaria')}
               iconRight={<ArrowRight size={18} strokeWidth={2.2} />}>
               Ver indumentaria
             </Button>
             <Button variant="ghost-dark" size="lg"
-              onClick={() => {
-                sessionStorage.setItem('catalogoState', JSON.stringify({ backView: 'catalogo', categorias: ['calzado'] }))
-                navigate('catalogo')
-              }}
+              onClick={() => navigate('/catalogo?categoria=calzado')}
               iconRight={<ArrowRight size={16} />}>
               Ver calzado
             </Button>

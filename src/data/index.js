@@ -1,8 +1,8 @@
 // ─── Navigation ───────────────────────────────────────────────────────────────
 export const NAV_ITEMS = [
-  { label: 'Indumentaria', view: 'catalogo', params: { categoria: 'indumentaria' } },
-  { label: 'Calzado',      view: 'catalogo', params: { categoria: 'calzado' } },
-  { label: 'Equipamiento', view: 'catalogo', params: { categoria: 'equipamiento' } },
+  { label: 'Indumentaria', to: '/catalogo?categoria=indumentaria', categoria: 'indumentaria' },
+  { label: 'Calzado',      to: '/catalogo?categoria=calzado',      categoria: 'calzado' },
+  { label: 'Equipamiento', to: '/catalogo?categoria=equipamiento', categoria: 'equipamiento' },
 ]
 
 export const MARQUEE_ITEMS = [
@@ -246,24 +246,24 @@ export const FOOTER_COLUMNS = [
   {
     title: 'Tienda',
     links: [
-      { label: 'Productos',    view: 'catalogo' },
-      { label: 'Indumentaria', view: 'catalogo', params: { categoria: 'indumentaria' } },
-      { label: 'Equipamiento', view: 'catalogo', params: { categoria: 'equipamiento' } },
-      { label: 'Calzado',      view: 'catalogo', params: { categoria: 'calzado' } },
+      { label: 'Productos',    to: '/catalogo' },
+      { label: 'Indumentaria', to: '/catalogo?categoria=indumentaria' },
+      { label: 'Equipamiento', to: '/catalogo?categoria=equipamiento' },
+      { label: 'Calzado',      to: '/catalogo?categoria=calzado' },
     ],
   },
   {
     title: 'Soporte',
     links: [
-      { label: 'Preguntas Frecuentes', view: 'faq' },
-      { label: 'Guía de tallas',       view: 'guia-tallas' },
-      { label: 'Estado de mi orden',   view: 'perfil' },
+      { label: 'Preguntas Frecuentes', to: '/faq' },
+      { label: 'Guía de tallas',       to: '/guia-tallas' },
+      { label: 'Estado de mi orden',   to: '/perfil' },
     ],
   },
 ]
 
 export const FOOTER_LEGAL_LINKS = [
-  { label: 'Contacto', view: 'contacto' },
+  { label: 'Contacto', to: '/contacto' },
 ]
 
 // ─── Trust strip ──────────────────────────────────────────────────────────────

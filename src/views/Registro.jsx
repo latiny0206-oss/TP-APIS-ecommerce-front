@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { Mountain, Eye, EyeOff, AlertTriangle } from 'lucide-react'
-import { useNavigation } from '../context/NavigationContext.jsx'
-import { useAuth }       from '../context/AuthContext.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 import Button from '../components/ui/Button.jsx'
 
 function Field({ label, error, children }) {
@@ -17,7 +17,6 @@ function Field({ label, error, children }) {
 }
 
 export default function Registro() {
-  const { navigate }                          = useNavigation()
   const { register, status, error, clearError } = useAuth()
 
   const [form, setForm] = useState({ nombre: '', email: '', password: '', confirmar: '' })
@@ -46,21 +45,21 @@ export default function Registro() {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
-    register({ nombre: form.nombre, email: form.email, password: form.password }, navigate)
+    register({ nombre: form.nombre, email: form.email, password: form.password })
   }
 
   return (
     <div className="min-h-screen bg-rock flex flex-col">
 
       <div className="flex items-center justify-center pt-10 pb-8">
-        <button onClick={() => navigate('home')} className="flex items-center gap-2.5">
+        <Link to="/" className="flex items-center gap-2.5">
           <span className="flex h-8 w-8 items-center justify-center rounded-sm bg-alpenglow text-ivory">
             <Mountain size={16} strokeWidth={2.2} />
           </span>
           <span className="font-display font-black tracking-tightest text-xl uppercase text-ivory">
             Cumbre
           </span>
-        </button>
+        </Link>
       </div>
 
       <div className="flex-1 flex items-start justify-center px-4 pb-16">
@@ -122,10 +121,10 @@ export default function Registro() {
 
             <p className="mt-6 text-center font-mono text-[11px] tracking-widest-2 uppercase text-rock/55">
               ¿Ya tenés cuenta?{' '}
-              <button onClick={() => navigate('login')}
+              <Link to="/login"
                 className="text-pine hover:text-pine-700 font-bold transition-colors">
                 Iniciá sesión
-              </button>
+              </Link>
             </p>
           </div>
         </div>

@@ -2,24 +2,30 @@ import {
   Mountain, LayoutDashboard, Package, Layers, Sliders,
   Ticket, ClipboardList, Users, Plus, Settings, LogOut, ChevronRight,
 } from 'lucide-react'
-import { useNavigation }   from '../../context/NavigationContext.jsx'
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { ProductsProvider } from '../../context/ProductsContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import Button from '../../components/ui/Button.jsx'
 
 const ADMIN_NAV = [
-  { id: 'admin-dashboard', label: 'Tablero',    Icon: LayoutDashboard },
-  { id: 'admin-products',  label: 'Productos',  Icon: Package },
-  { id: 'admin-variants',  label: 'Variantes',  Icon: Sliders },
-  { id: 'admin-catalog',   label: 'Catálogo',   Icon: Layers },
-  { id: 'admin-discounts', label: 'Descuentos', Icon: Ticket },
-  { id: 'admin-orders',    label: 'Órdenes',    Icon: ClipboardList },
-  { id: 'admin-users',     label: 'Usuarios',   Icon: Users },
+  { path: '/admin/dashboard',  label: 'Tablero',    Icon: LayoutDashboard },
+  { path: '/admin/productos',  label: 'Productos',  Icon: Package },
+  { path: '/admin/variantes',  label: 'Variantes',  Icon: Sliders },
+  { path: '/admin/catalogo',   label: 'Catálogo',   Icon: Layers },
+  { path: '/admin/descuentos', label: 'Descuentos', Icon: Ticket },
+  { path: '/admin/ordenes',    label: 'Órdenes',    Icon: ClipboardList },
+  { path: '/admin/usuarios',   label: 'Usuarios',   Icon: Users },
 ]
 
 const VIEW_LABELS = {
-  'admin-photos': 'Imágenes',
-  ...Object.fromEntries(ADMIN_NAV.map((n) => [n.id, n.label])),
+  'dashboard':  'Tablero',
+  'productos':  'Productos',
+  'variantes':  'Variantes',
+  'catalogo':   'Catálogo',
+  'descuentos': 'Descuentos',
+  'ordenes':    'Órdenes',
+  'usuarios':   'Usuarios',
+  'fotos':      'Imágenes',
 }
 
 function weekdayDate() {
@@ -28,10 +34,14 @@ function weekdayDate() {
   })
 }
 
-export default function AdminLayout({ children }) {
-  const { view: currentView, navigate } = useNavigation()
-  const { logout } = useAuth()
-  const currentLabel = VIEW_LABELS[currentView] ?? 'Tablero'
+export default function AdminLayout() {
+  const navigate        = useNavigate()
+  const { pathname }    = useLocation()
+  const { logout }      = useAuth()
+
+  // Obtiene el último segmento de la ruta para el label del header
+  const currentSegment  = pathname.split('/').pop()
+  const currentLabel    = VIEW_LABELS[currentSegment] ?? VIEW_LABELS[pathname.split('/')[2]] ?? 'Tablero'
 
   return (
     <ProductsProvider>
@@ -42,7 +52,7 @@ export default function AdminLayout({ children }) {
 
           {/* Brand */}
           <div className="px-6 py-6 border-b border-ivory/10 shrink-0">
-            <button onClick={() => navigate('admin-dashboard')} className="flex items-center gap-2.5 group">
+            <NavLink to="/admin/dashboard" className="flex items-center gap-2.5 group">
               <span className="flex h-8 w-8 items-center justify-center rounded-sm bg-alpenglow text-ivory">
                 <Mountain size={18} strokeWidth={2.2} />
               </span>
@@ -52,38 +62,41 @@ export default function AdminLayout({ children }) {
                   Admin · Panel de control
                 </div>
               </div>
-            </button>
+            </NavLink>
           </div>
 
           {/* Nav */}
           <nav className="flex-1 py-4 px-3">
-            {ADMIN_NAV.map(({ id, label, Icon }) => {
-              const active = currentView === id
-              return (
-                <button key={id} onClick={() => navigate(id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-left text-[13px] font-narrow font-bold uppercase tracking-widest-2 transition-all rounded-sm mb-0.5 ${
-                    active ? 'bg-alpenglow text-ivory' : 'text-ivory/70 hover:text-ivory hover:bg-ivory/5'
-                  }`}>
-                  <Icon size={14} strokeWidth={2} />
-                  {label}
-                  {active && <span className="ml-auto"><ChevronRight size={12} /></span>}
-                </button>
-              )
-            })}
+            {ADMIN_NAV.map(({ path, label, Icon }) => (
+              <NavLink key={path} to={path}
+                className={({ isActive }) =>
+                  `w-full flex items-center gap-3 px-3 py-2.5 text-left text-[13px] font-narrow font-bold uppercase tracking-widest-2 transition-all rounded-sm mb-0.5 ${
+                    isActive ? 'bg-alpenglow text-ivory' : 'text-ivory/70 hover:text-ivory hover:bg-ivory/5'
+                  }`
+                }>
+                {({ isActive }) => (
+                  <>
+                    <Icon size={14} strokeWidth={2} />
+                    {label}
+                    {isActive && <span className="ml-auto"><ChevronRight size={12} /></span>}
+                  </>
+                )}
+              </NavLink>
+            ))}
           </nav>
 
           {/* Footer CTA */}
           <div className="p-3 border-t border-ivory/10 shrink-0">
             <Button variant="secondary" size="md" className="w-full"
               icon={<Plus size={14} strokeWidth={2.2} />}
-              onClick={() => navigate('admin-products')}>
+              onClick={() => navigate('/admin/productos')}>
               Nuevo producto
             </Button>
             <div className="flex items-center justify-between mt-3 px-2">
               <button className="font-mono text-[10px] tracking-widest-2 uppercase text-ivory/55 hover:text-ivory flex items-center gap-1.5">
                 <Settings size={12} /> Ajustes
               </button>
-              <button onClick={() => { logout(); navigate('home') }}
+              <button onClick={() => { logout(); navigate('/') }}
                 className="font-mono text-[10px] tracking-widest-2 uppercase text-ivory/55 hover:text-alpenglow flex items-center gap-1.5">
                 <LogOut size={12} /> Salir
               </button>
@@ -112,7 +125,7 @@ export default function AdminLayout({ children }) {
               </div>
             </div>
           </header>
-          <main className="p-8 flex-1">{children}</main>
+          <main className="p-8 flex-1"><Outlet /></main>
         </div>
       </div>
     </ProductsProvider>

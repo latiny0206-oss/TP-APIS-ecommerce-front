@@ -1,6 +1,6 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ChevronDown, ArrowLeft } from 'lucide-react'
-import { useNavigation } from '../context/NavigationContext.jsx'
 
 const FAQ_DATA = [
   {
@@ -54,7 +54,6 @@ function AccordionItem({ item, isOpen, onToggle }) {
 }
 
 export default function FAQ() {
-  const { navigate } = useNavigation()
   const [openId, setOpenId] = useState(null)
   const toggle = (id) => setOpenId((prev) => (prev === id ? null : id))
 
@@ -63,7 +62,7 @@ export default function FAQ() {
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-10 lg:py-14">
 
         <nav className="flex items-center gap-2 font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 mb-8">
-          <button onClick={() => navigate('home')} className="hover:text-alpenglow transition-colors">Inicio</button>
+          <Link to="/" className="hover:text-alpenglow transition-colors">Inicio</Link>
           <span className="text-rock/30">›</span>
           <span className="text-rock">Preguntas frecuentes</span>
         </nav>
@@ -78,9 +77,9 @@ export default function FAQ() {
           </h1>
           <p className="text-rock/60 max-w-xl text-base lg:text-lg">
             Si no encontrás la respuesta que buscás,{' '}
-            <button onClick={() => navigate('contacto')} className="text-pine hover:underline font-medium">
+            <Link to="/contacto" className="text-pine hover:underline font-medium">
               escribinos
-            </button>.
+            </Link>.
           </p>
         </div>
 
@@ -107,17 +106,17 @@ export default function FAQ() {
               Nuestro equipo responde en menos de 48 horas.
             </p>
           </div>
-          <button onClick={() => navigate('contacto')}
+          <Link to="/contacto"
             className="shrink-0 h-11 px-6 bg-alpenglow hover:bg-alpenglow-700 text-ivory font-narrow font-bold uppercase tracking-widest-2 text-sm transition-colors">
             Contactarnos
-          </button>
+          </Link>
         </div>
 
         <div className="mt-10">
-          <button onClick={() => navigate('home')}
+          <Link to="/"
             className="inline-flex items-center gap-2 font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 hover:text-rock transition-colors">
             <ArrowLeft size={12} /> Volver al inicio
-          </button>
+          </Link>
         </div>
       </div>
     </div>

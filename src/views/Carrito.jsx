@@ -1,26 +1,26 @@
 import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Minus, Plus, Trash2, Tag, X, ArrowRight, ShoppingCart } from 'lucide-react'
-import { useNavigation } from '../context/NavigationContext.jsx'
-import { useCart }       from '../context/CartContext.jsx'
-import { useAuth }       from '../context/AuthContext.jsx'
-import { fmtPrice }      from '../mocks/data.js'
+import { useCart } from '../context/CartContext.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
+import { fmtPrice } from '../mocks/data.js'
 import Button from '../components/ui/Button.jsx'
 
 export default function Carrito() {
-  const { navigate }                                             = useNavigation()
+  const navigate                                                  = useNavigate()
   const { items, coupon, couponError, totals, updateQty,
-          removeFromCart, applyCoupon, removeCoupon, clearCart } = useCart()
-  const { isLoggedIn, setReturnTo }                             = useAuth()
+          removeFromCart, applyCoupon, removeCoupon, clearCart }  = useCart()
+  const { isLoggedIn, setReturnTo }                              = useAuth()
 
   const [couponInput, setCouponInput] = useState(coupon?.code || '')
 
   const handleCheckout = () => {
     if (!isLoggedIn) {
-      setReturnTo('checkout')
-      navigate('login')
+      setReturnTo('/checkout')
+      navigate('/login')
       return
     }
-    navigate('checkout')
+    navigate('/checkout')
   }
 
   return (
@@ -28,7 +28,7 @@ export default function Carrito() {
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-10 lg:py-14">
 
         <nav className="flex items-center gap-2 font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 mb-8">
-          <button onClick={() => navigate('home')} className="hover:text-alpenglow transition-colors">Inicio</button>
+          <Link to="/" className="hover:text-alpenglow transition-colors">Inicio</Link>
           <span className="text-rock/30">›</span>
           <span className="text-rock">Mi carrito</span>
         </nav>
@@ -60,10 +60,10 @@ export default function Carrito() {
               Agregá productos desde el catálogo para empezar tu expedición.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button variant="primary" onClick={() => navigate('indumentaria')} iconRight={<ArrowRight size={16} />}>
+              <Button variant="primary" onClick={() => navigate('/catalogo?categoria=indumentaria')} iconRight={<ArrowRight size={16} />}>
                 Ver indumentaria
               </Button>
-              <Button variant="ghost-light" onClick={() => navigate('calzado')}>
+              <Button variant="ghost-light" onClick={() => navigate('/catalogo?categoria=calzado')}>
                 Ver calzado
               </Button>
             </div>
@@ -76,7 +76,7 @@ export default function Carrito() {
                 <div key={line.lineId} className="flex gap-4 sm:gap-6 items-start bg-white border border-rock/10 p-4">
                   <div
                     className="h-24 w-20 sm:h-32 sm:w-28 overflow-hidden bg-rock-700 shrink-0 cursor-pointer"
-                    onClick={() => navigate({ view: 'producto', params: { id: line.productId } })}
+                    onClick={() => navigate(`/producto/${line.productId}`)}
                   >
                     {line.imagen && (
                       <img src={line.imagen} alt={line.nombre} className="w-full h-full object-cover"
@@ -87,7 +87,7 @@ export default function Carrito() {
                   <div className="flex-1 min-w-0">
                     <h3
                       className="font-narrow font-bold uppercase tracking-tight text-base leading-tight cursor-pointer hover:text-pine transition-colors"
-                      onClick={() => navigate({ view: 'producto', params: { id: line.productId } })}
+                      onClick={() => navigate(`/producto/${line.productId}`)}
                     >
                       {line.nombre}
                     </h3>
@@ -196,18 +196,7 @@ export default function Carrito() {
                 Ir al checkout
               </Button>
               <Button variant="ghost-dark" size="md" className="w-full mt-3"
-                onClick={() => {
-                  try {
-                    const raw = sessionStorage.getItem('catalogoReturnFilters')
-                    if (raw) {
-                      sessionStorage.setItem('catalogoState', JSON.stringify({
-                        ...JSON.parse(raw),
-                        backView: 'catalogo',
-                      }))
-                    }
-                  } catch {}
-                  navigate('catalogo')
-                }}>
+                onClick={() => navigate('/catalogo')}>
                 Continuar comprando
               </Button>
               <p className="mt-4 font-mono text-[10px] tracking-widest-2 uppercase text-ivory/35 text-center">

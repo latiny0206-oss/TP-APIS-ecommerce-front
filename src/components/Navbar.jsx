@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import {
   Mountain, ShoppingCart, Menu, X, ArrowUpRight, LogOut, UserCircle,
 } from 'lucide-react'
-import { useNavigation } from '../context/NavigationContext.jsx'
-import { useAuth }       from '../context/AuthContext.jsx'
-import { useCart }       from '../context/CartContext.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
+import { useCart } from '../context/CartContext.jsx'
 import { NAV_ITEMS, MARQUEE_ITEMS } from '../data/index.js'
 
 function PromoMarquee() {
@@ -32,9 +32,11 @@ function IconButton({ children, className = '', ...props }) {
 }
 
 export default function Navbar() {
-  const { view: currentView, params, navigate } = useNavigation()
-  const { isLoggedIn, user, logout }    = useAuth()
-  const { totals }                      = useCart()
+  const navigate                         = useNavigate()
+  const { pathname }                     = useLocation()
+  const [searchParams]                   = useSearchParams()
+  const { isLoggedIn, user, logout }     = useAuth()
+  const { totals }                       = useCart()
   const cartCount = totals.itemCount
 
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -46,33 +48,28 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const isHome = currentView === 'home'
+  const isHome = pathname === '/'
   const navBg  = !isHome
     ? 'bg-rock border-b border-ivory/10'
     : scrolled
       ? 'bg-rock/90 backdrop-blur-md border-b border-ivory/10'
       : 'bg-transparent border-b border-ivory/5'
 
-  const go = (view, navParams) => {
-    navigate(navParams ? { view, params: navParams } : view)
-    setMobileOpen(false)
-  }
-
+  const isAllProductsActive = pathname === '/catalogo' && !searchParams.get('categoria')
   const isItemActive = (item) =>
-    currentView === item.view &&
-    (!item.params?.categoria || params.categoria === item.params.categoria)
+    pathname === '/catalogo' && searchParams.get('categoria') === item.categoria
+
+  const closeMobile = () => setMobileOpen(false)
 
   const goAllProducts = () => {
-    sessionStorage.removeItem('catalogoState')
-    sessionStorage.removeItem('catalogoReturnFilters')
-    navigate('catalogo')
-    setMobileOpen(false)
+    navigate('/catalogo')
+    closeMobile()
   }
 
   const handleLogout = () => {
     logout()
-    navigate('home')
-    setMobileOpen(false)
+    navigate('/')
+    closeMobile()
   }
 
   return (
@@ -83,31 +80,32 @@ export default function Navbar() {
           <div className="flex items-center justify-between h-16 lg:h-20">
 
             {/* Logo */}
-            <button onClick={() => go('home')} className="flex items-center gap-2.5 group">
+            <Link to="/" onClick={closeMobile} className="flex items-center gap-2.5 group">
               <span className="flex h-7 w-7 items-center justify-center rounded-sm bg-alpenglow text-ivory">
                 <Mountain size={16} strokeWidth={2.2} />
               </span>
               <span className="font-display font-black tracking-tightest text-xl lg:text-[22px] uppercase text-ivory">
                 Cumbre
               </span>
-            </button>
+            </Link>
 
             {/* Desktop nav */}
             <nav className="hidden lg:flex items-center gap-9">
               <button onClick={goAllProducts}
                 className={`text-[13px] tracking-widest-2 uppercase font-medium link-underline transition-colors ${
-                  currentView === 'catalogo' && !params.categoria ? 'text-ivory' : 'text-ivory/75 hover:text-ivory'
+                  isAllProductsActive ? 'text-ivory' : 'text-ivory/75 hover:text-ivory'
                 }`}>
                 Productos
               </button>
               {NAV_ITEMS.map((item) => (
-                <button key={item.label}
-                  onClick={() => go(item.view, item.params)}
+                <Link key={item.label}
+                  to={item.to}
+                  onClick={closeMobile}
                   className={`text-[13px] tracking-widest-2 uppercase font-medium link-underline transition-colors ${
                     isItemActive(item) ? 'text-ivory' : 'text-ivory/75 hover:text-ivory'
                   }`}>
                   {item.label}
-                </button>
+                </Link>
               ))}
             </nav>
 
@@ -117,11 +115,11 @@ export default function Navbar() {
               {/* Auth — desktop */}
               {isLoggedIn ? (
                 <div className="hidden sm:flex items-center gap-2">
-                  <button onClick={() => go('perfil')}
+                  <Link to="/cuenta/ordenes" onClick={closeMobile}
                     className="flex items-center gap-1.5 font-mono text-[11px] tracking-widest-2 uppercase text-ivory/70 hover:text-ivory transition-colors">
                     <UserCircle size={14} />
                     {user?.nombre?.split(' ')[0]}
-                  </button>
+                  </Link>
                   <button onClick={handleLogout}
                     className="h-9 flex items-center gap-1.5 px-3 border border-ivory/20 text-ivory/70 hover:text-ivory hover:border-ivory/50 font-mono text-[10px] tracking-widest-2 uppercase transition-colors">
                     <LogOut size={12} /> Salir
@@ -129,19 +127,19 @@ export default function Navbar() {
                 </div>
               ) : (
                 <div className="hidden sm:flex items-center gap-2">
-                  <button onClick={() => go('login')}
+                  <Link to="/login" onClick={closeMobile}
                     className="h-9 flex items-center px-3 border border-ivory/20 text-ivory/70 hover:text-ivory hover:border-ivory/50 font-mono text-[10px] tracking-widest-2 uppercase transition-colors">
                     Iniciar sesión
-                  </button>
-                  <button onClick={() => go('registro')}
+                  </Link>
+                  <Link to="/registro" onClick={closeMobile}
                     className="h-9 flex items-center px-3 bg-alpenglow text-ivory font-mono text-[10px] tracking-widest-2 uppercase hover:bg-alpenglow-700 transition-colors">
                     Registrarse
-                  </button>
+                  </Link>
                 </div>
               )}
 
               {/* Carrito */}
-              <IconButton aria-label="Carrito" onClick={() => go('carrito')}>
+              <IconButton aria-label="Carrito" onClick={() => { navigate('/carrito'); closeMobile() }}>
                 <ShoppingCart size={18} />
                 {cartCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 h-4 min-w-[16px] px-1 rounded-full bg-alpenglow text-ivory text-[10px] font-bold flex items-center justify-center">
@@ -171,21 +169,21 @@ export default function Navbar() {
               <ArrowUpRight size={16} />
             </button>
             {NAV_ITEMS.map((item) => (
-              <button key={item.label} onClick={() => go(item.view, item.params)}
+              <Link key={item.label} to={item.to} onClick={closeMobile}
                 className="flex items-center justify-between py-3 border-b border-ivory/5 text-ivory hover:text-alpenglow transition-colors">
                 <span className="font-narrow font-bold uppercase tracking-widest-2 text-sm">{item.label}</span>
                 <ArrowUpRight size={16} />
-              </button>
+              </Link>
             ))}
 
             {/* Auth mobile */}
             <div className="flex gap-2 mt-4">
               {isLoggedIn ? (
                 <>
-                  <button onClick={() => go('perfil')}
+                  <Link to="/cuenta/ordenes" onClick={closeMobile}
                     className="flex-1 flex items-center gap-2 px-3 py-3 border border-ivory/20 text-ivory/70 hover:text-ivory font-mono text-[10px] tracking-widest-2 uppercase transition-colors">
                     <UserCircle size={14} /> {user?.nombre?.split(' ')[0]}
-                  </button>
+                  </Link>
                   <button onClick={handleLogout}
                     className="flex-1 py-3 border border-ivory/20 text-ivory font-mono text-[10px] tracking-widest-2 uppercase hover:bg-ivory/5 flex items-center justify-center gap-2 transition-colors">
                     <LogOut size={13} /> Cerrar sesión
@@ -193,22 +191,22 @@ export default function Navbar() {
                 </>
               ) : (
                 <>
-                  <button onClick={() => go('login')}
-                    className="flex-1 py-3 bg-alpenglow text-ivory font-narrow font-bold tracking-widest-2 uppercase text-xs hover:bg-alpenglow-700 transition-colors">
+                  <Link to="/login" onClick={closeMobile}
+                    className="flex-1 py-3 bg-alpenglow text-ivory font-narrow font-bold tracking-widest-2 uppercase text-xs hover:bg-alpenglow-700 transition-colors flex items-center justify-center">
                     Iniciar sesión
-                  </button>
-                  <button onClick={() => go('registro')}
-                    className="flex-1 py-3 border border-ivory/20 text-ivory font-narrow font-bold tracking-widest-2 uppercase text-xs hover:bg-ivory/5 transition-colors">
+                  </Link>
+                  <Link to="/registro" onClick={closeMobile}
+                    className="flex-1 py-3 border border-ivory/20 text-ivory font-narrow font-bold tracking-widest-2 uppercase text-xs hover:bg-ivory/5 transition-colors flex items-center justify-center">
                     Registrarse
-                  </button>
+                  </Link>
                 </>
               )}
             </div>
 
-            <button onClick={() => go('carrito')}
+            <Link to="/carrito" onClick={closeMobile}
               className="mt-2 w-full py-3 border border-ivory/20 text-ivory font-narrow font-bold tracking-widest-2 uppercase text-xs hover:bg-ivory/5 flex items-center justify-center gap-2 transition-colors">
               <ShoppingCart size={14} /> Carrito ({cartCount})
-            </button>
+            </Link>
           </div>
         </div>
       </header>

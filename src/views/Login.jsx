@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { Mountain, Eye, EyeOff, AlertTriangle } from 'lucide-react'
-import { useNavigation } from '../context/NavigationContext.jsx'
-import { useAuth }       from '../context/AuthContext.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 import Button from '../components/ui/Button.jsx'
 
 export default function Login() {
-  const { navigate }                 = useNavigation()
   const { login, status, error, clearError } = useAuth()
 
   const [email,    setEmail]    = useState('')
@@ -18,21 +17,21 @@ export default function Login() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    login(email, password, navigate)
+    login(email, password)
   }
 
   return (
     <div className="min-h-screen bg-rock flex flex-col">
 
       <div className="flex items-center justify-center pt-10 pb-8">
-        <button onClick={() => navigate('home')} className="flex items-center gap-2.5">
+        <Link to="/" className="flex items-center gap-2.5">
           <span className="flex h-8 w-8 items-center justify-center rounded-sm bg-alpenglow text-ivory">
             <Mountain size={16} strokeWidth={2.2} />
           </span>
           <span className="font-display font-black tracking-tightest text-xl uppercase text-ivory">
             Cumbre
           </span>
-        </button>
+        </Link>
       </div>
 
       <div className="flex-1 flex items-start justify-center px-4 pb-16">
@@ -93,10 +92,10 @@ export default function Login() {
 
             <p className="mt-6 text-center font-mono text-[11px] tracking-widest-2 uppercase text-rock/55">
               ¿No tenés cuenta?{' '}
-              <button onClick={() => navigate('registro')}
+              <Link to="/registro"
                 className="text-pine hover:text-pine-700 font-bold transition-colors">
                 Registrate
-              </button>
+              </Link>
             </p>
           </div>
         </div>

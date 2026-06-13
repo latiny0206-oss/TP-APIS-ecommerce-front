@@ -1,6 +1,5 @@
-import { useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { UserCircle, Package, LogOut, ShoppingBag } from 'lucide-react'
-import { useNavigation } from '../context/NavigationContext.jsx'
 import { useAuth }       from '../context/AuthContext.jsx'
 import { MOCK_PEDIDOS, fmtPrice } from '../mocks/data.js'
 import Button from '../components/ui/Button.jsx'
@@ -12,22 +11,17 @@ const ESTADO_STYLE = {
 }
 
 export default function Perfil() {
-  const { navigate }          = useNavigation()
-  const { user, isLoggedIn, logout } = useAuth()
+  const navigate              = useNavigate()
+  const { user, logout }      = useAuth()
 
-  useEffect(() => {
-    if (!isLoggedIn) {
-      navigate('login', { replace: true })
-    }
-  }, [isLoggedIn]) // eslint-disable-line
-
-  if (!isLoggedIn || !user) return null
+  // La redirección al login está gestionada por AccountGuard en App.jsx
+  if (!user) return null
 
   const pedidos = MOCK_PEDIDOS.filter((p) => p.userId === user.id)
 
   const handleLogout = () => {
     logout()
-    navigate('home')
+    navigate('/')
   }
 
   return (
@@ -37,7 +31,7 @@ export default function Perfil() {
         <div className="flex items-start justify-between gap-4 mb-10">
           <div>
             <div className="font-mono text-[11px] tracking-widest-2 uppercase text-alpenglow mb-2">Mi cuenta</div>
-            <h1 className="font-display font-black tracking-tightest uppercase text-4xl lg:text-5xl leading-[0.9]">Perfil</h1>
+            <h1 className="font-display font-black tracking-tightest uppercase text-4xl lg:text-5xl leading-[0.9]">Mis Pedidos</h1>
           </div>
           <Button variant="ghost-light" size="sm" onClick={handleLogout} icon={<LogOut size={14} />}>
             Cerrar sesión
@@ -57,7 +51,7 @@ export default function Perfil() {
         <section>
           <div className="flex items-center gap-2.5 mb-5">
             <Package size={16} strokeWidth={2} className="text-alpenglow" />
-            <h2 className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/70">Mis pedidos</h2>
+            <h2 className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/70">Historial de pedidos</h2>
           </div>
 
           {pedidos.length === 0 ? (
@@ -66,7 +60,7 @@ export default function Perfil() {
               <p className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 mb-4">
                 Todavía no realizaste ningún pedido
               </p>
-              <Button variant="primary" size="md" onClick={() => navigate('indumentaria')}>
+              <Button variant="primary" size="md" onClick={() => navigate('/catalogo')}>
                 Ir al catálogo
               </Button>
             </div>
@@ -81,7 +75,15 @@ export default function Perfil() {
                         {pedido.estado}
                       </span>
                     </div>
-                    <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/45">{pedido.fecha}</span>
+                    <div className="flex items-center gap-4">
+                      <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/45">{pedido.fecha}</span>
+                      <Link
+                        to={`/cuenta/ordenes/${pedido.id.replace('#', '')}`}
+                        className="font-mono text-[10px] tracking-widest-2 uppercase text-pine hover:underline"
+                      >
+                        Ver detalle →
+                      </Link>
+                    </div>
                   </div>
                   <ul className="space-y-1 mb-3">
                     {pedido.items.map((item, i) => (

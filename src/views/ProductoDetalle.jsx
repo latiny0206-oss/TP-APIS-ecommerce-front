@@ -1,6 +1,6 @@
 import { useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ShoppingCart, Minus, Plus, Check, X } from 'lucide-react'
-import { useNavigation } from '../context/NavigationContext.jsx'
 import { useCart }       from '../context/CartContext.jsx'
 import { getProductoById, fmtPrice, precioFinal } from '../mocks/data.js'
 import Button from '../components/ui/Button.jsx'
@@ -12,9 +12,10 @@ const CATEGORIA_LABELS = {
 }
 
 export default function ProductoDetalle() {
-  const { params, navigate } = useNavigation()
-  const { addToCart }        = useCart()
-  const producto = getProductoById(params.id)
+  const navigate      = useNavigate()
+  const { id }        = useParams()
+  const { addToCart } = useCart()
+  const producto = getProductoById(Number(id))
 
   const [talleSeleccionado, setTalleSeleccionado] = useState(null)
   const [cantidad, setCantidad] = useState(1)
@@ -27,7 +28,7 @@ export default function ProductoDetalle() {
           <p className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 mb-4">
             Producto no encontrado
           </p>
-          <Button variant="primary" onClick={() => navigate('home')}>
+          <Button variant="primary" onClick={() => navigate('/')}>
             Volver al inicio
           </Button>
         </div>
@@ -41,7 +42,6 @@ export default function ProductoDetalle() {
 
   const getStockParaTalle = (talle) => {
     if (!hayTalles) return producto.stock
-    // Use explicit per-size stock data when available
     if (producto.stockPorTalle) {
       return talle ? (producto.stockPorTalle[talle] ?? 0) : producto.stock
     }
@@ -76,31 +76,16 @@ export default function ProductoDetalle() {
     setTimeout(() => setAgregado(false), 2000)
   }
 
-  const handleBack = () => {
-    const raw = sessionStorage.getItem('catalogoState')
-    if (raw) {
-      try {
-        const saved = JSON.parse(raw)
-        if (saved.backView === 'catalogo') {
-          navigate('catalogo')
-          return
-        }
-      } catch { /* ignore */ }
-    }
-    // Sin historial del catálogo (ej. llegó desde el home): navega con filtro de categoría
-    navigate({ view: 'catalogo', params: { categoria: producto.categoria } })
-  }
-
   return (
     <div className="min-h-screen bg-ivory text-rock">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-10 lg:py-14">
 
         <nav className="flex items-center gap-2 font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 mb-8">
-          <button onClick={() => navigate('home')} className="hover:text-alpenglow transition-colors">
+          <Link to="/" className="hover:text-alpenglow transition-colors">
             Inicio
-          </button>
+          </Link>
           <span className="text-rock/30">›</span>
-          <button onClick={handleBack} className="hover:text-alpenglow transition-colors">
+          <button onClick={() => navigate(-1)} className="hover:text-alpenglow transition-colors">
             {categoriaLabel}
           </button>
           <span className="text-rock/30">›</span>
@@ -209,13 +194,13 @@ export default function ProductoDetalle() {
                 icon={agregado ? <Check size={18} strokeWidth={2.5} /> : <ShoppingCart size={18} strokeWidth={2} />}>
                 {agregado ? '¡Agregado!' : 'Agregar al carrito'}
               </Button>
-              <Button variant="ghost-light" size="lg" onClick={() => navigate('carrito')}>
+              <Button variant="ghost-light" size="lg" onClick={() => navigate('/carrito')}>
                 Ver carrito
               </Button>
             </div>
 
             <div className="mt-8 pt-8 border-t border-rock/10">
-              <button onClick={handleBack}
+              <button onClick={() => navigate(-1)}
                 className="inline-flex items-center gap-2 font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 hover:text-rock transition-colors">
                 <ArrowLeft size={12} /> Volver a Productos
               </button>

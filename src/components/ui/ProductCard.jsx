@@ -1,11 +1,11 @@
 import { ShoppingCart, Star } from 'lucide-react'
-import { useNavigation } from '../../context/NavigationContext.jsx'
-import { useCart }       from '../../context/CartContext.jsx'
+import { useNavigate } from 'react-router-dom'
+import { useCart }     from '../../context/CartContext.jsx'
 import StatusBadge from './StatusBadge.jsx'
 import { fmt, computePrice } from '../../data/index.js'
 
 export default function ProductCard({ product, dark = false }) {
-  const { navigate }  = useNavigation()
+  const navigate      = useNavigate()
   const { addToCart } = useCart()
   const { price, oldPrice } = computePrice(product)
 
@@ -27,7 +27,7 @@ export default function ProductCard({ product, dark = false }) {
   return (
     <article
       className="product-card group flex flex-col relative cursor-pointer"
-      onClick={() => navigate({ view: 'producto', params: { id: product.id } })}
+      onClick={() => navigate(`/producto/${product.id}`)}
     >
       <div
         className="relative aspect-[4/5] overflow-hidden"

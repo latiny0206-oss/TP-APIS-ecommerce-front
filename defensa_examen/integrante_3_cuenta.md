@@ -1,166 +1,174 @@
 # Integrante 3 — Flujo de Cuenta y Autenticación
-**Pantallas clave:** Login · Registro · Perfil (historial de pedidos)  
+**Pantallas clave:** Login (`/login`) · Mis Pedidos (`/cuenta/ordenes`) · Detalle de pedido (`/cuenta/ordenes/:id`)
 **Tiempo de exposición:** 3 minutos 45 segundos
 
 ---
 
-## 1. Guión de Exposición (Speech)
+## 1. Pantallas y rutas asignadas
 
-> **Retomás del integrante 2:**
-
-"Perfecto, la compra fue exitosa. Ahora yo me encargo de lo que pasa **antes** de ese checkout: la autenticación. Y también del historial de pedidos que el usuario puede consultar después.
-
-**Demo en vivo — guía paso a paso:**
-
-1. **Ruta protegida** → Si intentamos ir al checkout sin estar logueados, `handleCheckout()` en `Carrito.jsx` llama a `setReturnTo('checkout')` y redirige al login. Este es nuestro sistema de **protección de rutas** — sin React Router Guards, hecho con lógica de Context.
-
-2. **Login** → En `Login.jsx` mostramos el formulario controlado con `useState` para email y contraseña. Al hacer submit se llama `login(email, password, navigate)` que vive en `AuthContext.jsx`. Es una función `async` que simula 600ms de delay (como si fuera una llamada a API real) y luego busca el usuario en `MOCK_USERS`. Si el rol es `'admin'`, navega al `admin-dashboard`. Si es cliente, navega al `returnTo` guardado — en este caso, vuelve al checkout automáticamente.
-
-3. **Manejo de errores de login** → Si las credenciales no coinciden, `authReducer` procesa el action `'FAILURE'` y setea `state.error`. El `useEffect` en `Login.jsx` observa `[email, password]` — si el usuario empieza a tipear de nuevo, llama a `clearError()` automáticamente para limpiar el mensaje de error. Esto es UX consciente.
-
-4. **Perfil y pedidos** → `Perfil.jsx` tiene un `useEffect` que verifica `isLoggedIn`. Si es false, redirige al login. Si está logueado, filtra `MOCK_PEDIDOS` por `userId === user.id`. Mostramos el historial completo de pedidos del usuario con sus estados coloreados.
-
-5. **Cierre de sesión** → El botón 'Salir' del navbar llama a `logout()` del `AuthContext`, que despacha el action `'LOGOUT'` y resetea el estado a `initialState` (sin usuario, sin token). Inmediatamente redirige al home. Si el usuario tenía un carrito, este persiste en `localStorage` independientemente del auth."
-
-> **Cierre de tu bloque:**
-"Le dejo la posta a [integrante 4] que cierra con el panel de administración."
+| Pantalla          | Ruta                            |
+|-------------------|---------------------------------|
+| Login             | `/login`                        |
+| Lista de pedidos  | `/cuenta/ordenes`               |
+| Detalle de pedido | `/cuenta/ordenes/ORD-10234`     |
 
 ---
 
-## 2. Conceptos Teóricos "Salvavidas"
+## 2. Demo en vivo — guía paso a paso
 
-### Estado global vs estado local — Context API vs Props
+1. **Ruta protegida** → Intentar ir a `/cuenta/ordenes` sin estar logueado. `AccountGuard` en `App.jsx` detecta `!isLoggedIn` → guarda la ruta en `setReturnTo('/cuenta/ordenes')` → redirige a `/login`. Mostrar en la barra de URL que efectivamente termina en `/login`.
 
-| | Estado Local (`useState`) | Estado Global (`useContext`) |
-|---|---|---|
-| **Cuándo usarlo** | Un solo componente lo necesita | Múltiples componentes lo necesitan |
-| **Ejemplo en el proyecto** | `email` y `password` en el form de Login | `user`, `isLoggedIn` en toda la app |
-| **Cómo viaja** | Props de padre a hijo | Context directamente al consumidor |
+2. **Login** → En `Login.jsx`, ingresar credenciales incorrectas. El `authReducer` procesa `'FAILURE'` y `state.error` aparece en pantalla. Empezar a tipear: el `useEffect` que observa `[email, password]` llama a `clearError()` automáticamente — el mensaje de error desaparece.
 
-**Analogía:** El estado local es tu billetera — solo la usás vos. El Context es el saldo de la cuenta bancaria — cualquier componente dentro del Provider puede consultarlo directamente sin que nadie se lo tenga que pasar.
+3. **Login exitoso (cliente)** → Credenciales: `usuario@test.com` / `123456`. `login()` es async, simula 600ms de delay. El `authReducer` procesa `'SUCCESS'` con `safeUser` (sin `password`). Como `rol !== 'admin'`, navega al `returnTo` guardado: `/cuenta/ordenes`.
 
-En nuestro proyecto:
-- `AuthContext` → estado global: cualquier componente sabe si hay alguien logueado
-- `CartContext` → estado global: el badge del carrito en el Navbar y el Checkout leen el mismo estado
-- `useState` en `Login.jsx` → estado local: solo ese formulario necesita saber qué escribiste
+4. **Mis Pedidos (`/cuenta/ordenes`)** → `Perfil.jsx`. Mostrar la lista de pedidos filtrados por `userId === user.id`. Cada pedido tiene estado, fecha, ítems, total y un link "Ver detalle →" que navega a `/cuenta/ordenes/ORD-10234`.
 
-### ¿Por qué `useReducer` en AuthContext?
+5. **Detalle de pedido** → `CuentaOrdenDetalle.jsx`. Lee el ID de la URL con `useParams()`: el parámetro es `ORD-10234` (sin `#`). El componente reconstruye el ID completo `#${id}` para buscar en `MOCK_PEDIDOS`. Verifica además que `pedido.userId === user?.id` — un usuario no puede ver pedidos de otro.
 
-El auth tiene múltiples estados posibles: `idle` → `loading` → `success` o `error`. Con `useState` tendríamos tres variables separadas (`isLoading`, `error`, `user`) que habría que actualizar en sincronía. `useReducer` con `authReducer` garantiza que las transiciones sean **atómicas**:
+6. **Cierre de sesión** → El botón 'Cerrar sesión' en `Perfil.jsx` llama `logout()` (despacha `'LOGOUT'`, resetea el state a `initialState`) y `navigate('/')`. El Navbar vuelve a mostrar los botones de login/registro.
+
+7. **Cierre del bloque:**
+> "Le dejo la posta a [integrante 4] que cierra con el panel de administración."
+
+---
+
+## 3. Archivos y componentes clave
+
+| Archivo | Rol |
+|---|---|
+| `src/App.jsx` | Define `AccountGuard` y `AdminGuard` como layout routes de protección |
+| `src/context/AuthContext.jsx` | `useReducer` con estados idle/loading/success/error + `returnTo` |
+| `src/views/Login.jsx` | Formulario controlado con manejo de error reactivo |
+| `src/views/Perfil.jsx` | Lista de pedidos del usuario logueado con links al detalle |
+| `src/views/CuentaOrdenDetalle.jsx` | Detalle de un pedido identificado por `useParams().id` |
+
+---
+
+## 4. Tema técnico: Auth global con `useReducer`, navegación con route params, protección de rutas
+
+### `AuthContext.jsx` — máquina de estados con `useReducer`
+
+El auth tiene cuatro estados posibles: `idle`, `loading`, `success`, `error`. Con `useReducer`, las transiciones son atómicas:
 
 ```js
-case 'LOADING': return { ...state, status: 'loading', error: null }
-case 'SUCCESS': return { ...state, user: action.payload, isLoggedIn: true, status: 'idle' }
-case 'FAILURE': return { ...state, status: 'error', error: action.payload }
-case 'LOGOUT':  return { ...initialState }
-```
-Nunca puede haber un estado inconsistente como `{ isLoading: false, error: null, user: null }` cuando debería haber un error visible. Cada `case` describe una transición completa y válida.
-
-### Seguridad de sesión frontend — qué hacemos y qué no hacemos
-
-**Lo que hacemos:**
-- El password nunca se guarda en el estado: `const { password: _, ...safeUser } = user` → se destruye antes del dispatch
-- El estado de auth vive solo en memoria (React state) — si el usuario recarga, pierde la sesión (intencional para un mock)
-- `logout()` resetea el estado completo a `initialState` — ningún dato del usuario queda en memoria
-
-**Lo que haríamos en producción:**
-- El servidor enviaría un JWT (JSON Web Token) firmado
-- Lo guardaríamos en `httpOnly cookie` (no en `localStorage` — riesgo de XSS)
-- Cada request al backend llevaría ese token en el header `Authorization: Bearer <token>`
-- El frontend solo guardaría datos no sensibles del usuario (nombre, email, rol)
-
-### Parámetros dinámicos — cómo viaja el ID de un producto
-
-En React Router clásico usarías `/producto/:id` y `useParams()`. Nosotros implementamos el mismo concepto con nuestro router propio:
-
-```jsx
-// Al navegar:
-navigate({ view: 'producto', params: { id: 1001 } })
-
-// En NavigationContext, el reducer guarda:
-state.params = { id: 1001 }
-
-// En ProductoDetalle:
-const { params } = useNavigation()
-const producto = getProductoById(params.id)
-```
-
-El flujo es conceptualmente idéntico a `useParams()` — extraemos el identificador del estado de navegación y lo usamos para buscar el recurso.
-
----
-
-## 3. Auditoría de Código — Hooks y Eventos Reales
-
-### AuthContext.jsx
-
-| Elemento | Para qué sirve |
-|---|---|
-| `useReducer(authReducer, initialState)` | Maneja los estados del auth: idle, loading, success, error |
-| `login(email, password, navigate)` — async | Simula llamada API (600ms), busca en MOCK_USERS, despacha según resultado |
-| `register({ nombre, email, password }, navigate)` | Verifica email duplicado, despacha SUCCESS, navega al home |
-| `const { password: _, ...safeUser } = user` | Destruye el password antes de guardarlo en el estado — nunca vive en memoria |
-| `dispatch({ type: 'SET_RETURN_TO', payload: view })` | Guarda la vista a la que volver tras el login |
-| `logout()` | Resetea el estado completo a initialState — limpia auth, error y returnTo |
-| `clearError()` | Limpia solo el error sin modificar el resto del estado |
-
-### Login.jsx
-
-| Hook / Función | Para qué sirve |
-|---|---|
-| `useState('')` — `email` | Estado controlado del campo email |
-| `useState('')` — `password` | Estado controlado del campo contraseña |
-| `useState(false)` — `showPwd` | Toggle para mostrar/ocultar la contraseña |
-| `useAuth()` | Extrae `login`, `status`, `error`, `clearError` del AuthContext |
-| `useEffect(() => clearError(), [email, password])` | Limpia el error en cuanto el usuario empieza a corregir sus credenciales |
-| `handleSubmit(e)` | `e.preventDefault()` evita el reload; llama a `login()` |
-
-### Perfil.jsx
-
-| Hook / Función | Para qué sirve |
-|---|---|
-| `useAuth()` | Extrae `user`, `isLoggedIn`, `logout` |
-| `useEffect(() => { if (!isLoggedIn) navigate('login') }, [isLoggedIn])` | Protección de ruta: si el usuario cierra sesión desde cualquier componente, redirige automáticamente |
-| `MOCK_PEDIDOS.filter(p => p.userId === user.id)` | Filtra los pedidos del usuario logueado |
-| `ESTADO_STYLE[pedido.estado]` | Lookup object para estilos condicionales del badge de estado |
-| `key={pedido.id}` | ID único del pedido — React lo usa para el diffing de la lista |
-
----
-
-## 4. Defensa de la Arquitectura
-
-### Separación Login.jsx / Perfil.jsx — dos pantallas de "cuenta"
-
-**Pregunta posible del profesor:** "¿Por qué `Login.jsx` y `Perfil.jsx` son archivos separados si ambos manejan 'la cuenta del usuario'?"
-
-**Respuesta:** Porque tienen responsabilidades completamente distintas:
-- `Login.jsx` es un **formulario de entrada sin estado previo** — el usuario no está autenticado, no hay nada que mostrar excepto el form. Requiere `null` como estado inicial del user.
-- `Perfil.jsx` es una **vista autenticada** — requiere `user` no-null y filtra datos del backend (mock).
-
-Mezclarlos crearía un renderizado condicional enorme y dificultaría el mantenimiento. La separación también permite lazy loading independiente en `App.jsx`.
-
-**Pregunta trampa:** "¿Cómo protegen rutas privadas sin React Router?"
-
-**Respuesta:** Con un `useEffect` en el componente de la vista protegida:
-```jsx
-useEffect(() => {
-  if (!isLoggedIn) navigate('login')
-}, [isLoggedIn])
-```
-Y retornamos `null` si el usuario no está autenticado para no renderizar nada mientras redirige.
-
-En `Carrito.jsx` la protección es diferente y más elegante: no bloqueamos la vista del carrito (cualquiera puede ver su carrito), sino que interceptamos el intento de ir al checkout:
-```jsx
-const handleCheckout = () => {
-  if (!isLoggedIn) {
-    setReturnTo('checkout') // ← guarda a dónde volver
-    navigate('login')
-    return
+function authReducer(state, action) {
+  switch (action.type) {
+    case 'LOADING':  return { ...state, status: 'loading', error: null }
+    case 'SUCCESS':  return { ...state, user: action.payload, isLoggedIn: true, status: 'idle', error: null }
+    case 'FAILURE':  return { ...state, status: 'error', error: action.payload }
+    case 'LOGOUT':   return { ...initialState }  // reseteo completo
+    case 'SET_RETURN_TO': return { ...state, returnTo: action.payload }
+    default: return state
   }
-  navigate('checkout')
 }
 ```
-Es el patrón **redirect con returnTo** — el usuario no pierde su intención original tras autenticarse.
 
-### ¿Por qué los pedidos están en `mocks/data.js` y no en un Context?
+Con `useState` habría que coordinar `setUser`, `setIsLoggedIn`, `setStatus`, `setError` en cada acción — con riesgo de renders intermedios con estado inconsistente.
 
-Los pedidos son datos de **solo lectura** para el cliente — el usuario los consulta, no los modifica desde su perfil. Crear un Context para eso sería sobrediseño. Los importamos directamente en `Perfil.jsx` y filtramos en el render. Si hubiera un endpoint real, reemplazaríamos el import por un `fetch` dentro de un `useEffect`.
+### Flujo de login con `returnTo`
+
+```jsx
+// 1. AccountGuard — guarda la ruta intentada y redirige al login
+function AccountGuard() {
+  const { isLoggedIn, setReturnTo } = useAuth()
+  const location = useLocation()
+  if (!isLoggedIn) {
+    setReturnTo(location.pathname)      // guarda '/cuenta/ordenes'
+    return <Navigate to="/login" replace />
+  }
+  return <Outlet />
+}
+
+// 2. AuthContext — después del login exitoso
+navigate(safeUser.rol === 'admin'
+  ? '/admin/dashboard'
+  : (state.returnTo || '/'))   // vuelve a '/cuenta/ordenes'
+```
+
+### Protección de rutas con layouts — `AccountGuard` y `AdminGuard`
+
+```jsx
+// En App.jsx:
+<Route element={<ShellLayout />}>
+  {/* Rutas protegidas — AccountGuard renderiza Outlet solo si isLoggedIn */}
+  <Route element={<AccountGuard />}>
+    <Route path="/cuenta/ordenes"     element={<Perfil />} />
+    <Route path="/cuenta/ordenes/:id" element={<CuentaOrdenDetalle />} />
+  </Route>
+</Route>
+
+<Route path="/admin" element={<AdminGuard />}>
+  {/* AdminGuard verifica isLoggedIn && user.rol === 'admin' */}
+</Route>
+```
+
+No se usa React Router Guards (no existen en v6+). La protección se implementa con componentes que condicionalmente renderizan `<Outlet />` o `<Navigate>`.
+
+### `useParams()` para el detalle de pedido
+
+La ruta es `/cuenta/ordenes/:id`. En la URL el ID no lleva `#` (no es válido en URLs sin codificar). `CuentaOrdenDetalle.jsx` lo reconstruye:
+
+```jsx
+// La URL es /cuenta/ordenes/ORD-10234
+const { id } = useParams()   // id = 'ORD-10234'
+const pedido = MOCK_PEDIDOS.find((p) => p.id === `#${id}`)  // '#ORD-10234'
+```
+
+Además verifica ownership:
+```jsx
+if (!pedido || pedido.userId !== user?.id) {
+  return <NotFoundState />
+}
+```
+
+### Filtrado de pedidos por usuario
+
+En `Perfil.jsx`:
+```jsx
+const pedidos = MOCK_PEDIDOS.filter((p) => p.userId === user.id)
+```
+
+Cada usuario solo ve sus propios pedidos. El `user.id` viene del `AuthContext` — nunca se pasa como prop ni se lee de localStorage directamente en la vista.
+
+### Limpieza de error de login con `useEffect`
+
+```jsx
+// En Login.jsx — el error desaparece al empezar a tipear
+useEffect(() => {
+  if (error) clearError()
+}, [email, password]) // eslint-disable-line
+```
+
+Cuando el usuario modifica cualquiera de los dos campos, el efecto corre y limpia el mensaje de error. Es UX defensiva: no querés que un mensaje de error persista mientras el usuario ya está corrigiendo sus datos.
+
+### Password nunca se almacena en el Context
+
+```jsx
+const { password: _, ...safeUser } = user
+dispatch({ type: 'SUCCESS', payload: safeUser })
+```
+
+La desestructuración con renaming `password: _` extrae y descarta el campo `password`. Solo `safeUser` (sin la contraseña) entra al estado global.
+
+---
+
+## 5. Preguntas probables del examen
+
+**P: ¿Por qué `useReducer` en `AuthContext` y no `useState`?**
+R: El auth tiene múltiples estados relacionados que deben cambiar en sincronía. Con `useReducer`, la acción `'SUCCESS'` actualiza `user`, `isLoggedIn`, `status` y `error` en una sola operación atómica. Con `useState` habría que llamar a cuatro setters, con riesgo de renders intermedios con estado inconsistente (ej: `isLoggedIn = true` pero `user = null` por un render de 16ms).
+
+**P: ¿Cómo funciona la protección de rutas sin React Router Guards?**
+R: Se usan componentes que renderizan `<Outlet />` o `<Navigate>`. `AccountGuard` comprueba `isLoggedIn` del Context. Si es false, guarda la ruta intentada en `setReturnTo(location.pathname)` y redirige a `/login`. Si es true, renderiza `<Outlet />` — lo que permite que las rutas hijas (`/cuenta/ordenes`, `/cuenta/ordenes/:id`) se monten normalmente.
+
+**P: ¿Por qué `navigate('/', { replace: true })` en el logout y no `navigate('/')`?**
+R: `replace: true` reemplaza la entrada actual del historial. Si se usara `navigate('/')` sin replace, el usuario podría presionar "Atrás" desde el home y volver a una página protegida que ya debería ser inaccesible (aunque `AccountGuard` lo detectaría igual, el `replace` evita esa entrada del historial).
+
+**P: ¿Qué pasa si un usuario intenta acceder a `/cuenta/ordenes/ORD-10298` siendo el pedido de otro usuario?**
+R: `CuentaOrdenDetalle.jsx` verifica `pedido.userId !== user?.id`. Si el pedido existe pero pertenece a otro usuario, renderiza el estado de "Pedido no encontrado" — igual que si el ID no existiera. No se expone información de otros usuarios.
+
+**P: ¿Por qué se filtra `MOCK_PEDIDOS` por `userId` en la vista y no en el Context?**
+R: `MOCK_PEDIDOS` es una fuente de datos compartida (simula una API). El filtrado por usuario es responsabilidad de la vista que necesita los datos. Si se filtrara en el Context, habría que crear un selector específico y exponer otro valor en el Provider. La vista tiene todo lo necesario: sabe quién es `user` (del Auth) y tiene acceso a `MOCK_PEDIDOS` directamente.
+
+**P: ¿Qué es el `returnTo` y en qué casos se usa?**
+R: Es una ruta guardada en `AuthContext` que indica a dónde debe navegar el usuario después de loguearse. Se usa cuando una ruta protegida redirige al login: antes de redirigir, `AccountGuard` guarda `location.pathname` en `setReturnTo`. Después del login exitoso, `AuthContext.login()` navega a `state.returnTo` (o `/` si no hay ninguno guardado). Sin este mecanismo, el usuario siempre terminaría en `/` después de loguearse, perdiendo su destino original.

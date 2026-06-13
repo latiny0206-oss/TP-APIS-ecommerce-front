@@ -1,9 +1,8 @@
 import { Mountain } from 'lucide-react'
-import { useNavigation } from '../context/NavigationContext.jsx'
+import { Link } from 'react-router-dom'
 import { FOOTER_COLUMNS, FOOTER_LEGAL_LINKS } from '../data/index.js'
 
 export default function Footer() {
-  const { navigate } = useNavigation()
 
   return (
     <footer
@@ -17,8 +16,8 @@ export default function Footer() {
 
           {/* Brand column */}
           <div>
-            <button
-              onClick={() => navigate('home')}
+            <Link
+              to="/"
               className="inline-flex items-center gap-3 mb-6"
             >
               <span className="flex h-9 w-9 items-center justify-center rounded-sm bg-alpenglow text-ivory">
@@ -27,7 +26,7 @@ export default function Footer() {
               <span className="font-display font-black tracking-tightest text-2xl uppercase">
                 Cumbre
               </span>
-            </button>
+            </Link>
             <p className="text-ivory/65 max-w-sm text-sm lg:text-base leading-relaxed">
               Cumbre Expedition Equipment provee a guías profesionales y aventureros
               serios desde 2014. Diseñado en Bariloche. Probado en los Andes.
@@ -42,25 +41,21 @@ export default function Footer() {
                   {col.title}
                 </div>
                 <ul className="space-y-3">
-                  {col.links.map(({ label, view, params: linkParams }) =>
-                    view ? (
+                  {col.links.map(({ label, to }) =>
+                    to ? (
                       <li key={label}>
-                        <button
-                          onClick={() => navigate(linkParams ? { view, params: linkParams } : view)}
-                          className="text-sm lg:text-base text-ivory/85 hover:text-alpenglow link-underline transition-colors text-left"
-                        >
-                          {label}
-                        </button>
-                      </li>
-                    ) : (
-                      <li key={label}>
-                        <a
-                          href="#"
-                          onClick={(e) => e.preventDefault()}
+                        <Link
+                          to={to}
                           className="text-sm lg:text-base text-ivory/85 hover:text-alpenglow link-underline transition-colors"
                         >
                           {label}
-                        </a>
+                        </Link>
+                      </li>
+                    ) : (
+                      <li key={label}>
+                        <span className="text-sm lg:text-base text-ivory/85 link-underline">
+                          {label}
+                        </span>
                       </li>
                     )
                   )}
@@ -76,14 +71,14 @@ export default function Footer() {
             © 2026 Cumbre Expedition Equipment · Construido para las cumbres.
           </div>
           <div className="flex flex-wrap items-center gap-x-7 gap-y-2 font-mono text-[11px] tracking-widest-2 uppercase text-ivory/55">
-            {FOOTER_LEGAL_LINKS.map(({ label, view }) => (
-              <button
+            {FOOTER_LEGAL_LINKS.map(({ label, to }) => (
+              <Link
                 key={label}
-                onClick={() => navigate(view)}
+                to={to}
                 className="hover:text-ivory transition-colors"
               >
                 {label}
-              </button>
+              </Link>
             ))}
           </div>
         </div>

@@ -1,10 +1,10 @@
 import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, ArrowRight, Check, CreditCard, Landmark, Wallet, ChevronRight,
 } from 'lucide-react'
-import { useNavigation } from '../context/NavigationContext.jsx'
-import { useCart }       from '../context/CartContext.jsx'
-import { useAuth }       from '../context/AuthContext.jsx'
+import { useCart } from '../context/CartContext.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 import { fmtPrice }      from '../mocks/data.js'
 import Button from '../components/ui/Button.jsx'
 
@@ -152,43 +152,12 @@ function OrderSummary({ items, totals, coupon }) {
   )
 }
 
-function SuccessScreen({ orderNumber }) {
-  const { navigate } = useNavigation()
-  return (
-    <div className="bg-ivory text-rock min-h-screen flex items-center justify-center px-6">
-      <div className="text-center max-w-md fadein">
-        <span className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-pine text-ivory mb-8">
-          <Check size={36} strokeWidth={2} />
-        </span>
-        <div className="font-mono text-[11px] tracking-widest-2 uppercase text-alpenglow mb-3">
-          Pedido confirmado
-        </div>
-        <h1 className="font-display font-black tracking-tightest uppercase text-5xl leading-[0.9] mb-4">
-          ¡Gracias por<br/>tu compra!
-        </h1>
-        <div className="bg-rock/[0.05] border border-rock/10 px-6 py-4 mb-6 inline-block">
-          <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/45 block mb-1">Número de pedido</span>
-          <span className="font-mono font-bold text-xl text-rock">{orderNumber}</span>
-        </div>
-        <p className="text-rock/65 mb-8">
-          Recibirás un email con la confirmación y el seguimiento de tu pedido.<br/>
-          Entrega estimada: <strong>48 horas hábiles</strong>.
-        </p>
-        <Button variant="primary" size="lg" onClick={() => navigate('home')} iconRight={<ArrowRight size={16} />}>
-          Volver al inicio
-        </Button>
-      </div>
-    </div>
-  )
-}
-
 export default function Checkout() {
-  const { navigate }             = useNavigation()
+  const navigate                             = useNavigate()
   const { items, coupon, totals, clearCart } = useCart()
-  const { user }                 = useAuth()
+  const { user }                             = useAuth()
 
   const [step, setStep] = useState(1)
-  const [orderNumber, setOrderNumber] = useState(null)
 
   const [ship, setShip] = useState({
     nombre: user?.nombre || '', direccion: '', ciudad: '',
@@ -228,19 +197,17 @@ export default function Checkout() {
     setProcessing(true)
     await new Promise((r) => setTimeout(r, 900))
     const n = `#ORD-${Math.floor(Math.random() * 90000 + 10000)}`
-    setOrderNumber(n)
     clearCart()
     setProcessing(false)
+    navigate('/confirmacion', { state: { orderNumber: n } })
   }
-
-  if (orderNumber) return <SuccessScreen orderNumber={orderNumber} />
 
   if (items.length === 0) {
     return (
       <div className="bg-ivory min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 mb-4">Tu carrito está vacío</p>
-          <Button variant="primary" onClick={() => navigate('carrito')}>Ver carrito</Button>
+          <Button variant="primary" onClick={() => navigate('/carrito')}>Ver carrito</Button>
         </div>
       </div>
     )
@@ -251,9 +218,9 @@ export default function Checkout() {
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-10 lg:py-14">
 
         <nav className="flex items-center gap-2 font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 mb-6">
-          <button onClick={() => navigate('home')} className="hover:text-alpenglow transition-colors">Inicio</button>
+          <Link to="/" className="hover:text-alpenglow transition-colors">Inicio</Link>
           <span className="text-rock/30">›</span>
-          <button onClick={() => navigate('carrito')} className="hover:text-alpenglow transition-colors">Carrito</button>
+          <Link to="/carrito" className="hover:text-alpenglow transition-colors">Carrito</Link>
           <span className="text-rock/30">›</span>
           <span className="text-rock">Checkout</span>
         </nav>
@@ -295,7 +262,7 @@ export default function Checkout() {
                   </label>
                 </div>
                 <div className="flex gap-3 mt-8">
-                  <Button variant="ghost-light" size="md" onClick={() => navigate('carrito')} icon={<ArrowLeft size={14} />}>
+                  <Button variant="ghost-light" size="md" onClick={() => navigate('/carrito')} icon={<ArrowLeft size={14} />}>
                     Volver
                   </Button>
                   <Button variant="primary" size="lg" onClick={goStep2} iconRight={<ArrowRight size={16} />}>

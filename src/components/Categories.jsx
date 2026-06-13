@@ -1,14 +1,13 @@
 import { ArrowRight, Tent, Footprints, Shirt, Box } from 'lucide-react'
-import { useNavigation } from '../context/NavigationContext.jsx'
+import { useNavigate } from 'react-router-dom'
 import { CATEGORIES } from '../data/index.js'
 import { MOCK_PRODUCTOS } from '../mocks/data.js'
 import SectionHeader from './ui/SectionHeader.jsx'
 
 const ICON_MAP = { tent: Tent, boot: Footprints, jacket: Shirt }
-const VIEW_MAP = { equipamiento: 'equipamiento', calzado: 'calzado', ropa: 'indumentaria' }
 
 export default function Categories() {
-  const { navigate } = useNavigation()
+  const navigate = useNavigate()
 
   return (
     <section id="catalogo" className="relative bg-rock py-20 lg:py-28">
@@ -25,7 +24,7 @@ export default function Categories() {
             const subText = `${count} producto${count !== 1 ? 's' : ''} · ${cat.sub}`
             return (
               <button key={cat.id}
-                onClick={() => navigate({ view: 'catalogo', params: { categoria: cat.categoriaKey } })}
+                onClick={() => navigate(`/catalogo?categoria=${cat.categoriaKey}`)}
                 className="group relative overflow-hidden aspect-[4/5] md:aspect-[3/5] lg:aspect-[3/4] bg-rock-700 text-left">
                 <img src={cat.img} alt={cat.title}
                   className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"

@@ -1,143 +1,209 @@
 # Integrante 2 — Flujo de Conversión (Carrito y Checkout)
-**Pantallas clave:** Carrito · Checkout (3 pasos) · Pantalla de Confirmación  
+**Pantallas clave:** Carrito (`/carrito`) · Checkout (`/checkout`) · Confirmación (`/confirmacion`)
 **Tiempo de exposición:** 3 minutos 45 segundos
 
 ---
 
-## 1. Guión de Exposición (Speech)
+## 1. Pantallas y rutas asignadas
 
-> **Retomás la posta del integrante 1:**
-
-"Gracias [integrante 1]. Ahora que el usuario encontró su producto y lo agregó al carrito, yo me encargo de lo más importante del negocio: la **conversión de la compra**.
-
-**Demo en vivo — guía paso a paso:**
-
-1. **Agregar al carrito** → Desde `ProductoDetalle.jsx`, el botón 'Agregar al carrito' llama a `addToCart()` del `CartContext`. El `cartReducer` procesa el action `'ADD'` y genera un `lineId` único: `'p1001-M'`. Si el mismo producto con el mismo talle ya existe, suma la cantidad — sin duplicar líneas.
-
-2. **Ver el Carrito** → `Carrito.jsx`. Mostramos las líneas del carrito con `items.map()` — cada una con `key={line.lineId}`. Cambiamos la cantidad con los botones `+` y `−` que llaman a `updateQty({ lineId, qty })`. Si la cantidad llega a 0, el reducer elimina la línea automáticamente.
-
-3. **Continuar comprando** → El botón 'Continuar comprando' lee el estado de filtros guardado en `sessionStorage` (`catalogoReturnFilters`) y redirige al catálogo restaurando exactamente los mismos filtros que el usuario tenía antes de ir al carrito.
-
-4. **Cupón de descuento** → Escribimos `INVIERNO24` y presionamos 'Aplicar'. El reducer valida contra `ALL_COUPONS` y actualiza `state.coupon`. Los totales se recalculan en tiempo real con `computeTotals()`.
-
-5. **Checkout — Paso 1 (Envío)** → Formulario controlado en `Checkout.jsx`. Los campos tienen validación estricta: dirección alfanumérica (letras + número de calle obligatorio), ciudad y provincia solo letras (los números se rechazan al tipear), código postal solo dígitos, teléfono solo dígitos con mínimo 8 caracteres.
-
-6. **Checkout — Paso 2 (Pago)** → Si elegís tarjeta, `validateCard()` valida número (16 dígitos), titular (solo letras, mínimo nombre y apellido), vencimiento MM/AA y CVV. El titular no acepta números ni caracteres especiales.
-
-7. **Checkout — Paso 3 + Confirmación** → `confirmar()` es async, simula 900ms de procesamiento, genera un número de orden aleatorio y llama a `clearCart()`. Aparece la `SuccessScreen` con el número de pedido."
-
-> **Cierre de tu bloque:**
-"Le dejo la posta a [integrante 3] que muestra el login y el historial de pedidos."
+| Pantalla       | Ruta            |
+|----------------|-----------------|
+| Carrito        | `/carrito`      |
+| Checkout       | `/checkout`     |
+| Confirmación   | `/confirmacion` |
 
 ---
 
-## 2. Conceptos Teóricos "Salvavidas"
+## 2. Demo en vivo — guía paso a paso
 
-### ¿Qué es el estado en React?
+1. **Agregar al carrito** → Desde `ProductoDetalle.jsx`, el botón 'Agregar al carrito' llama a `addToCart()` del `CartContext`. El `cartReducer` procesa la acción `'ADD'` y genera un `lineId` único: `'p1001-M'`. Si el mismo producto con el mismo talle ya existe en el carrito, suma la cantidad — sin duplicar líneas.
 
-**Analogía:** El estado es la memoria a corto plazo de un componente. Como una pizarra: la podés borrar y reescribir, y cada vez que cambia, React redibuja el componente con la nueva info.
+2. **Ver el Carrito** → `Carrito.jsx`. Mostrar las líneas con `items.map((line) => ...)` — cada `<div>` tiene `key={line.lineId}`. Click en la imagen o el nombre del producto navega a `/producto/${line.productId}` (route param). Cambiar cantidades con los botones `+` y `−` que llaman a `updateQty({ lineId, qty })`. Si la cantidad llega a 0, el reducer elimina la línea automáticamente.
 
-Sin `useState`, si modificás una variable local, React no se entera y no actualiza la pantalla. Con `useState`, React "escucha" el cambio y re-renderiza.
+3. **Cupón de descuento** → Escribir `INVIERNO24` y presionar 'Aplicar'. El reducer valida contra `ALL_COUPONS` y actualiza `state.coupon`. Los totales se recalculan en tiempo real con `computeTotals()`.
 
-### ¿Por qué las actualizaciones de estado son asíncronas?
+4. **Continuar comprando** → El botón llama `navigate('/catalogo')` — simple, sin sessionStorage. El usuario puede volver al catálogo y los filtros que tenía en la URL siguen disponibles con el botón "Atrás" del navegador.
 
-React no actualiza el DOM de inmediato cuando llamás a `setState`. Primero **agrupa** (batching) todos los cambios del mismo evento y los aplica juntos en una sola pasada. Esto es más eficiente. Por eso, si hacés `setCantidad(cantidad + 1)` y luego leés `cantidad`, todavía tiene el valor viejo dentro del mismo handler. La solución: usar la forma funcional `setCantidad(prev => prev + 1)`.
+5. **Checkout — Paso 1 (Envío)** → Formulario controlado en `Checkout.jsx`. Los campos tienen validación estricta: dirección alfanumérica, ciudad y provincia solo letras, código postal solo dígitos, teléfono mínimo 8 dígitos.
 
-### ¿Por qué las listas necesitan `key` único?
+6. **Checkout — Paso 2 (Pago)** → Si elegís tarjeta, `validateCard()` valida número (16 dígitos), titular (solo letras, nombre y apellido), vencimiento MM/AA y CVV.
 
-**Qué pasa sin key (o con index):** React usa el `key` para identificar qué elemento cambió durante el diffing del Virtual DOM. Si usás el índice del array como key y eliminás un elemento, React "confunde" elementos entre sí → puede actualizar el componente equivocado → bugs visuales difíciles de reproducir.
-
-**En nuestro carrito:** Usamos `key={line.lineId}` donde `lineId = 'p1001-M'` — identifica unívocamente producto + talle. Si el mismo producto con diferente talle existe, tienen keys distintos y React los trata como elementos independientes.
-
-### ¿Cómo funcionan los inputs controlados?
-
-Un input controlado en React es aquel donde el valor está **atado al estado**:
+7. **Confirmación** → `confirmar()` es async, simula 900ms de procesamiento, genera un número de orden y llama a `clearCart()`. Luego **navega a `/confirmacion` pasando el número de orden en `location.state`**:
 ```jsx
-// Controlado ✅ — React es la fuente de verdad
-<input value={ship.nombre} onChange={(e) => setShip({...ship, nombre: e.target.value})} />
-
-// No controlado ❌ — el DOM es la fuente de verdad
-<input defaultValue="algo" />
+navigate('/confirmacion', { state: { orderNumber: '#ORD-12345' } })
 ```
-Ventaja: podés validar, transformar o rechazar cualquier entrada **antes** de que el usuario la vea. En Cumbre usamos esto para:
-- Rechazar letras en el campo "Código postal" (`v.replace(/\D/g, '')`)
-- Rechazar números en "Ciudad" y "Provincia" (`v.replace(/[^a-zA-Z...]/g, '')`)
-- Rechazar caracteres especiales en "Titular de tarjeta"
-- Auto-espaciar el número de tarjeta con `fmtCard()`
-
-### Validación en dos capas
-
-Implementamos validación en dos niveles:
-1. **Al tipear (filtros en onChange):** el campo físicamente no acepta caracteres inválidos. El usuario nunca puede escribir una letra en "Código postal".
-2. **Al enviar (validateShip / validateCard):** verificamos reglas de negocio que no se pueden filtrar al tipear, como "la dirección debe tener al menos un número de calle" o "el titular debe tener mínimo dos palabras".
+`Confirmacion.jsx` lee el número con `useLocation().state.orderNumber`. Si alguien accede directamente a `/confirmacion` sin estado, el `useEffect` redirige al home.
 
 ---
 
-## 3. Auditoría de Código — Hooks y Eventos Reales
+## 3. Archivos y componentes clave
 
-### CartContext.jsx — El corazón del carrito
-
-| Elemento | Para qué sirve |
+| Archivo | Rol |
 |---|---|
-| `useReducer(cartReducer, initialState)` | Maneja el estado mutable del carrito con acciones tipadas |
-| `loadSaved()` | Lee `localStorage` al iniciar la app para rehidratar el carrito persistido |
-| `useEffect([state])` con `useRef` | Sincroniza el estado del carrito a `localStorage` en cada cambio; el `useRef` evita escribir en el mount inicial |
-| `computeTotals(items, coupon)` | Función pura: calcula subtotal, descuento y total sin tocar el estado |
-| `action 'ADD'` — lineId `p${id}-${talle}` | Clave única que evita duplicar líneas del mismo producto+talle |
-| `action 'UPDATE_QTY'` | Si qty ≤ 0, elimina la línea automáticamente |
-| `action 'APPLY_COUPON'` | Valida contra `ALL_COUPONS` — si no existe, setea `couponError` |
-
-### Carrito.jsx
-
-| Hook / Función | Para qué sirve |
-|---|---|
-| `useCart()` | Extrae `items`, `coupon`, `couponError`, `totals`, `updateQty`, `removeFromCart`, `applyCoupon`, `clearCart` |
-| `useAuth()` | Extrae `isLoggedIn` y `setReturnTo` |
-| `useState(coupon?.code \|\| '')` | Estado local del input del cupón |
-| `handleCheckout()` | Si no está logueado → guarda `returnTo='checkout'` y redirige al login; si está logueado → va al checkout directo |
-| `key={line.lineId}` | Key único por línea del carrito (producto + talle) |
-| `"Continuar comprando" onClick` | Lee `sessionStorage.catalogoReturnFilters`, lo mueve a `catalogoState` y navega a `/catalogo` con filtros restaurados |
-
-### Checkout.jsx
-
-| Hook / Función | Para qué sirve |
-|---|---|
-| `useState(1)` — `step` | Controla en qué paso del stepper estamos (1, 2 o 3) |
-| `useState({nombre:'', ...})` — `ship` | Estado del formulario de envío como objeto |
-| `useState({})` — `shipErrors` | Errores de validación del formulario de envío |
-| `useState('card')` — `payMethod` | Método de pago seleccionado |
-| `useState({numero:'', ...})` — `card` | Datos de la tarjeta |
-| `sF(field, filter)` | Higher-order function: crea un onChange con transformación opcional del valor |
-| `validateShip(s)` | Valida: dirección alfanumérica, ciudad/provincia solo letras, CP solo dígitos, teléfono ≥8 dígitos |
-| `validateCard(c)` | Valida: número (16 dígitos), titular (solo letras, ≥2 palabras), formato MM/AA, CVV |
-| `goStep2()` | Valida paso 1 → si ok, avanza al paso 2 y scroll top |
-| `confirmar()` — async | Simula procesamiento, genera número de orden, llama `clearCart()` |
+| `src/views/Carrito.jsx` | Lista de ítems, cuponera, resumen y navegación al checkout |
+| `src/views/Checkout.jsx` | 3 pasos: envío, pago, revisión + acción `confirmar()` |
+| `src/views/Confirmacion.jsx` | Pantalla de éxito, lee el número de orden de `location.state` |
+| `src/context/CartContext.jsx` | `useReducer` con acciones ADD, REMOVE, UPDATE_QTY, APPLY_COUPON, CLEAR |
 
 ---
 
-## 4. Defensa de la Arquitectura
+## 4. Tema técnico: Estado del carrito, totales, formularios controlados y checkout
 
-### ¿Por qué no hay un `CheckoutForm.jsx` separado?
+### `CartContext.jsx` — `useReducer` y estado inmutable
 
-El checkout tiene **estado altamente acoplado** entre los tres pasos — `step`, `ship`, `card`, `payMethod`, `shipErrors`, `cardErrors`, `processing` y `orderNumber` son interdependientes. Separarlos en componentes hijos sin un Context dedicado requeriría prop-drilling de toda esa lógica hacia arriba, lo que resulta más complejo que tenerlo en un único componente orquestador.
+El carrito usa `useReducer` con cinco acciones. El estado tiene esta forma:
 
-Lo que sí modularizamos son las sub-vistas stateless:
-- `Stepper` — solo recibe `step` como prop
-- `OrderSummary` — recibe `items`, `totals` y `coupon`
-- `Section`, `TInput`, `Label` — átomos de formulario
-- `SuccessScreen` — pantalla de confirmación completamente separada
+```js
+{
+  items:       [],      // array de líneas { lineId, productId, nombre, precio, qty, imagen, talle }
+  coupon:      null,    // { code, type, value, label } | null
+  couponError: null,
+}
+```
 
-### Patrón Reducer en el carrito — por qué no `useState` simple
+**Llave de línea única:**
+```js
+const lineId = `p${productId}-${talle}`
+```
+Si el mismo producto con el mismo talle ya existe, el reducer suma cantidades en lugar de duplicar la línea.
 
-Con `useState` el carrito podría ser un array. Pero tenemos lógica compleja:
-- Merge de líneas duplicadas (mismo producto + mismo talle)
-- Validación del cupón contra un diccionario
-- Eliminación automática cuando qty = 0
+**Acción ADD — inmutable:**
+```js
+case 'ADD': {
+  const existing = state.items.find((i) => i.lineId === action.payload.lineId)
+  if (existing) {
+    return {
+      ...state,
+      items: state.items.map((i) =>
+        i.lineId === action.payload.lineId
+          ? { ...i, qty: i.qty + (action.payload.qty || 1) }
+          : i
+      ),
+    }
+  }
+  return { ...state, items: [...state.items, action.payload] }
+}
+```
+Nunca se muta el array directamente. Siempre se retorna un nuevo objeto de estado.
 
-`useReducer` centraliza toda esa lógica en `cartReducer` — un único lugar testeable, con acciones nombradas (`'ADD'`, `'UPDATE_QTY'`, `'APPLY_COUPON'`). Cualquier developer puede leer el reducer y entender qué puede pasar con el carrito sin rastrear `setState` dispersos.
+**Persistencia en localStorage:**
+```js
+// El reducer persiste en cada acción:
+localStorage.setItem('cart', JSON.stringify(state.items))
+```
 
-### ¿Por qué la persistencia del carrito usa `localStorage` pero los filtros del catálogo usan `sessionStorage`?
+### Cálculo de totales — `computeTotals()`
 
-El carrito debe sobrevivir al cierre del tab y al reinicio del navegador — el usuario espera que si agregó productos ayer, los vea hoy. Eso es `localStorage`.
+```js
+function computeTotals(items, coupon) {
+  const subtotal = items.reduce((sum, line) => sum + line.precio * line.qty, 0)
+  let discount = 0
+  if (coupon) {
+    discount = coupon.type === 'percent'
+      ? Math.round(subtotal * coupon.value)
+      : coupon.value
+  }
+  return {
+    subtotal,
+    discount,
+    total:     subtotal - discount,
+    itemCount: items.reduce((sum, line) => sum + line.qty, 0),
+  }
+}
+```
 
-Los filtros del catálogo son estado de navegación efímero — solo importan mientras el usuario navega entre catálogo, detalle y carrito en la misma sesión. Si el usuario abre el sitio en un nuevo tab, es razonable que los filtros comiencen limpios. Eso es `sessionStorage`.
+Los totales son **valores derivados** — no se almacenan en el estado, se recalculan en cada render a partir de `items` y `coupon`.
+
+### Formularios controlados en `Checkout.jsx`
+
+Cada campo del formulario de envío es un input controlado con validación:
+
+```jsx
+// Estado del formulario de envío
+const [ship, setShip] = useState({ nombre: '', direccion: '', ciudad: '', ... })
+
+// Handler con filtro de caracteres en tiempo real
+const sF = (field, filter) => (e) => {
+  const v = filter ? filter(e.target.value) : e.target.value
+  setShip({ ...ship, [field]: v })
+}
+
+// Ejemplo: ciudad solo acepta letras
+<TInput
+  value={ship.ciudad}
+  onChange={sF('ciudad', (v) => v.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-]/g, ''))}
+/>
+```
+
+**Validación explícita antes de avanzar (`validateShip`):**
+```js
+function validateShip(s) {
+  const e = {}
+  if (!s.nombre.trim()) e.nombre = 'Requerido'
+  if (!/\d/.test(s.direccion)) e.direccion = 'Debe incluir número de calle'
+  if (/\d/.test(s.ciudad)) e.ciudad = 'Solo letras permitidas'
+  // ...
+  return e  // objeto vacío = sin errores
+}
+```
+
+### `location.state` — paso de datos entre rutas
+
+Después de confirmar la compra, `Checkout.jsx` navega a `/confirmacion` pasando el número de pedido en el state de navegación:
+
+```jsx
+// En Checkout.jsx — después de confirmar:
+navigate('/confirmacion', { state: { orderNumber: '#ORD-12345' } })
+
+// En Confirmacion.jsx — lee el state:
+const { state } = useLocation()
+const orderNumber = state?.orderNumber
+
+// Si alguien accede directamente sin state, redirige al home:
+useEffect(() => {
+  if (!orderNumber) navigate('/', { replace: true })
+}, [orderNumber, navigate])
+```
+
+`location.state` es el mecanismo correcto para pasar datos efímeros entre rutas — datos que no deberían estar en la URL (como un número de confirmación que solo se muestra una vez) ni en el estado global.
+
+### Listas con `key` — por qué importa
+
+```jsx
+{items.map((line) => (
+  <div key={line.lineId}>   {/* ← key = 'p1001-M', no el índice */}
+    ...
+  </div>
+))}
+```
+
+`lineId = 'p${productId}-${talle}'` identifica unívocamente una combinación producto + talle. Si el usuario elimina la primera línea, React usa la key para identificar que es ese elemento el que desapareció — no "el primero" — y no confunde el estado de otros ítems.
+
+---
+
+## 5. Preguntas probables del examen
+
+**P: ¿Por qué `useReducer` en `CartContext` y no múltiples `useState`?**
+R: El carrito tiene múltiples acciones relacionadas (agregar, quitar, actualizar cantidad, aplicar cupón, vaciar). Con `useReducer`, cada acción está centralizada en `cartReducer` y las transiciones de estado son predecibles y testeables. Con `useState` tendríamos variables dispersas (`isLoading`, `items`, `coupon`) que habría que actualizar en sincronía, arriesgando estados inconsistentes.
+
+**P: ¿Qué pasa si el usuario agrega el mismo producto y talle dos veces?**
+R: El reducer detecta que ya existe una línea con ese `lineId` y suma las cantidades en lugar de crear una segunda línea:
+```js
+if (existing) {
+  return { ...state, items: state.items.map((i) =>
+    i.lineId === action.payload.lineId ? { ...i, qty: i.qty + 1 } : i
+  )}
+}
+```
+
+**P: ¿Cómo se calcula el descuento del cupón?**
+R: `computeTotals()` verifica el tipo del cupón: `'percent'` calcula el porcentaje sobre el subtotal (`subtotal * coupon.value`), `'fixed'` resta un monto fijo. La función retorna `{ subtotal, discount, total, itemCount }` y nunca guarda estos valores en el estado — se recalculan en cada render.
+
+**P: ¿Qué es un formulario controlado?**
+R: Un input cuyo `value` siempre está ligado a una variable de estado React. Cada cambio en el input dispara `onChange` → `setState` → React re-renderiza con el nuevo valor. El DOM no "sabe" el valor — React lo controla. Esto permite validar, filtrar caracteres y formatear (como el número de tarjeta con espacios cada 4 dígitos) antes de actualizar el estado.
+
+**P: ¿Por qué `/confirmacion` es una ruta separada y no un estado dentro de Checkout?**
+R: Tener `/confirmacion` como ruta propia permite que el URL sea semántico y bookmarkeable en teoría (aunque el guard redirige si no hay state). Más importante: separa la pantalla de éxito del flujo de checkout — si el usuario recarga `/checkout`, ve el formulario vacío, no la pantalla de éxito. Con la ruta separada, el estado de `Checkout.jsx` se limpia al navegar.
+
+**P: ¿Por qué no se guarda `orderNumber` en un Context global?**
+R: `orderNumber` es efímero — solo existe entre el momento de confirmar y el momento de ver la pantalla de confirmación. No tiene sentido en el estado global. `location.state` es el mecanismo correcto: vive solo mientras dure la navegación a esa ruta y se descarta automáticamente.

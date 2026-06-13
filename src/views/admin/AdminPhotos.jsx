@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Upload, Check, Trash2, ChevronRight } from 'lucide-react'
-import { useNavigation } from '../../context/NavigationContext.jsx'
-import { useProducts }   from '../../context/ProductsContext.jsx'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useProducts }            from '../../context/ProductsContext.jsx'
 
 export default function AdminPhotos() {
-  const { params, navigate } = useNavigation()
+  const navigate             = useNavigate()
+  const { productId: paramId } = useParams()
   const { ids, byId }        = useProducts()
-  const paramId  = params.productId
-  const product  = byId[paramId] ?? byId[ids[0]]
+  const product              = (paramId ? byId[Number(paramId)] : null) ?? byId[ids[0]]
 
   const [photos, setPhotos] = useState(() =>
     (product?.images || []).map((src, i) => ({
@@ -58,7 +58,7 @@ export default function AdminPhotos() {
     <div className="space-y-6">
 
       <nav className="flex items-center gap-2 font-mono text-[11px] tracking-widest-2 uppercase text-rock/55">
-        <button onClick={() => navigate('admin-products')} className="hover:text-pine transition-colors">
+        <button onClick={() => navigate('/admin/productos')} className="hover:text-pine transition-colors">
           Productos
         </button>
         <ChevronRight size={10} className="text-rock/30" />

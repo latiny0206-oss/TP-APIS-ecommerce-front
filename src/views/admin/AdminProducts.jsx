@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Search, Plus, Edit2, Image, Trash2, X, Check, Percent } from 'lucide-react'
-import { useNavigation }  from '../../context/NavigationContext.jsx'
-import { useProducts }    from '../../context/ProductsContext.jsx'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useProducts }  from '../../context/ProductsContext.jsx'
 import { fmt, computePrice, MARCAS, CATEGORIAS } from '../../data/index.js'
 import Button from '../../components/ui/Button.jsx'
 
@@ -202,18 +202,30 @@ function ProductDrawer({ productId, onClose }) {
 }
 
 export default function AdminProducts() {
-  const { navigate }             = useNavigation()
-  const { ids, byId, remove }    = useProducts()
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [editId, setEditId]         = useState(null)
-  const [query, setQuery]           = useState('')
+  const navigate              = useNavigate()
+  const { id: paramId }       = useParams()
+  const { ids, byId, remove } = useProducts()
+  const [query, setQuery]     = useState('')
+
+  // Si la ruta tiene :id, el drawer se abre para ese producto
+  const [drawerOpen, setDrawerOpen] = useState(!!paramId)
+  const [editId, setEditId]         = useState(paramId ? Number(paramId) : null)
 
   const products = ids
     .map((id) => byId[id])
     .filter((p) => !query || (p.nombre + ' ' + p.brand).toLowerCase().includes(query.toLowerCase()))
 
-  const openDrawer = (id = null) => { setEditId(id); setDrawerOpen(true) }
-  const closeDrawer = () => { setDrawerOpen(false); setEditId(null) }
+  const openDrawer = (id = null) => {
+    setEditId(id)
+    setDrawerOpen(true)
+    if (id) navigate(`/admin/productos/${id}`, { replace: true })
+  }
+
+  const closeDrawer = () => {
+    setDrawerOpen(false)
+    setEditId(null)
+    if (paramId) navigate('/admin/productos', { replace: true })
+  }
 
   return (
     <div className="space-y-6">
@@ -293,7 +305,7 @@ export default function AdminProducts() {
                         <Edit2 size={13} />
                       </button>
                       <button
-                        onClick={() => navigate({ view: 'admin-photos', params: { productId: p.id } })}
+                        onClick={() => navigate(`/admin/fotos/${p.id}`)}
                         className="h-8 w-8 grid place-items-center text-rock/55 hover:text-pine border border-rock/15 transition-colors" title="Imágenes">
                         <Image size={13} />
                       </button>

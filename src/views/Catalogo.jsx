@@ -1,10 +1,10 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Search, SlidersHorizontal, X, Check,
   ShoppingCart, ArrowLeft,
 } from 'lucide-react'
-import { useNavigation } from '../context/NavigationContext.jsx'
-import { useCart }       from '../context/CartContext.jsx'
+import { useCart } from '../context/CartContext.jsx'
 import { MOCK_PRODUCTOS, fmtPrice, precioFinal } from '../mocks/data.js'
 import Button from '../components/ui/Button.jsx'
 
@@ -215,68 +215,55 @@ function ProductoCard({ producto, onNavigate }) {
 }
 
 export default function Catalogo() {
-  const { navigate, params } = useNavigation()
-  const categoriaInicial = params.categoria ?? null
+  const navigate                       = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const [busqueda,   setBusqueda]   = useState('')
-  const [categorias, setCategorias] = useState(categoriaInicial ? [categoriaInicial] : [])
-  const [marcas,     setMarcas]     = useState([])
-  const [temporadas, setTemporadas] = useState([])
-  const [precioMin,  setPrecioMin]  = useState(0)
-  const [precioMax,  setPrecioMax]  = useState(PRECIO_GLOBAL_MAX)
+  // Todos los filtros viven en la URL — source of truth
+  const categorias = searchParams.getAll('categoria')
+  const marcas     = searchParams.getAll('marca')
+  const temporadas = searchParams.getAll('temporada')
+  const busqueda   = searchParams.get('q') ?? ''
+
+  // Rango de precio en estado local (cambios muy frecuentes)
+  const [precioMin, setPrecioMin] = useState(0)
+  const [precioMax, setPrecioMax] = useState(PRECIO_GLOBAL_MAX)
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  // Restore filter state when returning from product detail or from cart
-  useEffect(() => {
-    const raw = sessionStorage.getItem('catalogoState')
-    if (!raw) return
-    try {
-      const saved = JSON.parse(raw)
-      if (saved.backView === 'catalogo') {
-        setBusqueda(saved.busqueda ?? '')
-        setCategorias(saved.categorias ?? (categoriaInicial ? [categoriaInicial] : []))
-        setMarcas(saved.marcas ?? [])
-        setTemporadas(saved.temporadas ?? [])
-        setPrecioMin(saved.precioMin ?? 0)
-        setPrecioMax(saved.precioMax ?? PRECIO_GLOBAL_MAX)
-        sessionStorage.removeItem('catalogoState')
-      }
-    } catch { /* ignore malformed state */ }
-  }, []) // eslint-disable-line
+  // ─── Helpers para mutar la URL ────────────────────────────────────────────
+  const toggleItem = (key, value) => {
+    const current = searchParams.getAll(key)
+    const next = current.includes(value)
+      ? current.filter((v) => v !== value)
+      : [...current, value]
+    const params = new URLSearchParams(searchParams)
+    params.delete(key)
+    next.forEach((v) => params.append(key, v))
+    setSearchParams(params, { replace: true })
+  }
 
-  // Persist filter state so "Continuar comprando" can restore it
-  useEffect(() => {
-    sessionStorage.setItem('catalogoReturnFilters', JSON.stringify({
-      busqueda, categorias, marcas, temporadas, precioMin, precioMax,
-    }))
-  }, [busqueda, categorias, marcas, temporadas, precioMin, precioMax])
+  const toggleCategoria = (v) => toggleItem('categoria', v)
+  const toggleMarca     = (v) => toggleItem('marca', v)
+  const toggleTemporada = (v) => toggleItem('temporada', v)
 
-  const toggle = (setter) => (value) =>
-    setter((prev) => prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value])
-
-  const toggleCategoria = toggle(setCategorias)
-  const toggleMarca     = toggle(setMarcas)
-  const toggleTemporada = toggle(setTemporadas)
+  const setBusqueda = (value) => {
+    const params = new URLSearchParams(searchParams)
+    if (value) params.set('q', value)
+    else params.delete('q')
+    setSearchParams(params, { replace: true })
+  }
 
   const hasActiveFilters =
     busqueda !== '' || categorias.length > 0 || marcas.length > 0 ||
     temporadas.length > 0 || precioMin > 0 || precioMax < PRECIO_GLOBAL_MAX
 
   const resetFilters = () => {
-    setBusqueda('')
-    setCategorias([])
-    setMarcas([])
-    setTemporadas([])
+    setSearchParams({}, { replace: true })
     setPrecioMin(0)
     setPrecioMax(PRECIO_GLOBAL_MAX)
   }
 
   const handleProductNavigate = (productoId) => {
-    sessionStorage.setItem('catalogoState', JSON.stringify({
-      backView: 'catalogo',
-      busqueda, categorias, marcas, temporadas, precioMin, precioMax,
-    }))
-    navigate({ view: 'producto', params: { id: productoId } })
+    navigate(`/producto/${productoId}`)
   }
 
   const filterState = {
@@ -308,9 +295,9 @@ export default function Catalogo() {
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-10 lg:py-14">
 
         <nav className="flex items-center gap-2 font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 mb-8">
-          <button onClick={() => navigate('home')} className="hover:text-alpenglow transition-colors">
+          <Link to="/" className="hover:text-alpenglow transition-colors">
             Inicio
-          </button>
+          </Link>
           <span className="text-rock/30">›</span>
           <span className="text-rock">{breadcrumbLabel}</span>
         </nav>
@@ -325,10 +312,10 @@ export default function Catalogo() {
               PRODUCTOS
             </h1>
           </div>
-          <button onClick={() => navigate('home')}
+          <Link to="/"
             className="inline-flex items-center gap-2 font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 hover:text-rock transition-colors self-start">
             <ArrowLeft size={12} /> Volver al inicio
-          </button>
+          </Link>
         </div>
 
         <div className="flex gap-10 lg:gap-14 items-start">

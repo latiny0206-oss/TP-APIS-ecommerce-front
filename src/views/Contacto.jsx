@@ -1,6 +1,6 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Mail, Phone, MapPin, Check, ArrowLeft } from 'lucide-react'
-import { useNavigation } from '../context/NavigationContext.jsx'
 import Button from '../components/ui/Button.jsx'
 
 const ASUNTOS = ['Consulta general', 'Pedidos', 'Devoluciones', 'Otro']
@@ -22,7 +22,6 @@ function Field({ label, error, children }) {
 }
 
 export default function Contacto() {
-  const { navigate } = useNavigation()
 
   const [form, setForm]   = useState({ nombre: '', email: '', asunto: '', mensaje: '' })
   const [errors, setErrors]   = useState({})
@@ -58,7 +57,7 @@ export default function Contacto() {
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-10 lg:py-14">
 
         <nav className="flex items-center gap-2 font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 mb-8">
-          <button onClick={() => navigate('home')} className="hover:text-alpenglow transition-colors">Inicio</button>
+          <Link to="/" className="hover:text-alpenglow transition-colors">Inicio</Link>
           <span className="text-rock/30">›</span>
           <span className="text-rock">Contacto</span>
         </nav>
@@ -162,18 +161,18 @@ export default function Contacto() {
                 </p>
               </div>
             </div>
-            <button onClick={() => navigate('faq')}
+            <Link to="/faq"
               className="mt-4 w-full py-3 border border-rock/20 font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 hover:border-rock hover:text-rock transition-colors flex items-center justify-center gap-2">
               Ver preguntas frecuentes →
-            </button>
+            </Link>
           </aside>
         </div>
 
         <div className="mt-12 pt-10 border-t border-rock/10">
-          <button onClick={() => navigate('home')}
+          <Link to="/"
             className="inline-flex items-center gap-2 font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 hover:text-rock transition-colors">
             <ArrowLeft size={12} /> Volver al inicio
-          </button>
+          </Link>
         </div>
       </div>
     </div>
