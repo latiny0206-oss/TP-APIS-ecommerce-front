@@ -53,22 +53,14 @@ function cartReducer(state, action) {
   }
 }
 
-// coupon shape (API): { id, codigo, tipo, porcentaje, valor, label }
-function computeTotals(items, coupon) {
+// El descuento real lo aplica el backend al hacer checkout.
+// Aquí solo calculamos subtotal e itemCount para mostrar en la UI.
+function computeTotals(items) {
   const subtotal = items.reduce((s, i) => s + i.precio * i.qty, 0)
-  let discount = 0
-  if (coupon) {
-    if (coupon.tipo === 'PORCENTAJE' || coupon.type === 'percent') {
-      const pct = coupon.porcentaje ?? (coupon.value ? coupon.value * 100 : 0)
-      discount = Math.round(subtotal * pct / 100)
-    } else if (coupon.tipo === 'FIJO' || coupon.type === 'fixed') {
-      discount = coupon.valor ?? coupon.value ?? 0
-    }
-  }
   return {
     subtotal,
-    discount,
-    total:     Math.max(0, subtotal - discount),
+    discount:  0,
+    total:     subtotal,
     itemCount: items.reduce((n, i) => n + i.qty, 0),
   }
 }
@@ -92,6 +84,13 @@ export function CartProvider({ children }) {
       localStorage.setItem('cumbre_cart', JSON.stringify({ items: state.items, coupon: state.coupon }))
     } catch {}
   }, [state])
+
+  // Vaciar carrito cuando el interceptor de Axios detecta 401 o el usuario hace logout
+  useEffect(() => {
+    const handler = () => dispatch({ type: 'CLEAR' })
+    window.addEventListener('auth:logout', handler)
+    return () => window.removeEventListener('auth:logout', handler)
+  }, [])
 
   const applyCoupon = useCallback(async (code) => {
     const trimmed = (code || '').trim().toUpperCase()
@@ -120,7 +119,7 @@ export function CartProvider({ children }) {
     coupon:      state.coupon,
     couponError: state.couponError,
     toast:       state.toast,
-    totals:      computeTotals(state.items, state.coupon),
+    totals:      computeTotals(state.items),
     addToCart:      (p)    => dispatch({ type: 'ADD',          payload: p }),
     removeFromCart: (id)   => dispatch({ type: 'REMOVE',       payload: id }),
     updateQty:      (p)    => dispatch({ type: 'UPDATE_QTY',   payload: p }),

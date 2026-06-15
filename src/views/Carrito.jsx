@@ -1,18 +1,14 @@
-import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Minus, Plus, Trash2, Tag, X, ArrowRight, ShoppingCart } from 'lucide-react'
+import { Minus, Plus, Trash2, Tag, ArrowRight, ShoppingCart } from 'lucide-react'
 import { useCart } from '../context/CartContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { fmtPrice } from '../utils/format.js'
 import Button from '../components/ui/Button.jsx'
 
 export default function Carrito() {
-  const navigate                                                  = useNavigate()
-  const { items, coupon, couponError, totals, updateQty,
-          removeFromCart, applyCoupon, removeCoupon, clearCart }  = useCart()
-  const { isLoggedIn, setReturnTo }                              = useAuth()
-
-  const [couponInput, setCouponInput] = useState(coupon?.code || '')
+  const navigate                                           = useNavigate()
+  const { items, totals, updateQty, removeFromCart, clearCart } = useCart()
+  const { isLoggedIn, setReturnTo }                        = useAuth()
 
   const handleCheckout = () => {
     if (!isLoggedIn) {
@@ -135,52 +131,18 @@ export default function Carrito() {
               <h2 className="font-display font-black tracking-tightest uppercase text-3xl mb-6">Tu pedido</h2>
 
               <div className="mb-6 pb-6 border-b border-ivory/15">
-                <span className="font-mono text-[10px] tracking-widest-2 uppercase text-ivory/55 block mb-2">
-                  Código de descuento
-                </span>
-                {coupon ? (
-                  <div className="flex items-center gap-2 p-3 bg-pine/20 border border-pine/40">
-                    <Tag size={14} className="text-pine-300" />
-                    <span className="flex-1 font-mono text-xs tracking-widest-2 uppercase text-pine-300">{coupon.label}</span>
-                    <button onClick={() => { removeCoupon(); setCouponInput('') }}>
-                      <X size={14} className="text-ivory/60 hover:text-ivory" />
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex gap-2">
-                      <input
-                        value={couponInput}
-                        onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                        placeholder="DESCUENTO10"
-                        className="input-base input-dark flex-1 text-sm"
-                        onKeyDown={(e) => e.key === 'Enter' && applyCoupon(couponInput)}
-                      />
-                      <Button variant="secondary" size="md" onClick={() => applyCoupon(couponInput)}>
-                        Aplicar
-                      </Button>
-                    </div>
-                    {couponError && (
-                      <p className="font-mono text-[10px] tracking-widest-2 uppercase text-red-300 mt-2">
-                        ⚠ {couponError}
-                      </p>
-                    )}
-                    <p className="font-mono text-[10px] tracking-widest-2 uppercase text-ivory/35 mt-2">
-                      Ingresá tu código de descuento
-                    </p>
-                  </>
-                )}
+                <div className="flex items-center gap-2 text-ivory/45">
+                  <Tag size={13} />
+                  <span className="font-mono text-[10px] tracking-widest-2 uppercase">
+                    Seleccioná un descuento al confirmar el pedido
+                  </span>
+                </div>
               </div>
 
               <div className="space-y-3 mb-6 text-sm">
                 <div className="flex justify-between text-ivory/75">
                   <span>Subtotal</span><span className="font-mono">{fmtPrice(totals.subtotal)}</span>
                 </div>
-                {totals.discount > 0 && (
-                  <div className="flex justify-between text-alpenglow">
-                    <span>Descuento</span><span className="font-mono">− {fmtPrice(totals.discount)}</span>
-                  </div>
-                )}
                 <div className="flex justify-between text-ivory/45">
                   <span>Envío</span><span className="font-mono">Gratis</span>
                 </div>

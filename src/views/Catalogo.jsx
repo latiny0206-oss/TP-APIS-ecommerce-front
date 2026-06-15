@@ -202,7 +202,7 @@ export default function Catalogo() {
   const navigate                        = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const { ids, byId, loading: loadingData } = useProducts()
+  const { ids, byId, loading: loadingData, error: loadError, reload } = useProducts()
   const productos = ids.map(id => byId[id])
 
   const precioGlobalMax = useMemo(
@@ -332,6 +332,18 @@ export default function Catalogo() {
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="aspect-[4/5] bg-rock/10 animate-pulse" />
                 ))}
+              </div>
+            ) : loadError ? (
+              <div className="border border-red-200 bg-red-50 p-10 text-center">
+                <p className="font-mono text-[11px] tracking-widest-2 uppercase text-red-700 mb-4">
+                  {loadError}
+                </p>
+                <button
+                  onClick={reload}
+                  className="font-mono text-[11px] tracking-widest-2 uppercase text-pine hover:underline"
+                >
+                  Reintentar →
+                </button>
               </div>
             ) : filtrados.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-5 gap-y-12">

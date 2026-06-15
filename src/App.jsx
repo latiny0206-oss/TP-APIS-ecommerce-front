@@ -37,6 +37,7 @@ const AdminOrders    = lazy(() => import('./views/admin/AdminOrders.jsx'))
 const AdminDiscounts = lazy(() => import('./views/admin/AdminDiscounts.jsx'))
 const AdminUsers     = lazy(() => import('./views/admin/AdminUsers.jsx'))
 const AdminCatalog   = lazy(() => import('./views/admin/AdminCatalog.jsx'))
+const AdminContacto  = lazy(() => import('./views/admin/AdminContacto.jsx'))
 
 // ─── Scroll al inicio en cada navegación ──────────────────────────────────
 function ScrollToTop() {
@@ -170,6 +171,7 @@ export default function App() {
               <Route path="descuentos"        element={<AdminDiscounts />} />
               <Route path="ordenes"           element={<AdminOrders />} />
               <Route path="usuarios"          element={<AdminUsers />} />
+              <Route path="mensajes"          element={<AdminContacto />} />
             </Route>
           </Route>
 

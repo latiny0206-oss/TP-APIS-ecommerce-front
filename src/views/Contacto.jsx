@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Mail, Phone, MapPin, Check, ArrowLeft } from 'lucide-react'
 import Button from '../components/ui/Button.jsx'
+import { contactService } from '../api/contactService.js'
+import { getErrorMessage } from '../api/api.js'
 
 const ASUNTOS = ['Consulta general', 'Pedidos', 'Devoluciones', 'Otro']
 
@@ -23,10 +25,11 @@ function Field({ label, error, children }) {
 
 export default function Contacto() {
 
-  const [form, setForm]   = useState({ nombre: '', email: '', asunto: '', mensaje: '' })
-  const [errors, setErrors]   = useState({})
+  const [form, setForm]     = useState({ nombre: '', email: '', asunto: '', mensaje: '' })
+  const [errors, setErrors] = useState({})
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
 
   const f = (field) => (e) => {
     setForm({ ...form, [field]: e.target.value })
@@ -47,9 +50,15 @@ export default function Contacto() {
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 800))
-    setLoading(false)
-    setSuccess(true)
+    setSubmitError(null)
+    try {
+      await contactService.enviarContacto(form)
+      setSuccess(true)
+    } catch (err) {
+      setSubmitError(getErrorMessage(err))
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -94,7 +103,7 @@ export default function Contacto() {
                   a <span className="font-mono font-bold">{form.email}</span>.
                 </p>
                 <button
-                  onClick={() => { setSuccess(false); setForm({ nombre: '', email: '', asunto: '', mensaje: '' }) }}
+                  onClick={() => { setSuccess(false); setSubmitError(null); setForm({ nombre: '', email: '', asunto: '', mensaje: '' }) }}
                   className="mt-6 font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 hover:text-pine underline"
                 >
                   Enviar otro mensaje →
@@ -102,6 +111,11 @@ export default function Contacto() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+                {submitError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 font-mono text-[11px] tracking-widest-2 uppercase">
+                    {submitError}
+                  </div>
+                )}
                 <div className="grid sm:grid-cols-2 gap-5">
                   <Field label="Nombre completo" error={errors.nombre}>
                     <input type="text" value={form.nombre} onChange={f('nombre')} placeholder="Ana García"

@@ -156,30 +156,27 @@ export default function AdminUsers() {
     return matchSearch && matchRol
   })
 
+  const [deleteError, setDeleteError] = useState(null)
+
   async function handleSave(data) {
-    try {
-      if (data.id) {
-        const updated = await userService.actualizarUsuario(data.id, data)
-        setUsers(prev => prev.map(u => u.id === data.id ? { ...u, ...updated } : u))
-      } else {
-        // El backend de este proyecto usa /auth/register para crear usuarios.
-        // Si existe POST /api/usuarios lo usamos, sino redirigir al admin a /registro.
-        alert('Para crear usuarios nuevos usá el flujo de registro.')
-        return false
-      }
-    } catch (e) {
-      throw e
+    if (data.id) {
+      const updated = await userService.actualizarUsuario(data.id, data)
+      setUsers(prev => prev.map(u => u.id === data.id ? { ...u, ...updated } : u))
+    } else {
+      const created = await userService.crearUsuario(data)
+      setUsers(prev => [created, ...prev])
     }
   }
 
   async function handleDelete(id) {
+    setDeleteError(null)
     try {
       await userService.eliminarUsuario(id)
       setUsers(prev => prev.filter(u => u.id !== id))
+      setDelId(null)
     } catch (e) {
-      alert(getErrorMessage(e))
+      setDeleteError(getErrorMessage(e))
     }
-    setDelId(null)
   }
 
   const admins   = users.filter(u => u.rol === 'ADMIN').length
@@ -301,15 +298,20 @@ export default function AdminUsers() {
 
       {delId !== null && (
         <>
-          <div className="fixed inset-0 bg-rock/60 z-40 fadein" onClick={() => setDelId(null)} />
+          <div className="fixed inset-0 bg-rock/60 z-40 fadein" onClick={() => { setDelId(null); setDeleteError(null) }} />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 fadein">
             <div className="bg-ivory w-full max-w-xs border border-rock/15 shadow-2xl p-6">
               <h3 className="font-display font-black tracking-tightest uppercase text-lg">¿Eliminar usuario?</h3>
               <p className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/50 mt-1 mb-5">
                 Esta acción no se puede deshacer.
               </p>
+              {deleteError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 font-mono text-[10px] tracking-widest-2 uppercase mb-4">
+                  {deleteError}
+                </div>
+              )}
               <div className="flex gap-3">
-                <Button variant="ghost-light" size="sm" className="flex-1" onClick={() => setDelId(null)}>Cancelar</Button>
+                <Button variant="ghost-light" size="sm" className="flex-1" onClick={() => { setDelId(null); setDeleteError(null) }}>Cancelar</Button>
                 <Button variant="danger" size="sm" className="flex-1" onClick={() => handleDelete(delId)}>Eliminar</Button>
               </div>
             </div>

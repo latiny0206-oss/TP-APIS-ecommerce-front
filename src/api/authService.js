@@ -5,7 +5,13 @@ export const authService = {
     const { data } = await api.post('/auth/login', { username, password })
     // data = { token, username, rol }
     tokenStorage.set(data.token)
-    userStorage.set({ username: data.username, rol: data.rol })
+    userStorage.set({
+      id:       data.id,
+      username: data.username,
+      nombre:   data.nombre,
+      email:    data.email,
+      rol:      data.rol,
+    })
     return data
   },
 
@@ -14,9 +20,15 @@ export const authService = {
     return data
   },
 
+  async forgotPassword(email) {
+    const { data } = await api.post('/auth/forgot-password', { email })
+    return data
+  },
+
   logout() {
     tokenStorage.remove()
     userStorage.remove()
+    localStorage.removeItem('cumbre_cart')
   },
 
   getStoredUser() {

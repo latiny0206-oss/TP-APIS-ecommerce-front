@@ -23,7 +23,8 @@ export default function Perfil() {
 
   if (!user) return null
 
-  const { ordenes, loading, error } = useOrdenes()
+  // user?.id ?? null: si id no existe (sesión vieja), el hook muestra error en lugar de llamar /ordenes
+  const { ordenes, loading, error } = useOrdenes(user?.id ?? null)
 
   const handleLogout = () => { logout(); navigate('/') }
 

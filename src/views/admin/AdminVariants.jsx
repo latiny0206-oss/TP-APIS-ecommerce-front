@@ -117,6 +117,8 @@ export default function AdminVariants() {
   const [showNew,     setShowNew]     = useState(false)
   const [allVariants, setAllVariants] = useState({})
   const [saving,      setSaving]      = useState(false)
+  const [saveMsg,     setSaveMsg]     = useState(null)  // { type: 'ok'|'err', text: string }
+  const [actionMsg,   setActionMsg]   = useState(null)  // inline error for add/delete
   const [loadingVars, setLoadingVars] = useState(false)
 
   // Selecciona el primer producto disponible
@@ -158,40 +160,57 @@ export default function AdminVariants() {
   }
 
   async function addVariant(newVariant) {
+    setActionMsg(null)
     try {
       const created = await productService.crearVariante({
         ...newVariant,
+        talle: newVariant.talla ?? newVariant.talle,
         idProducto: selectedId,
       })
       setAllVariants(prev => ({
         ...prev,
         [selectedId]: [...(prev[selectedId] || []), created],
       }))
-    } catch (e) { alert(getErrorMessage(e)) }
+    } catch (e) {
+      setActionMsg({ type: 'err', text: getErrorMessage(e) })
+    }
     setShowNew(false)
   }
 
   async function removeVariant(variantId) {
+    setActionMsg(null)
     try {
       await productService.eliminarVariante(variantId)
       setAllVariants(prev => ({
         ...prev,
         [selectedId]: (prev[selectedId] || []).filter(v => v.id !== variantId),
       }))
-    } catch (e) { alert(getErrorMessage(e)) }
+    } catch (e) {
+      setActionMsg({ type: 'err', text: getErrorMessage(e) })
+    }
   }
 
   async function saveChanges() {
     setSaving(true)
+    setSaveMsg(null)
     try {
       await Promise.all(
         variants.map((v) =>
           productService.actualizarVariante(v.id, {
-            precio: v.precio, stock: v.stock, peso: v.peso, estacion: v.estacion,
+            color:    v.color,
+            talle:    v.talle ?? v.talla,
+            material: v.material,
+            peso:     v.peso,
+            precio:   v.precio,
+            stock:    v.stock,
+            estacion: v.estacion,
           })
         )
       )
-    } catch (e) { alert(getErrorMessage(e)) }
+      setSaveMsg({ type: 'ok', text: 'Cambios guardados correctamente' })
+    } catch (e) {
+      setSaveMsg({ type: 'err', text: getErrorMessage(e) })
+    }
     setSaving(false)
   }
 
@@ -291,10 +310,26 @@ export default function AdminVariants() {
             </table>
           </div>
 
-          <div className="px-5 py-4 border-t border-rock/10 flex items-center justify-between">
-            <span className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/55">
-              Stock total: <span className="font-bold text-pine">{totalStock}</span> unidades
-            </span>
+          {actionMsg && (
+            <div className={`px-5 py-2 font-mono text-[10px] tracking-widest-2 uppercase border-t ${
+              actionMsg.type === 'err'
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-pine/5 border-pine/20 text-pine'
+            }`}>
+              {actionMsg.text}
+            </div>
+          )}
+          <div className="px-5 py-4 border-t border-rock/10 flex items-center justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <span className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/55">
+                Stock total: <span className="font-bold text-pine">{totalStock}</span> unidades
+              </span>
+              {saveMsg && (
+                <p className={`font-mono text-[10px] mt-0.5 ${saveMsg.type === 'err' ? 'text-red-600' : 'text-pine'}`}>
+                  {saveMsg.text}
+                </p>
+              )}
+            </div>
             <Button variant="primary" size="sm" onClick={saveChanges} disabled={saving}>
               {saving ? 'Guardando…' : 'Guardar cambios'}
             </Button>

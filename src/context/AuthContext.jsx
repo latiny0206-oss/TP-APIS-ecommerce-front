@@ -51,8 +51,13 @@ export function AuthProvider({ children }) {
     dispatch({ type: 'LOADING' })
     try {
       const data = await authService.login({ username, password })
-      // data = { token, username, rol }
-      dispatch({ type: 'SUCCESS', payload: { username: data.username, rol: data.rol } })
+      dispatch({ type: 'SUCCESS', payload: {
+        id:       data.id,
+        username: data.username,
+        nombre:   data.nombre,
+        email:    data.email,
+        rol:      data.rol,
+      } })
       navigate(data.rol === 'ADMIN' ? '/admin/dashboard' : (state.returnTo || '/'))
     } catch (e) {
       dispatch({ type: 'FAILURE', payload: getErrorMessage(e) })
@@ -72,6 +77,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     authService.logout()
     dispatch({ type: 'LOGOUT' })
+    window.dispatchEvent(new Event('auth:logout'))
     navigate('/')
   }
 

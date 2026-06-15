@@ -1,6 +1,6 @@
 import {
   Mountain, LayoutDashboard, Package, Layers, Sliders,
-  Ticket, ClipboardList, Users, Plus, LogOut, ChevronRight,
+  Ticket, ClipboardList, Users, Mail, Plus, LogOut, ChevronRight,
 } from 'lucide-react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
@@ -14,6 +14,7 @@ const ADMIN_NAV = [
   { path: '/admin/descuentos', label: 'Descuentos', Icon: Ticket },
   { path: '/admin/ordenes',    label: 'Órdenes',    Icon: ClipboardList },
   { path: '/admin/usuarios',   label: 'Usuarios',   Icon: Users },
+  { path: '/admin/mensajes',   label: 'Mensajes',   Icon: Mail },
 ]
 
 const VIEW_LABELS = {
@@ -24,6 +25,7 @@ const VIEW_LABELS = {
   'descuentos': 'Descuentos',
   'ordenes':    'Órdenes',
   'usuarios':   'Usuarios',
+  'mensajes':   'Mensajes de contacto',
   'fotos':      'Imágenes',
 }
 

@@ -3,6 +3,8 @@ import { api } from './api.js'
 export const discountService = {
   // Cliente — requiere auth
   getDescuentosActivos: () => api.get('/descuentos/activos').then((r) => r.data),
+  buscarPorCodigo: (codigo) =>
+    api.get('/descuentos/buscar', { params: { codigo } }).then((r) => r.data),
   calcular: (descuentoId, monto) =>
     api.get(`/descuentos/${descuentoId}/calcular`, { params: { monto } }).then((r) => r.data),
 

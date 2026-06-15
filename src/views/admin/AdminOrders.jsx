@@ -28,7 +28,7 @@ function StatusChip({ status }) {
   )
 }
 
-function OrderDetail({ order, onClose, onConfirm, onCancel, actionLoading }) {
+function OrderDetail({ order, onClose, onConfirm, onCancel, actionLoading, actionError }) {
   const isPendiente = order.estado === 'PENDIENTE'
   const items = order.items ?? order.detalles ?? []
 
@@ -108,21 +108,28 @@ function OrderDetail({ order, onClose, onConfirm, onCancel, actionLoading }) {
           </div>
         </div>
 
-        <footer className="border-t border-rock/10 p-5 flex gap-3">
-          {isPendiente ? (
-            <>
-              <Button variant="danger" size="md" className="flex-1"
-                icon={<Ban size={13} strokeWidth={2} />} onClick={onCancel} disabled={actionLoading}>
-                Cancelar orden
-              </Button>
-              <Button variant="primary" size="md" className="flex-1"
-                icon={<Check size={14} strokeWidth={2.6} />} onClick={onConfirm} disabled={actionLoading}>
-                Confirmar
-              </Button>
-            </>
-          ) : (
-            <Button variant="ghost-light" size="md" className="flex-1" onClick={onClose}>Cerrar</Button>
+        <footer className="border-t border-rock/10 p-5 space-y-3">
+          {actionError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 font-mono text-[10px] tracking-widest-2 uppercase">
+              {actionError}
+            </div>
           )}
+          <div className="flex gap-3">
+            {isPendiente ? (
+              <>
+                <Button variant="danger" size="md" className="flex-1"
+                  icon={<Ban size={13} strokeWidth={2} />} onClick={onCancel} disabled={actionLoading}>
+                  Cancelar orden
+                </Button>
+                <Button variant="primary" size="md" className="flex-1"
+                  icon={<Check size={14} strokeWidth={2.6} />} onClick={onConfirm} disabled={actionLoading}>
+                  Confirmar
+                </Button>
+              </>
+            ) : (
+              <Button variant="ghost-light" size="md" className="flex-1" onClick={onClose}>Cerrar</Button>
+            )}
+          </div>
         </footer>
       </aside>
     </>
@@ -130,9 +137,10 @@ function OrderDetail({ order, onClose, onConfirm, onCancel, actionLoading }) {
 }
 
 export default function AdminOrders() {
-  const [tab,        setTab]        = useState('PENDIENTE')
-  const [selectedId, setSelectedId] = useState(null)
+  const [tab,          setTab]          = useState('PENDIENTE')
+  const [selectedId,   setSelectedId]   = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
+  const [actionError,   setActionError]   = useState(null)
 
   const { ordenes, loading, error, reload, confirmar, cancelar } = useOrdenes()
 
@@ -149,18 +157,40 @@ export default function AdminOrders() {
 
   const handleConfirm = async () => {
     setActionLoading(true)
-    try { await confirmar(selectedId) } catch { /* error mostrado en hook */ }
-    setSelectedId(null)
-    setTab('CONFIRMADA')
-    setActionLoading(false)
+    setActionError(null)
+    try {
+      await confirmar(selectedId)
+      setSelectedId(null)
+      setTab('CONFIRMADA')
+    } catch (e) {
+      const status = e?.response?.status
+      if (status === 403) {
+        setActionError('No tenés permiso para confirmar esta orden.')
+      } else {
+        setActionError(getErrorMessage(e))
+      }
+    } finally {
+      setActionLoading(false)
+    }
   }
 
   const handleCancel = async () => {
     setActionLoading(true)
-    try { await cancelar(selectedId) } catch {}
-    setSelectedId(null)
-    setTab('CANCELADA')
-    setActionLoading(false)
+    setActionError(null)
+    try {
+      await cancelar(selectedId)
+      setSelectedId(null)
+      setTab('CANCELADA')
+    } catch (e) {
+      const status = e?.response?.status
+      if (status === 403) {
+        setActionError('No tenés permiso para cancelar esta orden.')
+      } else {
+        setActionError(getErrorMessage(e))
+      }
+    } finally {
+      setActionLoading(false)
+    }
   }
 
   return (
@@ -250,10 +280,11 @@ export default function AdminOrders() {
       {panelOrder && (
         <OrderDetail
           order={panelOrder}
-          onClose={() => setSelectedId(null)}
+          onClose={() => { setSelectedId(null); setActionError(null) }}
           onConfirm={handleConfirm}
           onCancel={handleCancel}
           actionLoading={actionLoading}
+          actionError={actionError}
         />
       )}
     </div>

@@ -24,11 +24,20 @@ export const cartService = {
   getTotal: (carritoId) =>
     api.get(`/carritos/${carritoId}/total`).then((r) => r.data),
 
+  // Aplica cupón por código al carrito
+  aplicarCupon: (carritoId, codigo) =>
+    api.put(`/carritos/${carritoId}/descuento`, { codigo }).then((r) => r.data),
+
   // Checkout: descuenta stock y genera la orden
-  checkout: (carritoId) =>
-    api.post(`/carritos/${carritoId}/checkout`).then((r) => r.data),
+  // body opcional: { nombreDestinatario, direccion, ciudad, provincia, codigoPostal, telefono, metodoPago }
+  checkout: (carritoId, body = {}) =>
+    api.post(`/carritos/${carritoId}/checkout`, body).then((r) => r.data),
 
   // Vacía el carrito sin eliminarlo
   vaciar: (carritoId) =>
     api.post(`/carritos/${carritoId}/vaciar`).then((r) => r.data),
+
+  // Actualiza datos del carrito (ej: asociar descuentoId)
+  actualizarCarrito: (carritoId, data) =>
+    api.put(`/carritos/${carritoId}`, data).then((r) => r.data),
 }

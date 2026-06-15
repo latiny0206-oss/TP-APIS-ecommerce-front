@@ -1,12 +1,15 @@
-import { createContext, useContext, useReducer, useEffect } from 'react'
+import { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
 import { productService } from '../api/productService.js'
+import { getErrorMessage } from '../api/api.js'
 
 function reducer(state, action) {
   switch (action.type) {
+    case 'LOADING':  return { ...state, loading: true, error: null }
     case 'SET_ALL': {
       const byId = Object.fromEntries(action.payload.map((p) => [p.id, p]))
-      return { byId, ids: action.payload.map((p) => p.id), loading: false }
+      return { byId, ids: action.payload.map((p) => p.id), loading: false, error: null }
     }
+    case 'SET_ERROR': return { ...state, loading: false, error: action.payload }
     case 'UPSERT': {
       const isNew = !state.byId[action.payload.id]
       return {
@@ -26,9 +29,10 @@ function reducer(state, action) {
 const ProductsContext = createContext(null)
 
 export function ProductsProvider({ children }) {
-  const [state, dispatch] = useReducer(reducer, { byId: {}, ids: [], loading: true })
+  const [state, dispatch] = useReducer(reducer, { byId: {}, ids: [], loading: true, error: null })
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    dispatch({ type: 'LOADING' })
     Promise.all([
       productService.getProductos(),
       productService.getVariantes(),
@@ -46,15 +50,19 @@ export function ProductsProvider({ children }) {
         productService.normalizeProducto(p, variantesByProducto[p.id] ?? [])
       )
       dispatch({ type: 'SET_ALL', payload: normalized })
-    }).catch(() => {
-      dispatch({ type: 'SET_ALL', payload: [] })
+    }).catch((e) => {
+      dispatch({ type: 'SET_ERROR', payload: getErrorMessage(e) })
     })
   }, [])
+
+  useEffect(() => { load() }, [load])
 
   const value = {
     byId:    state.byId,
     ids:     state.ids,
     loading: state.loading,
+    error:   state.error,
+    reload:  load,
     upsert:  (product) => dispatch({ type: 'UPSERT', payload: product }),
     remove:  (id)      => dispatch({ type: 'REMOVE', payload: id }),
   }

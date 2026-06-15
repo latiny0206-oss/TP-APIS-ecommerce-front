@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { ArrowRight, Check } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ArrowRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import Button from './ui/Button.jsx'
 import { HERO_IMAGES } from '../data/index.js'
 import { useProducts } from '../context/ProductsContext.jsx'
+import { discountService } from '../api/discountService.js'
 
 function StatCell({ label, value, mono, accent, sub }) {
   return (
@@ -14,12 +15,26 @@ function StatCell({ label, value, mono, accent, sub }) {
       </div>
       {sub && (
         <div className="mt-1.5 font-mono text-[9px] tracking-widest-2 uppercase text-ivory/35 flex items-center gap-1.5">
-          <Check size={10} strokeWidth={2.6} className="text-pine shrink-0" />
           {sub}
         </div>
       )}
     </div>
   )
+}
+
+function buildPromoText(descuento) {
+  if (!descuento) return null
+  const codigo = descuento.codigo
+  if (descuento.tipo === 'PORCENTAJE' && codigo) {
+    return { eyebrow: `${descuento.porcentaje ?? descuento.valor}% OFF · Código ${codigo}`, stat: `${codigo} · ${descuento.porcentaje ?? descuento.valor}% OFF` }
+  }
+  if (descuento.tipo === 'FIJO' && codigo) {
+    return { eyebrow: `Descuento activo · Código ${codigo}`, stat: `${codigo} · Descuento disponible` }
+  }
+  if (codigo) {
+    return { eyebrow: `Descuento activo · Código ${codigo}`, stat: `${codigo} · Descuento disponible` }
+  }
+  return null
 }
 
 export default function HeroSection() {
@@ -28,6 +43,20 @@ export default function HeroSection() {
   const imgSrc        = HERO_IMAGES[variant] || HERO_IMAGES.midnight
   const { ids }       = useProducts()
   const totalStock    = ids.length
+
+  const [promo, setPromo] = useState(null)
+
+  useEffect(() => {
+    discountService.getDescuentosActivos()
+      .then((data) => {
+        const list = Array.isArray(data) ? data : []
+        const withCode = list.find((d) => d.codigo)
+        setPromo(buildPromoText(withCode))
+      })
+      .catch(() => {
+        // Sin descuentos disponibles — no mostramos código
+      })
+  }, [])
 
   return (
     <section className="relative grain overflow-hidden bg-rock">
@@ -45,7 +74,9 @@ export default function HeroSection() {
         <div className="rise rise-d1 inline-flex items-center gap-3 mb-8 lg:mb-12 border border-ivory/20 bg-rock/40 backdrop-blur-sm px-4 py-2">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-alpenglow animate-pulse" />
           <span className="font-mono text-[11px] tracking-widest-2 uppercase text-ivory/90">
-            20% OFF en colección de invierno · Código INVIERNO24
+            {promo
+              ? promo.eyebrow
+              : 'Descubrí productos seleccionados para tu próxima aventura'}
           </span>
         </div>
 
@@ -79,7 +110,11 @@ export default function HeroSection() {
 
         {/* Stats */}
         <div className="rise rise-d4 mt-16 lg:mt-24 border-t border-ivory/10 pt-6 grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-10">
-          <StatCell label="Código activo" value="INVIERNO24 · 20% OFF" mono accent sub="Aplicado en checkout" />
+          {promo ? (
+            <StatCell label="Código activo" value={promo.stat} mono accent />
+          ) : (
+            <StatCell label="Colección actual" value="Temporada 2026" />
+          )}
           <StatCell label="Productos en stock" value={totalStock.toLocaleString('es-CL')} />
           <StatCell label="Garantía de por vida" value="Toda la línea Pro" />
           <StatCell label="Envío express" value="48 horas" />

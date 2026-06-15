@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const BASE_URL = 'http://localhost:8080/api'
+const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api'
 const TOKEN_KEY = 'cumbre_token'
 const USER_KEY  = 'cumbre_user'
 
@@ -24,6 +24,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem(USER_KEY)
+      localStorage.removeItem('cumbre_cart')
       window.dispatchEvent(new Event('auth:logout'))
     }
     return Promise.reject(error)

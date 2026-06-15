@@ -2,16 +2,22 @@ import { useState, useEffect, useCallback } from 'react'
 import { orderService } from '../api/orderService.js'
 import { getErrorMessage } from '../api/api.js'
 
+// userId = number  → GET /ordenes/usuario/:userId  (usuario propio)
+// userId = undefined (sin arg) → GET /ordenes          (admin, todos)
+// userId = null  → no fetch (sesión sin id, mostrar error en UI)
 export function useOrdenes(userId) {
   const [ordenes, setOrdenes] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState(null)
+  const [loading, setLoading] = useState(userId !== null)
+  const [error,   setError]   = useState(
+    userId === null ? 'No se encontró tu ID de usuario. Por favor, cerrá sesión y volvé a ingresar.' : null
+  )
 
   const load = useCallback(async () => {
+    if (userId === null) return
     setLoading(true)
     setError(null)
     try {
-      const data = userId
+      const data = userId !== undefined
         ? await orderService.getOrdenesByUser(userId)
         : await orderService.getOrdenes()
       setOrdenes(data)
