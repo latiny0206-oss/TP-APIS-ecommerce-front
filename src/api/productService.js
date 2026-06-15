@@ -6,6 +6,14 @@ export const productService = {
   getMarcas:      () => api.get('/marcas').then((r) => r.data),
   getProductos:   () => api.get('/productos').then((r) => r.data),
   getProducto:    (id) => api.get(`/productos/${id}`).then((r) => r.data),
+
+  // Admin: trae ACTIVO + PAUSADO + ELIMINADO (requiere ADMIN)
+  getProductosAdmin: () =>
+    Promise.allSettled([
+      api.get('/productos/estado/ACTIVO').then((r) => r.data),
+      api.get('/productos/estado/PAUSADO').then((r) => r.data),
+      api.get('/productos/estado/ELIMINADO').then((r) => r.data),
+    ]).then((results) => results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []))),
   getProductosByCategoria: (id) => api.get(`/productos/categoria/${id}`).then((r) => r.data),
   getProductosByMarca:     (id) => api.get(`/productos/marca/${id}`).then((r) => r.data),
   isProductoDisponible:    (id) => api.get(`/productos/${id}/disponible`).then((r) => r.data),

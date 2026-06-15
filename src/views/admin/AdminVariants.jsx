@@ -3,7 +3,6 @@ import { Plus, Trash2, Check, X } from 'lucide-react'
 import Button from '../../components/ui/Button.jsx'
 import { productService } from '../../api/productService.js'
 import { getErrorMessage } from '../../api/api.js'
-import { useProducts } from '../../context/ProductsContext.jsx'
 
 const COLOR_SWATCH = {
   'Azul Marino': '#1f3a5f', 'Verde Oliva': '#3d4a2a', 'Negro': '#1a1a1a',
@@ -109,9 +108,19 @@ function VariantRow({ variant, onUpdate, onDelete }) {
   )
 }
 
+const ESTADO_LABEL = { PAUSADO: '⏸', ELIMINADO: '✕' }
+
 export default function AdminVariants() {
-  const { ids, byId, loading: productsLoading } = useProducts()
-  const products = ids.map(id => byId[id])
+  const [products,       setProducts]       = useState([])
+  const [productsLoading, setProductsLoading] = useState(true)
+
+  // Carga ACTIVO + PAUSADO + ELIMINADO para que admin pueda gestionar variantes de cualquier estado
+  useEffect(() => {
+    productService.getProductosAdmin()
+      .catch(() => productService.getProductos())
+      .then((prods) => setProducts(prods.map((p) => productService.normalizeProducto(p, []))))
+      .finally(() => setProductsLoading(false))
+  }, [])
 
   const [selectedId,  setSelectedId]  = useState(null)
   const [showNew,     setShowNew]     = useState(false)
@@ -240,7 +249,12 @@ export default function AdminVariants() {
                     ) : <span className="font-mono text-[8px] text-rock/30">IMG</span>}
                   </div>
                   <div className="min-w-0">
-                    <div className="font-narrow font-bold text-xs uppercase tracking-tight truncate">{p.nombre}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-narrow font-bold text-xs uppercase tracking-tight truncate">{p.nombre}</span>
+                      {p.estado !== 'ACTIVO' && (
+                        <span className="font-mono text-[9px] text-rock/40 shrink-0">{ESTADO_LABEL[p.estado] ?? p.estado}</span>
+                      )}
+                    </div>
                     <div className="font-mono text-[10px] text-rock/50 mt-0.5">
                       {vCount} variante{vCount !== 1 ? 's' : ''}
                     </div>

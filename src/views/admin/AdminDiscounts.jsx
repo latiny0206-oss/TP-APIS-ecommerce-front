@@ -76,13 +76,16 @@ function DiscountCard({ d, onToggle, onEdit, onDelete }) {
 const EMPTY_FORM = { codigo: '', tipo: 'PORCENTAJE', porcentaje: '', valor: '', fechaInicio: '', fechaFin: '' }
 
 export default function AdminDiscounts() {
-  const [descuentos, setDescuentos] = useState([])
-  const [loading,    setLoading]    = useState(true)
-  const [showForm,   setShowForm]   = useState(false)
-  const [editData,   setEditData]   = useState(null)
-  const [form,       setForm]       = useState(EMPTY_FORM)
-  const [deleteId,   setDeleteId]   = useState(null)
-  const [saving,     setSaving]     = useState(false)
+  const [descuentos,   setDescuentos]   = useState([])
+  const [loading,      setLoading]      = useState(true)
+  const [showForm,     setShowForm]     = useState(false)
+  const [editData,     setEditData]     = useState(null)
+  const [form,         setForm]         = useState(EMPTY_FORM)
+  const [deleteId,     setDeleteId]     = useState(null)
+  const [saving,       setSaving]       = useState(false)
+  const [formError,    setFormError]    = useState(null)
+  const [toggleError,  setToggleError]  = useState(null)
+  const [deleteError,  setDeleteError]  = useState(null)
 
   useEffect(() => {
     discountService.getDescuentos()
@@ -116,6 +119,7 @@ export default function AdminDiscounts() {
       fechaFin:   form.fechaFin,
       estado:     editData?.estado ?? 'ACTIVO',
     }
+    setFormError(null)
     try {
       if (editData) {
         const updated = await discountService.actualizarDescuento(editData.id, payload)
@@ -125,24 +129,28 @@ export default function AdminDiscounts() {
         setDescuentos(prev => [...prev, created])
       }
       setShowForm(false)
-    } catch (e) { alert(getErrorMessage(e)) }
+    } catch (e) { setFormError(getErrorMessage(e)) }
     setSaving(false)
   }
 
   async function handleToggle(d) {
     const newEstado = d.estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO'
+    setToggleError(null)
     try {
       await discountService.actualizarDescuento(d.id, { ...d, estado: newEstado })
       setDescuentos(prev => prev.map(item => item.id === d.id ? { ...item, estado: newEstado } : item))
-    } catch (e) { alert(getErrorMessage(e)) }
+    } catch (e) { setToggleError(getErrorMessage(e)) }
   }
 
   async function handleDelete(id) {
+    setDeleteError(null)
     try {
       await discountService.eliminarDescuento(id)
       setDescuentos(prev => prev.filter(d => d.id !== id))
-    } catch (e) { alert(getErrorMessage(e)) }
-    setDeleteId(null)
+      setDeleteId(null)
+    } catch (e) {
+      setDeleteError(getErrorMessage(e))
+    }
   }
 
   return (
@@ -203,6 +211,11 @@ export default function AdminDiscounts() {
               <input type="date" value={form.fechaFin} onChange={setF('fechaFin')} className="input-base w-full h-11" />
             </label>
           </div>
+          {formError && (
+            <div className="mt-3 bg-red-50 border border-red-200 text-red-700 px-4 py-2 font-mono text-[11px] tracking-widest-2 uppercase">
+              {formError}
+            </div>
+          )}
           <div className="flex gap-3 mt-4">
             <Button variant="primary" size="sm" icon={<Check size={13} strokeWidth={2.6} />}
               onClick={handleSubmit} disabled={saving}>
@@ -230,6 +243,13 @@ export default function AdminDiscounts() {
         </div>
       )}
 
+      {toggleError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 font-mono text-[11px] tracking-widest-2 uppercase flex items-center justify-between">
+          {toggleError}
+          <button onClick={() => setToggleError(null)} className="ml-4 text-red-400 hover:text-red-700">×</button>
+        </div>
+      )}
+
       {deleteId !== null && (
         <>
           <div className="fixed inset-0 bg-rock/60 z-40 fadein" onClick={() => setDeleteId(null)} />
@@ -237,8 +257,13 @@ export default function AdminDiscounts() {
             <div className="bg-ivory w-full max-w-xs border border-rock/15 shadow-2xl p-6">
               <h3 className="font-display font-black tracking-tightest uppercase text-lg">¿Eliminar cupón?</h3>
               <p className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/50 mt-1 mb-5">Esta acción no se puede deshacer.</p>
+              {deleteError && (
+                <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-3 py-2 font-mono text-[11px] tracking-widest-2 uppercase">
+                  {deleteError}
+                </div>
+              )}
               <div className="flex gap-3">
-                <Button variant="ghost-light" size="sm" className="flex-1" onClick={() => setDeleteId(null)}>Cancelar</Button>
+                <Button variant="ghost-light" size="sm" className="flex-1" onClick={() => { setDeleteId(null); setDeleteError(null) }}>Cancelar</Button>
                 <Button variant="danger" size="sm" className="flex-1" onClick={() => handleDelete(deleteId)}>Eliminar</Button>
               </div>
             </div>

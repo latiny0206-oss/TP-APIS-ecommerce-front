@@ -5,12 +5,13 @@ import { productService } from '../../api/productService.js'
 import { getErrorMessage } from '../../api/api.js'
 
 function TaxoTable({ title, endpoint, entityName, items, loading, onUpsert, onDelete }) {
-  const [editId,   setEditId]   = useState(null)
-  const [editForm, setEditForm] = useState({ nombre: '', descripcion: '' })
-  const [showNew,  setShowNew]  = useState(false)
-  const [newForm,  setNewForm]  = useState({ nombre: '', descripcion: '' })
-  const [deleteId, setDeleteId] = useState(null)
-  const [saving,   setSaving]   = useState(false)
+  const [editId,      setEditId]      = useState(null)
+  const [editForm,    setEditForm]    = useState({ nombre: '', descripcion: '' })
+  const [showNew,     setShowNew]     = useState(false)
+  const [newForm,     setNewForm]     = useState({ nombre: '', descripcion: '' })
+  const [deleteId,    setDeleteId]    = useState(null)
+  const [saving,      setSaving]      = useState(false)
+  const [actionError, setActionError] = useState(null)
 
   function startEdit(item) {
     setEditId(item.id)
@@ -21,18 +22,28 @@ function TaxoTable({ title, endpoint, entityName, items, loading, onUpsert, onDe
   async function commitEdit() {
     if (!editForm.nombre.trim()) { setEditId(null); return }
     setSaving(true)
-    await onUpsert({ id: editId, nombre: editForm.nombre.trim(), descripcion: editForm.descripcion.trim() })
+    setActionError(null)
+    try {
+      await onUpsert({ id: editId, nombre: editForm.nombre.trim(), descripcion: editForm.descripcion.trim() })
+      setEditId(null)
+    } catch (e) {
+      setActionError(e.message)
+    }
     setSaving(false)
-    setEditId(null)
   }
 
   async function commitNew() {
     if (!newForm.nombre.trim()) { setShowNew(false); return }
     setSaving(true)
-    await onUpsert({ nombre: newForm.nombre.trim(), descripcion: newForm.descripcion.trim() })
+    setActionError(null)
+    try {
+      await onUpsert({ nombre: newForm.nombre.trim(), descripcion: newForm.descripcion.trim() })
+      setNewForm({ nombre: '', descripcion: '' })
+      setShowNew(false)
+    } catch (e) {
+      setActionError(e.message)
+    }
     setSaving(false)
-    setNewForm({ nombre: '', descripcion: '' })
-    setShowNew(false)
   }
 
   return (
@@ -159,6 +170,13 @@ function TaxoTable({ title, endpoint, entityName, items, loading, onUpsert, onDe
         )}
       </div>
 
+      {actionError && (
+        <div className="mx-5 mb-3 bg-red-50 border border-red-200 text-red-700 px-4 py-2 font-mono text-[11px] tracking-widest-2 uppercase flex items-center justify-between">
+          {actionError}
+          <button onClick={() => setActionError(null)} className="ml-3 text-red-400 hover:text-red-700">×</button>
+        </div>
+      )}
+
       {deleteId !== null && (
         <>
           <div className="fixed inset-0 bg-rock/60 z-40 fadein" onClick={() => setDeleteId(null)} />
@@ -169,7 +187,12 @@ function TaxoTable({ title, endpoint, entityName, items, loading, onUpsert, onDe
               <div className="flex gap-3">
                 <Button variant="ghost-light" size="sm" className="flex-1" onClick={() => setDeleteId(null)}>Cancelar</Button>
                 <Button variant="danger" size="sm" className="flex-1"
-                  onClick={() => { onDelete(deleteId); setDeleteId(null) }}>
+                  onClick={async () => {
+                    const id = deleteId
+                    setDeleteId(null)
+                    setActionError(null)
+                    try { await onDelete(id) } catch (e) { setActionError(e.message) }
+                  }}>
                   Eliminar
                 </Button>
               </div>
@@ -199,41 +222,33 @@ export default function AdminCatalog() {
 
   const catHandlers = {
     onUpsert: async (data) => {
-      try {
-        if (data.id) {
-          const updated = await productService.actualizarCategoria(data.id, data)
-          setCategorias(prev => prev.map(c => c.id === data.id ? { ...c, ...updated } : c))
-        } else {
-          const created = await productService.crearCategoria(data)
-          setCategorias(prev => [...prev, created])
-        }
-      } catch (e) { alert(getErrorMessage(e)) }
+      if (data.id) {
+        const updated = await productService.actualizarCategoria(data.id, data)
+        setCategorias(prev => prev.map(c => c.id === data.id ? { ...c, ...updated } : c))
+      } else {
+        const created = await productService.crearCategoria(data)
+        setCategorias(prev => [...prev, created])
+      }
     },
     onDelete: async (id) => {
-      try {
-        await productService.eliminarCategoria(id)
-        setCategorias(prev => prev.filter(c => c.id !== id))
-      } catch (e) { alert(getErrorMessage(e)) }
+      await productService.eliminarCategoria(id)
+      setCategorias(prev => prev.filter(c => c.id !== id))
     },
   }
 
   const marcaHandlers = {
     onUpsert: async (data) => {
-      try {
-        if (data.id) {
-          const updated = await productService.actualizarMarca(data.id, data)
-          setMarcas(prev => prev.map(m => m.id === data.id ? { ...m, ...updated } : m))
-        } else {
-          const created = await productService.crearMarca(data)
-          setMarcas(prev => [...prev, created])
-        }
-      } catch (e) { alert(getErrorMessage(e)) }
+      if (data.id) {
+        const updated = await productService.actualizarMarca(data.id, data)
+        setMarcas(prev => prev.map(m => m.id === data.id ? { ...m, ...updated } : m))
+      } else {
+        const created = await productService.crearMarca(data)
+        setMarcas(prev => [...prev, created])
+      }
     },
     onDelete: async (id) => {
-      try {
-        await productService.eliminarMarca(id)
-        setMarcas(prev => prev.filter(m => m.id !== id))
-      } catch (e) { alert(getErrorMessage(e)) }
+      await productService.eliminarMarca(id)
+      setMarcas(prev => prev.filter(m => m.id !== id))
     },
   }
 

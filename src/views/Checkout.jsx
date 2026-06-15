@@ -272,8 +272,8 @@ export default function Checkout() {
         try {
           await cartService.aplicarCupon(carritoId, cuponCodigo)
         } catch {
-          // Cupón inválido en el momento de confirmar — limpiar y continuar
-          await cartService.actualizarCarrito(carritoId, { descuentoId: null }).catch(() => {})
+          await cartService.vaciar(carritoId).catch(() => {})
+          throw new Error('No se pudo aplicar el cupón. Verificá el código o retiralo para continuar sin descuento.')
         }
       } else {
         await cartService.actualizarCarrito(carritoId, { descuentoId: null }).catch(() => {})

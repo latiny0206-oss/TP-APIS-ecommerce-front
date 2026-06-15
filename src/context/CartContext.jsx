@@ -85,11 +85,15 @@ export function CartProvider({ children }) {
     } catch {}
   }, [state])
 
-  // Vaciar carrito cuando el interceptor de Axios detecta 401 o el usuario hace logout
+  // Vaciar carrito en auto-logout (401 del interceptor) o logout manual
   useEffect(() => {
     const handler = () => dispatch({ type: 'CLEAR' })
-    window.addEventListener('auth:logout', handler)
-    return () => window.removeEventListener('auth:logout', handler)
+    window.addEventListener('auth:logout', handler)   // 401 → auto-logout
+    window.addEventListener('cart:clear',  handler)   // logout manual
+    return () => {
+      window.removeEventListener('auth:logout', handler)
+      window.removeEventListener('cart:clear',  handler)
+    }
   }, [])
 
   const applyCoupon = useCallback(async (code) => {

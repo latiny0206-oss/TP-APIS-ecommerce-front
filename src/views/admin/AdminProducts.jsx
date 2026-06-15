@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Search, Plus, Edit2, Image, Trash2, X, Check, Percent } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useProducts }    from '../../context/ProductsContext.jsx'
@@ -14,14 +14,12 @@ function AdminInput({ className = '', ...props }) {
   return <input {...props} className={`input-base w-full ${className}`} />
 }
 
-function ProductDrawer({ productId, onClose, onSaved }) {
-  const { byId } = useProducts()
-  const existing = productId ? byId[productId] : null
-
+function ProductDrawer({ product: existing, onClose, onSaved }) {
   const [marcas,     setMarcas]     = useState([])
   const [categorias, setCategorias] = useState([])
   const [saving,     setSaving]     = useState(false)
   const [errors,     setErrors]     = useState({})
+  const [saveError,  setSaveError]  = useState(null)
 
   const [form, setForm] = useState(() =>
     existing
@@ -61,6 +59,7 @@ function ProductDrawer({ productId, onClose, onSaved }) {
     const e = validate()
     if (Object.keys(e).length > 0) { setErrors(e); return }
     setSaving(true)
+    setSaveError(null)
     try {
       const payload = {
         nombre:      form.nombre,
@@ -80,7 +79,7 @@ function ProductDrawer({ productId, onClose, onSaved }) {
       onSaved()
       onClose()
     } catch (err) {
-      alert(getErrorMessage(err))
+      setSaveError(getErrorMessage(err))
     } finally {
       setSaving(false)
     }
@@ -111,6 +110,12 @@ function ProductDrawer({ productId, onClose, onSaved }) {
         </header>
 
         <div className="flex-1 overflow-auto p-5 space-y-4">
+          {saveError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 font-mono text-[11px] tracking-widest-2 uppercase">
+              {saveError}
+            </div>
+          )}
+
           <label className="block">
             <FieldLabel>Nombre</FieldLabel>
             <AdminInput value={form.nombre} onChange={f('nombre')} placeholder="Mochila Atmos AG 65" />
@@ -168,7 +173,8 @@ function ProductDrawer({ productId, onClose, onSaved }) {
               <FieldLabel>Estado</FieldLabel>
               <select value={form.estado} onChange={f('estado')} className="input-base w-full">
                 <option value="ACTIVO">ACTIVO</option>
-                <option value="INACTIVO">INACTIVO</option>
+                <option value="PAUSADO">PAUSADO</option>
+                <option value="ELIMINADO">ELIMINADO</option>
               </select>
             </label>
             <label className="block">
@@ -202,45 +208,31 @@ function ProductDrawer({ productId, onClose, onSaved }) {
   )
 }
 
+const ESTADO_STYLES = {
+  ACTIVO:    'text-pine',
+  PAUSADO:   'text-alpenglow',
+  ELIMINADO: 'text-red-600',
+}
+
 export default function AdminProducts() {
   const navigate              = useNavigate()
   const { id: paramId }       = useParams()
-  const { ids, byId, remove, loading, upsert } = useProducts()
-  const [query, setQuery]     = useState('')
-  const [drawerOpen, setDrawerOpen] = useState(!!paramId)
-  const [editId,     setEditId]     = useState(paramId ? Number(paramId) : null)
-  const [deleting,   setDeleting]   = useState(null)
+  const { upsert, remove }    = useProducts()
 
-  const products = ids
-    .map((id) => byId[id])
-    .filter((p) => !query || (p.nombre + ' ' + (p.marca ?? '')).toLowerCase().includes(query.toLowerCase()))
+  const [adminProds,   setAdminProds]   = useState([])
+  const [adminLoading, setAdminLoading] = useState(true)
+  const [query,        setQuery]        = useState('')
+  const [drawerOpen,   setDrawerOpen]   = useState(!!paramId)
+  const [editProduct,  setEditProduct]  = useState(null)
+  const [deleting,     setDeleting]     = useState(null)
+  const [deleteError,  setDeleteError]  = useState(null)
 
-  const openDrawer = (id = null) => {
-    setEditId(id)
-    setDrawerOpen(true)
-    if (id) navigate(`/admin/productos/${id}`, { replace: true })
-  }
-
-  const closeDrawer = () => {
-    setDrawerOpen(false)
-    setEditId(null)
-    if (paramId) navigate('/admin/productos', { replace: true })
-  }
-
-  const handleDelete = async (id) => {
-    setDeleting(id)
-    try {
-      await productService.eliminarProducto(id)
-      remove(id)
-    } catch (e) { alert(getErrorMessage(e)) }
-    setDeleting(null)
-  }
-
-  // Refresca el contexto después de guardar en el drawer
-  const handleSaved = async () => {
+  // Carga todos los productos (ACTIVO + PAUSADO + ELIMINADO) para el admin
+  const loadAdminProds = useCallback(async () => {
+    setAdminLoading(true)
     try {
       const [prods, vars] = await Promise.all([
-        productService.getProductos(),
+        productService.getProductosAdmin(),
         productService.getVariantes(),
       ])
       const varByProd = vars.reduce((acc, v) => {
@@ -248,8 +240,69 @@ export default function AdminProducts() {
         if (pid) { acc[pid] = acc[pid] ?? []; acc[pid].push(v) }
         return acc
       }, {})
-      prods.forEach((p) => upsert(productService.normalizeProducto(p, varByProd[p.id] ?? [])))
-    } catch {}
+      const normalized = prods.map((p) => productService.normalizeProducto(p, varByProd[p.id] ?? []))
+      setAdminProds(normalized)
+      // Sincroniza los productos ACTIVO con el contexto público
+      normalized.filter(p => p.estado === 'ACTIVO').forEach((p) => upsert(p))
+    } catch {
+      // Si el endpoint admin falla (403 u otro), caer al público
+      try {
+        const [prods, vars] = await Promise.all([
+          productService.getProductos(),
+          productService.getVariantes(),
+        ])
+        const varByProd = vars.reduce((acc, v) => {
+          const pid = v.idProducto ?? v.productoId
+          if (pid) { acc[pid] = acc[pid] ?? []; acc[pid].push(v) }
+          return acc
+        }, {})
+        const normalized = prods.map((p) => productService.normalizeProducto(p, varByProd[p.id] ?? []))
+        setAdminProds(normalized)
+        normalized.forEach((p) => upsert(p))
+      } catch {}
+    } finally {
+      setAdminLoading(false)
+    }
+  }, [upsert])
+
+  useEffect(() => { loadAdminProds() }, [loadAdminProds])
+
+  // Abre drawer con el producto pasado por parámetro de URL
+  useEffect(() => {
+    if (paramId && adminProds.length > 0) {
+      const found = adminProds.find(p => p.id === Number(paramId))
+      if (found) setEditProduct(found)
+    }
+  }, [paramId, adminProds])
+
+  const products = adminProds.filter((p) =>
+    !query || (p.nombre + ' ' + (p.marca ?? '')).toLowerCase().includes(query.toLowerCase())
+  )
+
+  const openDrawer = (product = null) => {
+    setEditProduct(product)
+    setDrawerOpen(true)
+    if (product?.id) navigate(`/admin/productos/${product.id}`, { replace: true })
+    else             navigate('/admin/productos', { replace: true })
+  }
+
+  const closeDrawer = () => {
+    setDrawerOpen(false)
+    setEditProduct(null)
+    if (paramId) navigate('/admin/productos', { replace: true })
+  }
+
+  const handleDelete = async (id) => {
+    setDeleting(id)
+    setDeleteError(null)
+    try {
+      await productService.eliminarProducto(id)
+      setAdminProds(prev => prev.filter(p => p.id !== id))
+      remove(id)
+    } catch (e) {
+      setDeleteError(getErrorMessage(e))
+    }
+    setDeleting(null)
   }
 
   return (
@@ -265,6 +318,15 @@ export default function AdminProducts() {
         </Button>
       </div>
 
+      {deleteError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 font-mono text-[11px] tracking-widest-2 uppercase flex items-center justify-between">
+          {deleteError}
+          <button onClick={() => setDeleteError(null)} className="ml-4 text-red-400 hover:text-red-700">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       <div className="bg-white border border-rock/10 overflow-x-auto">
         <table className="w-full text-sm min-w-[700px]">
           <thead>
@@ -275,7 +337,7 @@ export default function AdminProducts() {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
+            {adminLoading ? (
               <tr>
                 <td colSpan={8} className="px-5 py-12 text-center font-mono text-[11px] tracking-widest-2 uppercase text-rock/40">
                   Cargando…
@@ -286,7 +348,7 @@ export default function AdminProducts() {
                 ? Math.round((p.precioBase ?? p.precio ?? 0) * (1 - (p.descuentoPct ?? 0) / 100))
                 : (p.precioBase ?? p.precio ?? 0)
               return (
-                <tr key={p.id} className="border-t border-rock/10 hover:bg-rock/[0.02]">
+                <tr key={p.id} className={`border-t border-rock/10 hover:bg-rock/[0.02] ${p.estado !== 'ACTIVO' ? 'opacity-60' : ''}`}>
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
                       <div className="h-12 w-12 overflow-hidden shrink-0 bg-rock/10 flex items-center justify-center">
@@ -326,13 +388,13 @@ export default function AdminProducts() {
                     ) : <span className="font-mono text-[10px] text-rock/30">—</span>}
                   </td>
                   <td className="px-5 py-3">
-                    <span className={`font-mono text-[10px] tracking-widest-2 uppercase ${p.estado === 'ACTIVO' ? 'text-pine' : 'text-rock/45'}`}>
+                    <span className={`font-mono text-[10px] tracking-widest-2 uppercase ${ESTADO_STYLES[p.estado] ?? 'text-rock/45'}`}>
                       {p.estado || 'ACTIVO'}
                     </span>
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => openDrawer(p.id)}
+                      <button onClick={() => openDrawer(p)}
                         className="h-8 w-8 grid place-items-center text-rock/55 hover:text-pine border border-rock/15 transition-colors">
                         <Edit2 size={13} />
                       </button>
@@ -351,7 +413,7 @@ export default function AdminProducts() {
             })}
           </tbody>
         </table>
-        {!loading && products.length === 0 && (
+        {!adminLoading && products.length === 0 && (
           <div className="p-10 text-center font-mono text-[11px] tracking-widest-2 uppercase text-rock/40">
             No se encontraron productos
           </div>
@@ -359,7 +421,7 @@ export default function AdminProducts() {
       </div>
 
       {drawerOpen && (
-        <ProductDrawer productId={editId} onClose={closeDrawer} onSaved={handleSaved} />
+        <ProductDrawer product={editProduct} onClose={closeDrawer} onSaved={loadAdminProds} />
       )}
     </div>
   )

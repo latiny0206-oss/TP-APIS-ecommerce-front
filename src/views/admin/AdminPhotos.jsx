@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Upload, Check, Trash2, ChevronRight, ImageOff } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useProducts } from '../../context/ProductsContext.jsx'
 import { productService } from '../../api/productService.js'
 import { api, getErrorMessage } from '../../api/api.js'
 
@@ -21,16 +20,34 @@ async function uploadFoto(varianteId, file, onProgress) {
 export default function AdminPhotos() {
   const navigate               = useNavigate()
   const { productId: paramId } = useParams()
-  const { ids, byId }          = useProducts()
 
-  const product    = (paramId ? byId[Number(paramId)] : null) ?? byId[ids[0]]
-  const variantes  = product?._variantes ?? []
+  const [adminProds,   setAdminProds]   = useState([])
+  const [prodsLoading, setProdsLoading] = useState(true)
 
-  const [selectedVar, setSelectedVar] = useState(null)
-  const [fotos,       setFotos]       = useState([])
+  // Carga todos los productos (ACTIVO + PAUSADO + ELIMINADO) para gestionar fotos de cualquier estado
+  useEffect(() => {
+    Promise.all([
+      productService.getProductosAdmin().catch(() => productService.getProductos()),
+      productService.getVariantes(),
+    ]).then(([prods, vars]) => {
+      const varByProd = vars.reduce((acc, v) => {
+        const pid = v.idProducto ?? v.productoId
+        if (pid) { acc[pid] = acc[pid] ?? []; acc[pid].push(v) }
+        return acc
+      }, {})
+      setAdminProds(prods.map((p) => productService.normalizeProducto(p, varByProd[p.id] ?? [])))
+    }).finally(() => setProdsLoading(false))
+  }, [])
+
+  const product   = (paramId ? adminProds.find((p) => p.id === Number(paramId)) : null) ?? adminProds[0]
+  const variantes = product?._variantes ?? []
+
+  const [selectedVar,  setSelectedVar]  = useState(null)
+  const [fotos,        setFotos]        = useState([])
   const [loadingFotos, setLoadingFotos] = useState(false)
-  const [queue,       setQueue]       = useState([])
-  const [dragOver,    setDragOver]    = useState(false)
+  const [queue,        setQueue]        = useState([])
+  const [dragOver,     setDragOver]     = useState(false)
+  const [deleteError,  setDeleteError]  = useState(null)
 
   // Selecciona la primera variante disponible
   useEffect(() => {
@@ -50,11 +67,12 @@ export default function AdminPhotos() {
   }, [selectedVar?.id]) // eslint-disable-line
 
   async function handleDelete(fotoId) {
+    setDeleteError(null)
     try {
       await api.delete(`/fotos/${fotoId}`)
       setFotos(prev => prev.filter(f => f.id !== fotoId))
     } catch (e) {
-      alert(getErrorMessage(e))
+      setDeleteError(getErrorMessage(e))
     }
   }
 
@@ -76,6 +94,14 @@ export default function AdminPhotos() {
           setQueue(q => q.map(it => it.uid === uid ? { ...it, error: getErrorMessage(e) } : it))
         })
     })
+  }
+
+  if (prodsLoading) {
+    return (
+      <div className="py-16 text-center font-mono text-[11px] tracking-widest-2 uppercase text-rock/40">
+        Cargando productos…
+      </div>
+    )
   }
 
   if (!product) {
@@ -142,6 +168,12 @@ export default function AdminPhotos() {
             )}
           </header>
           <div className="p-5">
+            {deleteError && (
+              <div className="mb-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 font-mono text-[11px] tracking-widest-2 uppercase flex items-center justify-between">
+                {deleteError}
+                <button onClick={() => setDeleteError(null)} className="ml-3 text-red-400 hover:text-red-700">×</button>
+              </div>
+            )}
             {loadingFotos ? (
               <div className="grid grid-cols-3 gap-3">
                 {Array.from({ length: 3 }).map((_, i) => (
