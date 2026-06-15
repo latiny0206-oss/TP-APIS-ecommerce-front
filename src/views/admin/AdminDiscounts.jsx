@@ -1,37 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Ticket, Plus, Trash2, Pencil, Check, X } from 'lucide-react'
 import Button from '../../components/ui/Button.jsx'
+import { discountService } from '../../api/discountService.js'
+import { getErrorMessage }  from '../../api/api.js'
 
-// ─── Custom toggle switch ─────────────────────────────────────────────────────
 function ToggleSwitch({ active, onToggle }) {
   return (
-    <button
-      onClick={onToggle}
+    <button onClick={onToggle}
       className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200 focus:outline-none
-        ${active ? 'bg-pine' : 'bg-rock/20'}`}
-      aria-pressed={active}
-    >
-      <span
-        className={`inline-block h-5 w-5 translate-y-0.5 rounded-full bg-ivory shadow-sm transition-transform duration-200
-          ${active ? 'translate-x-[22px]' : 'translate-x-0.5'}`}
-      />
+        ${active ? 'bg-pine' : 'bg-rock/20'}`} aria-pressed={active}>
+      <span className={`inline-block h-5 w-5 translate-y-0.5 rounded-full bg-ivory shadow-sm transition-transform duration-200
+        ${active ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
     </button>
   )
-}
-
-// ─── Mock data ────────────────────────────────────────────────────────────────
-const INITIAL_DESCUENTOS = [
-  { id: 1, codigo: 'DESCUENTO10',   tipo: 'PORCENTAJE', valor: 0,     porcentaje: 10, fechaInicio: '2026-01-01', fechaFin: '2026-06-20', estado: 'ACTIVO',   usos: 47 },
-  { id: 2, codigo: 'INVIERNO24',    tipo: 'PORCENTAJE', valor: 0,     porcentaje: 20, fechaInicio: '2026-03-01', fechaFin: '2026-06-14', estado: 'ACTIVO',   usos: 38 },
-  { id: 3, codigo: 'NUEVOSOCIO',    tipo: 'FIJO',       valor: 15000, porcentaje: null, fechaInicio: '2026-01-01', fechaFin: '2026-06-17', estado: 'ACTIVO', usos: 12 },
-  { id: 4, codigo: 'ENVIOPRO',      tipo: 'FIJO',       valor: 5000,  porcentaje: null, fechaInicio: '2026-01-01', fechaFin: '2026-07-31', estado: 'ACTIVO', usos: 201 },
-  { id: 5, codigo: 'PRIMERACOMPRA', tipo: 'PORCENTAJE', valor: 0,     porcentaje: 5,  fechaInicio: '2026-01-01', fechaFin: '2026-12-31', estado: 'ACTIVO',   usos: 342 },
-  { id: 6, codigo: 'VERANO25',      tipo: 'PORCENTAJE', valor: 0,     porcentaje: 15, fechaInicio: '2026-01-01', fechaFin: '2026-03-31', estado: 'INACTIVO', usos: 80 },
-  { id: 7, codigo: 'BLACKWEEK',     tipo: 'PORCENTAJE', valor: 0,     porcentaje: 30, fechaInicio: '2026-11-25', fechaFin: '2026-11-28', estado: 'INACTIVO', usos: 0 },
-]
-
-const EMPTY_FORM = {
-  codigo: '', tipo: 'PORCENTAJE', porcentaje: '', valor: '', fechaInicio: '', fechaFin: '',
 }
 
 function fmtDateShort(dateStr) {
@@ -40,7 +21,6 @@ function fmtDateShort(dateStr) {
   return `${m}-${d}`
 }
 
-// ─── Discount card ────────────────────────────────────────────────────────────
 function DiscountCard({ d, onToggle, onEdit, onDelete }) {
   const active     = d.estado === 'ACTIVO'
   const valueLabel = d.tipo === 'PORCENTAJE'
@@ -49,8 +29,6 @@ function DiscountCard({ d, onToggle, onEdit, onDelete }) {
 
   return (
     <article className={`bg-white border transition-opacity ${active ? 'border-pine' : 'border-rock/15 opacity-60'}`}>
-
-      {/* Top */}
       <div className="flex items-start justify-between p-5 pb-3">
         <div>
           <div className="font-mono text-[10px] tracking-widest-2 uppercase text-alpenglow">
@@ -61,13 +39,12 @@ function DiscountCard({ d, onToggle, onEdit, onDelete }) {
             {d.codigo}
           </div>
         </div>
-        <ToggleSwitch active={active} onToggle={() => onToggle(d.id)} />
+        <ToggleSwitch active={active} onToggle={() => onToggle(d)} />
       </div>
 
-      {/* Metrics */}
       <div className="grid grid-cols-3 divide-x divide-rock/10 border-t border-b border-rock/10">
         <div className="px-4 py-3 text-center">
-          <div className="font-display font-black tracking-tightest text-xl">{d.usos}</div>
+          <div className="font-display font-black tracking-tightest text-xl">{d.usos ?? 0}</div>
           <div className="font-mono text-[9px] tracking-widest-2 uppercase text-rock/45 mt-0.5">usos</div>
         </div>
         <div className="px-4 py-3 text-center">
@@ -77,25 +54,18 @@ function DiscountCard({ d, onToggle, onEdit, onDelete }) {
           <div className="font-mono text-[9px] tracking-widest-2 uppercase text-rock/45 mt-0.5">vigencia</div>
         </div>
         <div className="px-4 py-3 text-center">
-          <div className={`font-mono text-[10px] font-bold ${active ? 'text-pine' : 'text-rock/45'}`}>
-            {d.estado}
-          </div>
+          <div className={`font-mono text-[10px] font-bold ${active ? 'text-pine' : 'text-rock/45'}`}>{d.estado}</div>
           <div className="font-mono text-[9px] tracking-widest-2 uppercase text-rock/45 mt-0.5">estado</div>
         </div>
       </div>
 
-      {/* Footer */}
       <div className="flex items-center justify-between px-5 py-3">
-        <button
-          onClick={() => onEdit(d)}
-          className="flex items-center gap-1.5 font-mono text-[10px] tracking-widest-2 uppercase text-pine hover:opacity-70 transition-opacity"
-        >
+        <button onClick={() => onEdit(d)}
+          className="flex items-center gap-1.5 font-mono text-[10px] tracking-widest-2 uppercase text-pine hover:opacity-70 transition-opacity">
           <Pencil size={11} /> Editar
         </button>
-        <button
-          onClick={() => onDelete(d.id)}
-          className="flex items-center gap-1.5 font-mono text-[10px] tracking-widest-2 uppercase text-rock/45 hover:text-red-700 transition-colors"
-        >
+        <button onClick={() => onDelete(d.id)}
+          className="flex items-center gap-1.5 font-mono text-[10px] tracking-widest-2 uppercase text-rock/45 hover:text-red-700 transition-colors">
           <Trash2 size={11} /> Eliminar
         </button>
       </div>
@@ -103,39 +73,41 @@ function DiscountCard({ d, onToggle, onEdit, onDelete }) {
   )
 }
 
-// ─── Vista principal ──────────────────────────────────────────────────────────
+const EMPTY_FORM = { codigo: '', tipo: 'PORCENTAJE', porcentaje: '', valor: '', fechaInicio: '', fechaFin: '' }
+
 export default function AdminDiscounts() {
-  const [descuentos, setDescuentos] = useState(INITIAL_DESCUENTOS)
+  const [descuentos, setDescuentos] = useState([])
+  const [loading,    setLoading]    = useState(true)
   const [showForm,   setShowForm]   = useState(false)
   const [editData,   setEditData]   = useState(null)
   const [form,       setForm]       = useState(EMPTY_FORM)
   const [deleteId,   setDeleteId]   = useState(null)
+  const [saving,     setSaving]     = useState(false)
+
+  useEffect(() => {
+    discountService.getDescuentos()
+      .then(setDescuentos)
+      .catch(() => {
+        // Fallback: intenta con endpoint de activos
+        discountService.getDescuentosActivos().then(setDescuentos).catch(() => {})
+      })
+      .finally(() => setLoading(false))
+  }, [])
 
   const activos = descuentos.filter(d => d.estado === 'ACTIVO').length
   const setF    = field => e => setForm(prev => ({ ...prev, [field]: e.target.value }))
 
-  function openNew() {
-    setEditData(null)
-    setForm(EMPTY_FORM)
-    setShowForm(true)
-  }
-
+  function openNew()   { setEditData(null); setForm(EMPTY_FORM); setShowForm(true) }
   function openEdit(d) {
     setEditData(d)
-    setForm({
-      codigo:     d.codigo,
-      tipo:       d.tipo,
-      porcentaje: d.porcentaje ?? '',
-      valor:      d.valor || '',
-      fechaInicio: d.fechaInicio,
-      fechaFin:   d.fechaFin,
-    })
+    setForm({ codigo: d.codigo, tipo: d.tipo, porcentaje: d.porcentaje ?? '', valor: d.valor || '', fechaInicio: d.fechaInicio, fechaFin: d.fechaFin })
     setShowForm(true)
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!form.codigo.trim()) return
-    const base = {
+    setSaving(true)
+    const payload = {
       codigo:     form.codigo.trim().toUpperCase(),
       tipo:       form.tipo,
       valor:      form.tipo === 'FIJO'       ? Number(form.valor)      : 0,
@@ -144,29 +116,37 @@ export default function AdminDiscounts() {
       fechaFin:   form.fechaFin,
       estado:     editData?.estado ?? 'ACTIVO',
     }
-    if (editData) {
-      setDescuentos(prev => prev.map(d => d.id === editData.id ? { ...d, ...base } : d))
-    } else {
-      setDescuentos(prev => [...prev, { id: Date.now(), usos: 0, ...base }])
-    }
-    setShowForm(false)
+    try {
+      if (editData) {
+        const updated = await discountService.actualizarDescuento(editData.id, payload)
+        setDescuentos(prev => prev.map(d => d.id === editData.id ? { ...d, ...updated } : d))
+      } else {
+        const created = await discountService.crearDescuento(payload)
+        setDescuentos(prev => [...prev, created])
+      }
+      setShowForm(false)
+    } catch (e) { alert(getErrorMessage(e)) }
+    setSaving(false)
   }
 
-  function handleToggle(id) {
-    setDescuentos(prev =>
-      prev.map(d => d.id === id ? { ...d, estado: d.estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO' } : d)
-    )
+  async function handleToggle(d) {
+    const newEstado = d.estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO'
+    try {
+      await discountService.actualizarDescuento(d.id, { ...d, estado: newEstado })
+      setDescuentos(prev => prev.map(item => item.id === d.id ? { ...item, estado: newEstado } : item))
+    } catch (e) { alert(getErrorMessage(e)) }
   }
 
-  function handleDelete(id) {
-    setDescuentos(prev => prev.filter(d => d.id !== id))
+  async function handleDelete(id) {
+    try {
+      await discountService.eliminarDescuento(id)
+      setDescuentos(prev => prev.filter(d => d.id !== id))
+    } catch (e) { alert(getErrorMessage(e)) }
     setDeleteId(null)
   }
 
   return (
     <div className="space-y-6">
-
-      {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <span className="h-10 w-10 bg-alpenglow/15 text-alpenglow grid place-items-center shrink-0">
@@ -179,16 +159,13 @@ export default function AdminDiscounts() {
             </div>
           </div>
         </div>
-        <Button
-          variant="primary"
+        <Button variant="primary"
           icon={showForm && !editData ? <X size={14} /> : <Plus size={14} strokeWidth={2.2} />}
-          onClick={showForm && !editData ? () => setShowForm(false) : openNew}
-        >
+          onClick={showForm && !editData ? () => setShowForm(false) : openNew}>
           {showForm && !editData ? 'Cancelar' : 'Nuevo cupón'}
         </Button>
       </div>
 
-      {/* Create / Edit form */}
       {showForm && (
         <div className="bg-pine/5 border border-pine/30 p-5 fadein">
           <div className="font-mono text-[10px] tracking-widest-2 uppercase text-pine mb-4">
@@ -197,14 +174,9 @@ export default function AdminDiscounts() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
             <label className="block">
               <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 block mb-1.5">Código</span>
-              <input
-                value={form.codigo}
-                onChange={e => setForm(p => ({ ...p, codigo: e.target.value.toUpperCase() }))}
-                placeholder="VERANO25"
-                className="input-base w-full h-11"
-              />
+              <input value={form.codigo} onChange={e => setForm(p => ({ ...p, codigo: e.target.value.toUpperCase() }))}
+                placeholder="VERANO25" className="input-base w-full h-11" />
             </label>
-
             <label className="block">
               <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 block mb-1.5">Tipo</span>
               <select value={form.tipo} onChange={setF('tipo')} className="input-base w-full h-11">
@@ -212,78 +184,62 @@ export default function AdminDiscounts() {
                 <option value="FIJO">FIJO</option>
               </select>
             </label>
-
             <label className="block">
               <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 block mb-1.5">
                 {form.tipo === 'PORCENTAJE' ? 'Porcentaje (%)' : 'Valor ($)'}
               </span>
-              <input
-                type="number"
-                min="0"
+              <input type="number" min="0"
                 value={form.tipo === 'PORCENTAJE' ? form.porcentaje : form.valor}
                 onChange={form.tipo === 'PORCENTAJE' ? setF('porcentaje') : setF('valor')}
                 placeholder={form.tipo === 'PORCENTAJE' ? '20' : '5000'}
-                className="input-base w-full h-11"
-              />
+                className="input-base w-full h-11" />
             </label>
-
             <label className="block">
               <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 block mb-1.5">Desde</span>
               <input type="date" value={form.fechaInicio} onChange={setF('fechaInicio')} className="input-base w-full h-11" />
             </label>
-
             <label className="block">
               <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 block mb-1.5">Hasta</span>
               <input type="date" value={form.fechaFin} onChange={setF('fechaFin')} className="input-base w-full h-11" />
             </label>
           </div>
-
           <div className="flex gap-3 mt-4">
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<Check size={13} strokeWidth={2.6} />}
-              onClick={handleSubmit}
-            >
-              {editData ? 'Actualizar cupón' : 'Crear cupón'}
+            <Button variant="primary" size="sm" icon={<Check size={13} strokeWidth={2.6} />}
+              onClick={handleSubmit} disabled={saving}>
+              {saving ? 'Guardando…' : editData ? 'Actualizar cupón' : 'Crear cupón'}
             </Button>
-            <Button variant="ghost-light" size="sm" onClick={() => setShowForm(false)}>
-              Cancelar
-            </Button>
+            <Button variant="ghost-light" size="sm" onClick={() => setShowForm(false)}>Cancelar</Button>
           </div>
         </div>
       )}
 
-      {/* Card grid */}
-      <div className="grid md:grid-cols-2 gap-4">
-        {descuentos.map(d => (
-          <DiscountCard
-            key={d.id}
-            d={d}
-            onToggle={handleToggle}
-            onEdit={openEdit}
-            onDelete={id => setDeleteId(id)}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <div className="grid md:grid-cols-2 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-40 bg-rock/10 animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-4">
+          {descuentos.map(d => (
+            <DiscountCard key={d.id} d={d}
+              onToggle={handleToggle}
+              onEdit={openEdit}
+              onDelete={id => setDeleteId(id)} />
+          ))}
+        </div>
+      )}
 
-      {/* Confirm delete */}
       {deleteId !== null && (
         <>
           <div className="fixed inset-0 bg-rock/60 z-40 fadein" onClick={() => setDeleteId(null)} />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 fadein">
             <div className="bg-ivory w-full max-w-xs border border-rock/15 shadow-2xl p-6">
               <h3 className="font-display font-black tracking-tightest uppercase text-lg">¿Eliminar cupón?</h3>
-              <p className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/50 mt-1 mb-5">
-                Esta acción no se puede deshacer.
-              </p>
+              <p className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/50 mt-1 mb-5">Esta acción no se puede deshacer.</p>
               <div className="flex gap-3">
-                <Button variant="ghost-light" size="sm" className="flex-1" onClick={() => setDeleteId(null)}>
-                  Cancelar
-                </Button>
-                <Button variant="danger" size="sm" className="flex-1" onClick={() => handleDelete(deleteId)}>
-                  Eliminar
-                </Button>
+                <Button variant="ghost-light" size="sm" className="flex-1" onClick={() => setDeleteId(null)}>Cancelar</Button>
+                <Button variant="danger" size="sm" className="flex-1" onClick={() => handleDelete(deleteId)}>Eliminar</Button>
               </div>
             </div>
           </div>

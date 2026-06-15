@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { ArrowLeft, ShoppingCart, Minus, Plus, Check, X } from 'lucide-react'
-import { useCart }       from '../context/CartContext.jsx'
-import { getProductoById, fmtPrice, precioFinal } from '../mocks/data.js'
+import { useCart }         from '../context/CartContext.jsx'
+import { productService }  from '../api/productService.js'
+import { fmtPrice }        from '../utils/format.js'
 import Button from '../components/ui/Button.jsx'
 
 const CATEGORIA_LABELS = {
@@ -12,74 +13,103 @@ const CATEGORIA_LABELS = {
 }
 
 export default function ProductoDetalle() {
-  const navigate      = useNavigate()
-  const location      = useLocation()
-  const { id }        = useParams()
-
-  const handleVolver = () => {
-    if (location.state?.from === 'catalogo') {
-      navigate(-1)
-    } else {
-      navigate('/catalogo')
-    }
-  }
+  const navigate  = useNavigate()
+  const location  = useLocation()
+  const { id }    = useParams()
   const { addToCart } = useCart()
-  const producto = getProductoById(Number(id))
+
+  const [producto, setProducto] = useState(null)
+  const [fotos,    setFotos]    = useState([])
+  const [loading,  setLoading]  = useState(true)
+  const [notFound, setNotFound] = useState(false)
 
   const [talleSeleccionado, setTalleSeleccionado] = useState(null)
-  const [cantidad, setCantidad] = useState(1)
-  const [agregado, setAgregado] = useState(false)
+  const [cantidad,  setCantidad]  = useState(1)
+  const [agregado,  setAgregado]  = useState(false)
 
-  if (!producto) {
+  const handleVolver = () => {
+    if (location.state?.from === 'catalogo') navigate(-1)
+    else navigate('/catalogo')
+  }
+
+  useEffect(() => {
+    setLoading(true)
+    setNotFound(false)
+    Promise.all([
+      productService.getProducto(id),
+      productService.getVariantes(),
+    ]).then(async ([raw, allVariantes]) => {
+      const variantes = allVariantes.filter(
+        (v) => (v.idProducto ?? v.productoId) === raw.id
+      )
+      const p = productService.normalizeProducto(raw, variantes)
+      setProducto(p)
+
+      // Carga las fotos de la primera variante disponible
+      if (variantes.length > 0) {
+        try {
+          const fs = await productService.getFotosByVariante(variantes[0].id)
+          setFotos(fs)
+        } catch { /* sin fotos */ }
+      }
+    }).catch(() => setNotFound(true))
+      .finally(() => setLoading(false))
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-ivory flex items-center justify-center text-rock">
+        <span className="spinner" />
+      </div>
+    )
+  }
+
+  if (notFound || !producto) {
     return (
       <div className="min-h-screen bg-ivory flex items-center justify-center text-rock">
         <div className="text-center">
           <p className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 mb-4">
             Producto no encontrado
           </p>
-          <Button variant="primary" onClick={() => navigate('/')}>
-            Volver al inicio
-          </Button>
+          <Button variant="primary" onClick={() => navigate('/')}>Volver al inicio</Button>
         </div>
       </div>
     )
   }
 
-  const pf     = precioFinal(producto)
-  const hayTalles = producto.talles && producto.talles.length > 0 && producto.talles[0] !== 'Único'
-  const categoriaLabel = CATEGORIA_LABELS[producto.categoria] || producto.categoria
+  const pf              = producto.precioFinal ?? producto.precio
+  const hayTalles       = producto.talles && producto.talles.length > 0 && producto.talles[0] !== 'Único'
+  const categoriaLabel  = CATEGORIA_LABELS[producto.categoria] || producto.categoria
+  const primeraFoto     = fotos[0]
+  const imagenSrc       = primeraFoto
+    ? productService.buildImageSrc(primeraFoto)
+    : producto.imagen
 
   const getStockParaTalle = (talle) => {
     if (!hayTalles) return producto.stock
-    if (producto.stockPorTalle) {
-      return talle ? (producto.stockPorTalle[talle] ?? 0) : producto.stock
-    }
-    if (!talle) return producto.stock
-    const idx = producto.talles.indexOf(talle)
-    const n   = producto.talles.length
-    if (n <= 1) return producto.stock
-    const mid  = (n - 1) / 2
-    const dist = Math.abs(idx - mid)
-    const pct  = Math.max(0.15, 1 - (dist / (mid + 1)) * 0.75)
-    return Math.max(1, Math.round(producto.stock * pct))
+    if (producto.stockPorTalle) return producto.stockPorTalle[talle] ?? 0
+    const v = producto._variantes?.find((v) => (v.talla ?? v.talle) === talle)
+    return v?.stock ?? 0
   }
 
-  const stockActual = talleSeleccionado ? getStockParaTalle(talleSeleccionado) : producto.stock
+  const stockActual = talleSeleccionado
+    ? getStockParaTalle(talleSeleccionado)
+    : producto.stock
 
-  const handleTalleSelect = (t) => {
-    setTalleSeleccionado(t)
-    setCantidad(1)
-  }
+  const varianteSeleccionada = talleSeleccionado
+    ? producto._variantes?.find((v) => (v.talla ?? v.talle) === talleSeleccionado)
+    : producto._variantes?.[0]
 
   const handleAgregar = () => {
     if (hayTalles && !talleSeleccionado) return
     addToCart({
-      productId: producto.id,
-      nombre:    producto.nombre,
-      precio:    pf,
-      imagen:    producto.imagen,
-      talle:     talleSeleccionado ?? (producto.talles?.[0] ?? null),
-      qty:       cantidad,
+      productId:  producto.id,
+      varianteId: varianteSeleccionada?.id ?? null,
+      nombre:     producto.nombre,
+      precio:     pf,
+      imagen:     imagenSrc,
+      talle:      talleSeleccionado ?? (producto.talles?.[0] ?? null),
+      qty:        cantidad,
     })
     setAgregado(true)
     setTimeout(() => setAgregado(false), 2000)
@@ -90,9 +120,7 @@ export default function ProductoDetalle() {
       <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-10 lg:py-14">
 
         <nav className="flex items-center gap-2 font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 mb-8">
-          <Link to="/" className="hover:text-alpenglow transition-colors">
-            Inicio
-          </Link>
+          <Link to="/" className="hover:text-alpenglow transition-colors">Inicio</Link>
           <span className="text-rock/30">›</span>
           <button onClick={handleVolver} className="hover:text-alpenglow transition-colors">
             {categoriaLabel}
@@ -103,17 +131,35 @@ export default function ProductoDetalle() {
 
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16">
 
+          {/* Imagen */}
           <div className="relative aspect-[4/5] bg-rock-700 overflow-hidden">
-            <img src={producto.imagen} alt={producto.nombre}
-              className="w-full h-full object-cover"
-              onError={(e) => { e.currentTarget.style.display = 'none' }} />
-            {producto.descuento > 0 && (
+            {imagenSrc ? (
+              <img src={imagenSrc} alt={producto.nombre}
+                className="w-full h-full object-cover"
+                onError={(e) => { e.currentTarget.style.display = 'none' }} />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="font-mono text-[10px] text-rock/30 tracking-widest-2 uppercase">Sin foto</span>
+              </div>
+            )}
+            {(producto.descuento ?? producto.descuentoPct ?? 0) > 0 && (
               <div className="absolute top-4 right-4 bg-rock text-ivory font-mono text-[11px] tracking-widest-2 uppercase px-3 py-1.5">
-                -{producto.descuento}%
+                -{producto.descuento ?? producto.descuentoPct}%
+              </div>
+            )}
+            {/* Galería adicional */}
+            {fotos.length > 1 && (
+              <div className="absolute bottom-3 left-3 flex gap-1.5">
+                {fotos.slice(1, 4).map((f, i) => (
+                  <img key={i} src={productService.buildImageSrc(f)} alt=""
+                    className="h-14 w-14 object-cover border-2 border-ivory/60 cursor-pointer hover:border-ivory"
+                    onClick={() => setFotos([f, ...fotos.filter((_, j) => j !== i + 1)])} />
+                ))}
               </div>
             )}
           </div>
 
+          {/* Detalle */}
           <div className="flex flex-col">
             <div className="font-mono text-[11px] tracking-widest-2 uppercase text-alpenglow mb-4">
               {categoriaLabel}
@@ -124,11 +170,11 @@ export default function ProductoDetalle() {
 
             <div className="flex items-baseline gap-3 mb-6">
               <span className="font-display font-black tracking-tightest text-4xl">{fmtPrice(pf)}</span>
-              {producto.descuento > 0 && (
+              {(producto.descuento ?? producto.descuentoPct ?? 0) > 0 && (
                 <>
-                  <span className="text-xl text-rock/35 line-through">{fmtPrice(producto.precio)}</span>
+                  <span className="text-xl text-rock/35 line-through">{fmtPrice(producto.precio ?? producto.precioBase)}</span>
                   <span className="font-mono text-xs text-alpenglow bg-alpenglow/15 px-2 py-0.5">
-                    Ahorrás {fmtPrice(producto.precio - pf)}
+                    Ahorrás {fmtPrice((producto.precio ?? producto.precioBase) - pf)}
                   </span>
                 </>
               )}
@@ -149,9 +195,8 @@ export default function ProductoDetalle() {
                     const agotado = stockT === 0
                     return (
                       <button key={t}
-                        onClick={() => !agotado && handleTalleSelect(t)}
+                        onClick={() => !agotado && (setTalleSeleccionado(t), setCantidad(1))}
                         disabled={agotado}
-                        title={agotado ? 'Sin stock' : undefined}
                         className={`relative h-10 min-w-[40px] px-3 border font-mono text-xs font-bold tracking-widest-2 transition-all overflow-hidden ${
                           agotado
                             ? 'border-rock/10 text-rock/25 cursor-not-allowed bg-rock/3 select-none'
@@ -185,7 +230,7 @@ export default function ProductoDetalle() {
                   <Minus size={14} strokeWidth={2} />
                 </button>
                 <span className="px-5 font-mono font-bold text-sm tabular-nums w-12 text-center">{cantidad}</span>
-                <button onClick={() => setCantidad((q) => Math.min(stockActual, q + 1))}
+                <button onClick={() => setCantidad((q) => Math.min(stockActual || 99, q + 1))}
                   className="h-11 w-11 grid place-items-center text-rock hover:bg-rock/5 transition-colors">
                   <Plus size={14} strokeWidth={2} />
                 </button>

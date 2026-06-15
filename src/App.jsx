@@ -108,7 +108,7 @@ function AccountGuard() {
 // ─── Protección de rutas admin — requiere rol 'admin' ────────────────────
 function AdminGuard() {
   const { isLoggedIn, user } = useAuth()
-  if (!isLoggedIn || user?.rol !== 'admin') {
+  if (!isLoggedIn || user?.rol?.toUpperCase() !== 'ADMIN') {
     return <Navigate to="/login" replace />
   }
   return <Outlet />

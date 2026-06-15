@@ -7,7 +7,7 @@ import Button from '../components/ui/Button.jsx'
 export default function Login() {
   const { login, status, error, clearError } = useAuth()
 
-  const [email,    setEmail]    = useState('')
+  const [email,    setEmail]    = useState('') // campo de usuario/email
   const [password, setPassword] = useState('')
   const [showPwd,  setShowPwd]  = useState(false)
 
@@ -56,9 +56,9 @@ export default function Login() {
 
             <form onSubmit={handleSubmit} className="space-y-5" noValidate>
               <label className="block">
-                <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 block mb-1.5">Email</span>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu@correo.com" required className="input-base w-full" autoComplete="email" />
+                <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 block mb-1.5">Usuario</span>
+                <input type="text" value={email} onChange={(e) => setEmail(e.target.value)}
+                  placeholder="tu usuario" required className="input-base w-full" autoComplete="username" />
               </label>
 
               <label className="block">

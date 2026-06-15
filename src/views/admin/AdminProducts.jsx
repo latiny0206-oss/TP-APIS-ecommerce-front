@@ -1,84 +1,89 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Plus, Edit2, Image, Trash2, X, Check, Percent } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useProducts }  from '../../context/ProductsContext.jsx'
-import { fmt, computePrice, MARCAS, CATEGORIAS } from '../../data/index.js'
+import { useProducts }    from '../../context/ProductsContext.jsx'
+import { productService } from '../../api/productService.js'
+import { getErrorMessage } from '../../api/api.js'
+import { fmtPrice }       from '../../utils/format.js'
 import Button from '../../components/ui/Button.jsx'
 
 function FieldLabel({ children }) {
   return <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 block mb-1.5">{children}</span>
 }
-
 function AdminInput({ className = '', ...props }) {
   return <input {...props} className={`input-base w-full ${className}`} />
 }
 
-function ProductDrawer({ productId, onClose }) {
-  const { byId, upsert } = useProducts()
+function ProductDrawer({ productId, onClose, onSaved }) {
+  const { byId } = useProducts()
   const existing = productId ? byId[productId] : null
+
+  const [marcas,     setMarcas]     = useState([])
+  const [categorias, setCategorias] = useState([])
+  const [saving,     setSaving]     = useState(false)
+  const [errors,     setErrors]     = useState({})
 
   const [form, setForm] = useState(() =>
     existing
       ? {
           nombre:      existing.nombre,
           descripcion: existing.descripcion || '',
-          marcaId:     existing.marcaId,
-          categoriaId: existing.categoriaId,
-          precioBase:  existing.precioBase,
+          marcaId:     existing.marcaId ?? 1,
+          categoriaId: existing.categoriaId ?? 1,
+          precioBase:  existing.precioBase ?? existing.precio ?? 0,
           estado:      existing.estado || 'ACTIVO',
           tag:         existing.tag || '',
           descuentoPct: existing.descuentoPct ?? 0,
         }
       : { nombre: '', descripcion: '', marcaId: 1, categoriaId: 1, precioBase: 0, estado: 'ACTIVO', tag: '', descuentoPct: 0 }
   )
-  const [errors, setErrors] = useState({})
+
+  useEffect(() => {
+    Promise.all([productService.getMarcas(), productService.getCategorias()]).then(([m, c]) => {
+      setMarcas(m)
+      setCategorias(c)
+      if (!existing) {
+        setForm(prev => ({ ...prev, marcaId: m[0]?.id ?? 1, categoriaId: c[0]?.id ?? 1 }))
+      }
+    })
+  }, []) // eslint-disable-line
 
   const validate = () => {
     const e = {}
-    if (!form.nombre.trim())          e.nombre = 'Ingresá un nombre'
+    if (!form.nombre.trim()) e.nombre = 'Ingresá un nombre'
     if (Number(form.precioBase) <= 0) e.precioBase = 'El precio debe ser mayor a 0'
     const pct = Number(form.descuentoPct)
-    if (pct < 0 || pct > 100)         e.descuentoPct = 'Ingresá un valor entre 0 y 100'
+    if (pct < 0 || pct > 100) e.descuentoPct = 'Ingresá entre 0 y 100'
     return e
   }
 
-  const save = () => {
+  const save = async () => {
     const e = validate()
     if (Object.keys(e).length > 0) { setErrors(e); return }
-
-    const marca      = MARCAS.find((m) => m.id === Number(form.marcaId))
-    const cat        = CATEGORIAS.find((c) => c.id === Number(form.categoriaId))
-    const precioBase = Number(form.precioBase)
-    const descuentoPct = Number(form.descuentoPct)
-    const precioAnterior = descuentoPct > 0 ? precioBase : (existing?.precioAnterior ?? null)
-
-    const next = {
-      ...(existing || {}),
-      id:          existing?.id ?? (Date.now() % 100000 + 200),
-      nombre:      form.nombre,
-      name:        form.nombre,
-      descripcion: form.descripcion,
-      marcaId:     Number(form.marcaId),
-      categoriaId: Number(form.categoriaId),
-      brand:       (marca?.nombre || '').toUpperCase(),
-      category:    cat?.nombre || '',
-      precioBase,
-      precioAnterior,
-      descuentoPct,
-      price:    descuentoPct > 0 ? Math.round(precioBase * (1 - descuentoPct / 100)) : precioBase,
-      oldPrice: precioAnterior,
-      estado:   form.estado,
-      tag:      form.tag || null,
-      rating:   existing?.rating ?? 0,
-      color:    existing?.color ?? '#454338',
-      images:   existing?.images ?? [],
-      image:    existing?.image ?? '',
-      variants: existing?.variants ?? [],
-      stock:    existing?.stock ?? 0,
+    setSaving(true)
+    try {
+      const payload = {
+        nombre:      form.nombre,
+        descripcion: form.descripcion,
+        precioBase:  Number(form.precioBase),
+        descuentoPct: Number(form.descuentoPct),
+        estado:      form.estado,
+        tag:         form.tag || null,
+        marca:       { id: Number(form.marcaId) },
+        categoria:   { id: Number(form.categoriaId) },
+      }
+      if (existing) {
+        await productService.actualizarProducto(existing.id, payload)
+      } else {
+        await productService.crearProducto(payload)
+      }
+      onSaved()
+      onClose()
+    } catch (err) {
+      alert(getErrorMessage(err))
+    } finally {
+      setSaving(false)
     }
-
-    upsert(next)
-    onClose()
   }
 
   const f = (field) => (e) => setForm({ ...form, [field]: e.target.value })
@@ -116,13 +121,13 @@ function ProductDrawer({ productId, onClose }) {
             <label className="block">
               <FieldLabel>Marca</FieldLabel>
               <select value={form.marcaId} onChange={f('marcaId')} className="input-base w-full">
-                {MARCAS.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                {marcas.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
               </select>
             </label>
             <label className="block">
               <FieldLabel>Categoría</FieldLabel>
               <select value={form.categoriaId} onChange={f('categoriaId')} className="input-base w-full">
-                {CATEGORIAS.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                {categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
             </label>
           </div>
@@ -145,18 +150,14 @@ function ProductDrawer({ productId, onClose }) {
 
           {precioBase_ > 0 && (
             <div className="bg-rock/[0.04] border border-rock/10 px-4 py-3 flex items-center justify-between">
-              <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55">
-                Precio que verá el cliente
-              </span>
+              <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55">Precio cliente</span>
               <div className="flex items-center gap-2">
                 {descuentoPct_ > 0 && (
-                  <span className="font-mono text-xs text-rock/35 line-through">{fmt(precioBase_)}</span>
+                  <span className="font-mono text-xs text-rock/35 line-through">{fmtPrice(precioBase_)}</span>
                 )}
-                <span className="font-display font-black tracking-tightest text-lg text-rock">{fmt(precioFinal)}</span>
+                <span className="font-display font-black tracking-tightest text-lg text-rock">{fmtPrice(precioFinal)}</span>
                 {descuentoPct_ > 0 && (
-                  <span className="bg-alpenglow text-ivory font-mono text-[10px] px-1.5 py-0.5">
-                    -{descuentoPct_}%
-                  </span>
+                  <span className="bg-alpenglow text-ivory font-mono text-[10px] px-1.5 py-0.5">-{descuentoPct_}%</span>
                 )}
               </div>
             </div>
@@ -191,9 +192,9 @@ function ProductDrawer({ productId, onClose }) {
 
         <footer className="border-t border-rock/10 p-5 flex gap-3">
           <Button variant="ghost-light" size="md" className="flex-1" onClick={onClose}>Cancelar</Button>
-          <Button variant="primary" size="md" className="flex-1" onClick={save}
+          <Button variant="primary" size="md" className="flex-1" onClick={save} disabled={saving}
             iconRight={<Check size={14} strokeWidth={2.6} />}>
-            {existing ? 'Guardar' : 'Crear producto'}
+            {saving ? 'Guardando…' : existing ? 'Guardar' : 'Crear producto'}
           </Button>
         </footer>
       </aside>
@@ -204,16 +205,15 @@ function ProductDrawer({ productId, onClose }) {
 export default function AdminProducts() {
   const navigate              = useNavigate()
   const { id: paramId }       = useParams()
-  const { ids, byId, remove } = useProducts()
+  const { ids, byId, remove, loading, upsert } = useProducts()
   const [query, setQuery]     = useState('')
-
-  // Si la ruta tiene :id, el drawer se abre para ese producto
   const [drawerOpen, setDrawerOpen] = useState(!!paramId)
-  const [editId, setEditId]         = useState(paramId ? Number(paramId) : null)
+  const [editId,     setEditId]     = useState(paramId ? Number(paramId) : null)
+  const [deleting,   setDeleting]   = useState(null)
 
   const products = ids
     .map((id) => byId[id])
-    .filter((p) => !query || (p.nombre + ' ' + p.brand).toLowerCase().includes(query.toLowerCase()))
+    .filter((p) => !query || (p.nombre + ' ' + (p.marca ?? '')).toLowerCase().includes(query.toLowerCase()))
 
   const openDrawer = (id = null) => {
     setEditId(id)
@@ -227,9 +227,33 @@ export default function AdminProducts() {
     if (paramId) navigate('/admin/productos', { replace: true })
   }
 
+  const handleDelete = async (id) => {
+    setDeleting(id)
+    try {
+      await productService.eliminarProducto(id)
+      remove(id)
+    } catch (e) { alert(getErrorMessage(e)) }
+    setDeleting(null)
+  }
+
+  // Refresca el contexto después de guardar en el drawer
+  const handleSaved = async () => {
+    try {
+      const [prods, vars] = await Promise.all([
+        productService.getProductos(),
+        productService.getVariantes(),
+      ])
+      const varByProd = vars.reduce((acc, v) => {
+        const pid = v.idProducto ?? v.productoId
+        if (pid) { acc[pid] = acc[pid] ?? []; acc[pid].push(v) }
+        return acc
+      }, {})
+      prods.forEach((p) => upsert(productService.normalizeProducto(p, varByProd[p.id] ?? [])))
+    } catch {}
+  }
+
   return (
     <div className="space-y-6">
-
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
         <div className="relative flex-1 max-w-md">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-rock/40" />
@@ -251,16 +275,26 @@ export default function AdminProducts() {
             </tr>
           </thead>
           <tbody>
-            {products.map((p) => {
-              const { price, oldPrice } = computePrice(p)
+            {loading ? (
+              <tr>
+                <td colSpan={8} className="px-5 py-12 text-center font-mono text-[11px] tracking-widest-2 uppercase text-rock/40">
+                  Cargando…
+                </td>
+              </tr>
+            ) : products.map((p) => {
+              const pf = (p.descuentoPct ?? 0) > 0
+                ? Math.round((p.precioBase ?? p.precio ?? 0) * (1 - (p.descuentoPct ?? 0) / 100))
+                : (p.precioBase ?? p.precio ?? 0)
               return (
                 <tr key={p.id} className="border-t border-rock/10 hover:bg-rock/[0.02]">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 overflow-hidden shrink-0" style={{ backgroundColor: p.color }}>
-                        {p.image && (
-                          <img src={p.image} alt="" className="w-full h-full object-cover"
+                      <div className="h-12 w-12 overflow-hidden shrink-0 bg-rock/10 flex items-center justify-center">
+                        {p.imagen ? (
+                          <img src={p.imagen} alt="" className="w-full h-full object-cover"
                             onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                        ) : (
+                          <span className="font-mono text-[8px] text-rock/30">IMG</span>
                         )}
                       </div>
                       <div className="min-w-0">
@@ -269,19 +303,19 @@ export default function AdminProducts() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-5 py-3 font-mono text-xs text-rock/75">{p.brand}</td>
-                  <td className="px-5 py-3 text-xs">{p.category}</td>
+                  <td className="px-5 py-3 font-mono text-xs text-rock/75">{p.marca}</td>
+                  <td className="px-5 py-3 text-xs capitalize">{p.categoria}</td>
                   <td className="px-5 py-3">
                     <span className={`font-mono text-xs font-bold ${
                       p.stock === 0 ? 'text-red-700' : p.stock <= 3 ? 'text-alpenglow' : 'text-pine'
-                    }`}>
-                      {p.stock}
-                    </span>
+                    }`}>{p.stock}</span>
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex flex-col">
-                      <span className="font-mono text-xs font-bold">{fmt(price)}</span>
-                      {oldPrice && <span className="font-mono text-[10px] text-rock/40 line-through">{fmt(oldPrice)}</span>}
+                      <span className="font-mono text-xs font-bold">{fmtPrice(pf)}</span>
+                      {(p.descuentoPct ?? 0) > 0 && (
+                        <span className="font-mono text-[10px] text-rock/40 line-through">{fmtPrice(p.precioBase ?? p.precio ?? 0)}</span>
+                      )}
                     </div>
                   </td>
                   <td className="px-5 py-3">
@@ -289,9 +323,7 @@ export default function AdminProducts() {
                       <span className="inline-flex items-center gap-1 bg-alpenglow/15 text-alpenglow font-mono text-[10px] px-2 py-0.5 tracking-widest-2">
                         <Percent size={9} /> {p.descuentoPct}%
                       </span>
-                    ) : (
-                      <span className="font-mono text-[10px] text-rock/30">—</span>
-                    )}
+                    ) : <span className="font-mono text-[10px] text-rock/30">—</span>}
                   </td>
                   <td className="px-5 py-3">
                     <span className={`font-mono text-[10px] tracking-widest-2 uppercase ${p.estado === 'ACTIVO' ? 'text-pine' : 'text-rock/45'}`}>
@@ -301,16 +333,15 @@ export default function AdminProducts() {
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-1">
                       <button onClick={() => openDrawer(p.id)}
-                        className="h-8 w-8 grid place-items-center text-rock/55 hover:text-pine border border-rock/15 transition-colors" title="Editar">
+                        className="h-8 w-8 grid place-items-center text-rock/55 hover:text-pine border border-rock/15 transition-colors">
                         <Edit2 size={13} />
                       </button>
-                      <button
-                        onClick={() => navigate(`/admin/fotos/${p.id}`)}
-                        className="h-8 w-8 grid place-items-center text-rock/55 hover:text-pine border border-rock/15 transition-colors" title="Imágenes">
+                      <button onClick={() => navigate(`/admin/fotos/${p.id}`)}
+                        className="h-8 w-8 grid place-items-center text-rock/55 hover:text-pine border border-rock/15 transition-colors">
                         <Image size={13} />
                       </button>
-                      <button onClick={() => remove(p.id)}
-                        className="h-8 w-8 grid place-items-center text-rock/55 hover:text-red-700 border border-rock/15 transition-colors" title="Eliminar">
+                      <button onClick={() => handleDelete(p.id)} disabled={deleting === p.id}
+                        className="h-8 w-8 grid place-items-center text-rock/55 hover:text-red-700 border border-rock/15 transition-colors disabled:opacity-40">
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -320,14 +351,16 @@ export default function AdminProducts() {
             })}
           </tbody>
         </table>
-        {products.length === 0 && (
+        {!loading && products.length === 0 && (
           <div className="p-10 text-center font-mono text-[11px] tracking-widest-2 uppercase text-rock/40">
             No se encontraron productos
           </div>
         )}
       </div>
 
-      {drawerOpen && <ProductDrawer productId={editId} onClose={closeDrawer} />}
+      {drawerOpen && (
+        <ProductDrawer productId={editId} onClose={closeDrawer} onSaved={handleSaved} />
+      )}
     </div>
   )
 }

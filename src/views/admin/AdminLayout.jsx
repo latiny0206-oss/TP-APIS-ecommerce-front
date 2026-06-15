@@ -3,7 +3,6 @@ import {
   Ticket, ClipboardList, Users, Plus, LogOut, ChevronRight,
 } from 'lucide-react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { ProductsProvider } from '../../context/ProductsContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 import Button from '../../components/ui/Button.jsx'
 
@@ -37,15 +36,14 @@ function weekdayDate() {
 export default function AdminLayout() {
   const navigate        = useNavigate()
   const { pathname }    = useLocation()
-  const { logout }      = useAuth()
+  const { logout, user } = useAuth()
 
   // Obtiene el último segmento de la ruta para el label del header
   const currentSegment  = pathname.split('/').pop()
   const currentLabel    = VIEW_LABELS[currentSegment] ?? VIEW_LABELS[pathname.split('/')[2]] ?? 'Tablero'
 
   return (
-    <ProductsProvider>
-      <div className="bg-ivory text-rock h-screen overflow-hidden flex">
+    <div className="bg-ivory text-rock h-screen overflow-hidden flex">
 
         {/* ── Sidebar ── */}
         <aside className="w-64 shrink-0 bg-rock text-ivory flex flex-col overflow-y-auto">
@@ -112,10 +110,10 @@ export default function AdminLayout() {
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-2 pl-3 border-l border-rock/15 h-10">
                   <span className="h-8 w-8 rounded-full bg-pine text-ivory grid place-items-center font-narrow font-bold text-xs">
-                    JP
+                    {(user?.username?.[0] ?? 'A').toUpperCase()}
                   </span>
                   <div className="hidden sm:block">
-                    <div className="font-narrow font-bold text-xs uppercase tracking-tight">Juan Pérez</div>
+                    <div className="font-narrow font-bold text-xs uppercase tracking-tight">{user?.username ?? 'Admin'}</div>
                     <div className="font-mono text-[9px] tracking-widest-2 uppercase text-rock/55">Administrador</div>
                   </div>
                 </span>
@@ -125,6 +123,5 @@ export default function AdminLayout() {
           <main className="p-8 flex-1"><Outlet /></main>
         </div>
       </div>
-    </ProductsProvider>
   )
 }

@@ -1,6 +1,6 @@
 import { Package, ClipboardList, Ticket, Users, AlertTriangle, TrendingUp, Clock } from 'lucide-react'
 import { useProducts } from '../../context/ProductsContext.jsx'
-import { fmt } from '../../data/index.js'
+import { fmtPrice as fmt } from '../../utils/format.js'
 
 const RECENT_ORDERS = [
   { id: 'ORD-092', client: 'Carlos Mendoza',  initials: 'CM', date: '18/05/2026', amount: 450000, status: 'PENDIENTE' },

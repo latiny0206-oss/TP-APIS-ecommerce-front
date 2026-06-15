@@ -16,10 +16,14 @@ function Field({ label, error, children }) {
   )
 }
 
+const PWD_RE = /^(?=.*[A-Z])(?=.*\d).{8,}$/
+
 export default function Registro() {
   const { register, status, error, clearError } = useAuth()
 
-  const [form, setForm] = useState({ nombre: '', email: '', password: '', confirmar: '' })
+  const [form, setForm] = useState({
+    username: '', nombre: '', apellido: '', email: '', password: '', confirmar: '',
+  })
   const [showPwd, setShowPwd] = useState(false)
   const [errors,  setErrors]  = useState({})
 
@@ -34,10 +38,12 @@ export default function Registro() {
 
   const validate = () => {
     const e = {}
-    if (!form.nombre.trim())                              e.nombre    = 'Ingresá tu nombre'
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))  e.email     = 'Email inválido'
-    if (form.password.length < 6)                         e.password  = 'Mínimo 6 caracteres'
-    if (form.password !== form.confirmar)                 e.confirmar = 'Las contraseñas no coinciden'
+    if (!form.username.trim())                              e.username  = 'Ingresá un nombre de usuario'
+    if (!form.nombre.trim())                               e.nombre    = 'Ingresá tu nombre'
+    if (!form.apellido.trim())                             e.apellido  = 'Ingresá tu apellido'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))   e.email     = 'Email inválido'
+    if (!PWD_RE.test(form.password))                       e.password  = 'Mínimo 8 caracteres, una mayúscula y un número'
+    if (form.password !== form.confirmar)                  e.confirmar = 'Las contraseñas no coinciden'
     return e
   }
 
@@ -45,7 +51,13 @@ export default function Registro() {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
-    register({ nombre: form.nombre, email: form.email, password: form.password })
+    register({
+      username:  form.username,
+      nombre:    form.nombre,
+      apellido:  form.apellido,
+      email:     form.email,
+      password:  form.password,
+    })
   }
 
   return (
@@ -84,10 +96,21 @@ export default function Registro() {
 
             <form onSubmit={handleSubmit} className="space-y-4" noValidate>
 
-              <Field label="Nombre completo" error={errors.nombre}>
-                <input type="text" value={form.nombre} onChange={f('nombre')} placeholder="Ana García"
-                  className="input-base w-full" autoComplete="name" />
+              <Field label="Usuario" error={errors.username}>
+                <input type="text" value={form.username} onChange={f('username')} placeholder="mi_usuario"
+                  className="input-base w-full" autoComplete="username" />
               </Field>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Nombre" error={errors.nombre}>
+                  <input type="text" value={form.nombre} onChange={f('nombre')} placeholder="Ana"
+                    className="input-base w-full" autoComplete="given-name" />
+                </Field>
+                <Field label="Apellido" error={errors.apellido}>
+                  <input type="text" value={form.apellido} onChange={f('apellido')} placeholder="García"
+                    className="input-base w-full" autoComplete="family-name" />
+                </Field>
+              </div>
 
               <Field label="Email" error={errors.email}>
                 <input type="email" value={form.email} onChange={f('email')} placeholder="tu@correo.com"
@@ -97,7 +120,7 @@ export default function Registro() {
               <Field label="Contraseña" error={errors.password}>
                 <div className="relative">
                   <input type={showPwd ? 'text' : 'password'} value={form.password} onChange={f('password')}
-                    placeholder="Mínimo 6 caracteres" className="input-base w-full pr-11" autoComplete="new-password" />
+                    placeholder="Mín. 8 · mayúscula · número" className="input-base w-full pr-11" autoComplete="new-password" />
                   <button type="button" onClick={() => setShowPwd((v) => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-rock/40 hover:text-rock" tabIndex={-1}>
                     {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}

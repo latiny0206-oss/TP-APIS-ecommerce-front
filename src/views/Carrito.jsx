@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Minus, Plus, Trash2, Tag, X, ArrowRight, ShoppingCart } from 'lucide-react'
 import { useCart } from '../context/CartContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { fmtPrice } from '../mocks/data.js'
+import { fmtPrice } from '../utils/format.js'
 import Button from '../components/ui/Button.jsx'
 
 export default function Carrito() {
@@ -166,7 +166,7 @@ export default function Carrito() {
                       </p>
                     )}
                     <p className="font-mono text-[10px] tracking-widest-2 uppercase text-ivory/35 mt-2">
-                      Probá: DESCUENTO10 · INVIERNO24
+                      Ingresá tu código de descuento
                     </p>
                   </>
                 )}

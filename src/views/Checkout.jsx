@@ -3,9 +3,11 @@ import { Link, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, ArrowRight, Check, CreditCard, Landmark, Wallet, ChevronRight,
 } from 'lucide-react'
-import { useCart } from '../context/CartContext.jsx'
-import { useAuth } from '../context/AuthContext.jsx'
-import { fmtPrice }      from '../mocks/data.js'
+import { useCart }        from '../context/CartContext.jsx'
+import { useAuth }        from '../context/AuthContext.jsx'
+import { cartService }    from '../api/cartService.js'
+import { getErrorMessage } from '../api/api.js'
+import { fmtPrice }       from '../utils/format.js'
 import Button from '../components/ui/Button.jsx'
 
 function Stepper({ step }) {
@@ -13,9 +15,7 @@ function Stepper({ step }) {
   return (
     <div className="flex items-center gap-0 mb-10">
       {steps.map((label, i) => {
-        const n = i + 1
-        const active = step === n
-        const done   = step > n
+        const n = i + 1; const active = step === n; const done = step > n
         return (
           <div key={label} className="flex items-center">
             <div className="flex items-center gap-2">
@@ -60,58 +60,30 @@ function Section({ eyebrow, title, children }) {
 }
 
 const fmtCard = (v) => v.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim()
-const fmtExp  = (v) => { const d = v.replace(/\D/g, '').slice(0, 4); return d.length >= 3 ? d.slice(0,2)+'/'+d.slice(2) : d }
+const fmtExp  = (v) => { const d = v.replace(/\D/g, '').slice(0, 4); return d.length >= 3 ? d.slice(0, 2) + '/' + d.slice(2) : d }
 
 function validateShip(s) {
   const e = {}
-  if (!s.nombre.trim()) {
-    e.nombre = 'Requerido'
-  }
-  if (!s.direccion.trim()) {
-    e.direccion = 'Requerido'
-  } else if (!/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(s.direccion)) {
-    e.direccion = 'Debe contener letras'
-  } else if (!/\d/.test(s.direccion)) {
-    e.direccion = 'Debe incluir número de calle'
-  }
-  if (!s.ciudad.trim()) {
-    e.ciudad = 'Requerido'
-  } else if (/\d/.test(s.ciudad)) {
-    e.ciudad = 'Solo letras permitidas'
-  }
-  if (!s.provincia.trim()) {
-    e.provincia = 'Requerido'
-  } else if (/\d/.test(s.provincia)) {
-    e.provincia = 'Solo letras permitidas'
-  }
-  if (!s.cp.trim()) {
-    e.cp = 'Requerido'
-  } else if (!/^\d+$/.test(s.cp)) {
-    e.cp = 'Solo números'
-  }
-  if (!s.telefono.trim()) {
-    e.telefono = 'Requerido'
-  } else if (!/^\d+$/.test(s.telefono)) {
-    e.telefono = 'Solo números'
-  } else if (s.telefono.length < 8) {
-    e.telefono = 'Mínimo 8 dígitos'
-  }
+  if (!s.nombre.trim())    e.nombre    = 'Requerido'
+  if (!s.direccion.trim()) e.direccion = 'Requerido'
+  else if (!/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(s.direccion)) e.direccion = 'Debe contener letras'
+  else if (!/\d/.test(s.direccion)) e.direccion = 'Debe incluir número de calle'
+  if (!s.ciudad.trim())    e.ciudad    = 'Requerido'
+  else if (/\d/.test(s.ciudad)) e.ciudad = 'Solo letras'
+  if (!s.provincia.trim()) e.provincia = 'Requerido'
+  if (!s.cp.trim())        e.cp        = 'Requerido'
+  else if (!/^\d+$/.test(s.cp)) e.cp  = 'Solo números'
+  if (!s.telefono.trim())  e.telefono  = 'Requerido'
+  else if (!/^\d+$/.test(s.telefono)) e.telefono = 'Solo números'
+  else if (s.telefono.length < 8) e.telefono = 'Mínimo 8 dígitos'
   return e
 }
 
 function validateCard(c) {
   const e = {}
-  const d = c.numero.replace(/\s/g, '')
-  if (!/^\d{16}$/.test(d)) {
-    e.numero = '16 dígitos requeridos'
-  }
-  if (!c.titular.trim()) {
-    e.titular = 'Requerido'
-  } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(c.titular)) {
-    e.titular = 'Solo letras permitidas'
-  } else if (c.titular.trim().split(/\s+/).filter(Boolean).length < 2) {
-    e.titular = 'Ingresá nombre y apellido'
-  }
+  if (!/^\d{16}$/.test(c.numero.replace(/\s/g, ''))) e.numero = '16 dígitos requeridos'
+  if (!c.titular.trim()) e.titular = 'Requerido'
+  else if (c.titular.trim().split(/\s+/).filter(Boolean).length < 2) e.titular = 'Ingresá nombre y apellido'
   if (!/^\d{2}\/\d{2}$/.test(c.exp)) e.exp = 'Formato MM/AA'
   if (!/^\d{3,4}$/.test(c.cvv))      e.cvv = 'CVV inválido'
   return e
@@ -158,17 +130,16 @@ export default function Checkout() {
   const { user }                             = useAuth()
 
   const [step, setStep] = useState(1)
-
   const [ship, setShip] = useState({
-    nombre: user?.nombre || '', direccion: '', ciudad: '',
+    nombre: user?.nombre || user?.username || '', direccion: '', ciudad: '',
     provincia: '', cp: '', telefono: '',
   })
   const [shipErrors, setShipErrors] = useState({})
-
-  const [payMethod, setPayMethod] = useState('card')
-  const [card, setCard] = useState({ numero: '', titular: '', exp: '', cvv: '' })
+  const [payMethod,  setPayMethod]  = useState('card')
+  const [card,       setCard]       = useState({ numero: '', titular: '', exp: '', cvv: '' })
   const [cardErrors, setCardErrors] = useState({})
-  const [processing, setProcessing] = useState(false)
+  const [processing,  setProcessing]  = useState(false)
+  const [processError, setProcessError] = useState(null)
 
   const sF = (field, filter) => (e) => {
     const v = filter ? filter(e.target.value) : e.target.value
@@ -195,11 +166,29 @@ export default function Checkout() {
 
   const confirmar = async () => {
     setProcessing(true)
-    await new Promise((r) => setTimeout(r, 900))
-    const n = `#ORD-${Math.floor(Math.random() * 90000 + 10000)}`
-    clearCart()
-    setProcessing(false)
-    navigate('/confirmacion', { state: { orderNumber: n } })
+    setProcessError(null)
+    try {
+      // 1. Crear carrito (el backend extrae el usuario del JWT; pasa descuentoId si hay cupón)
+      const carrito = await cartService.crearCarrito(
+        coupon?.id ? { descuentoId: coupon.id } : undefined
+      )
+
+      // 2. Agregar cada item (solo los que tienen varianteId)
+      for (const item of items) {
+        if (item.varianteId) {
+          await cartService.addItem(carrito.id, { idVariante: item.varianteId, cantidad: item.qty })
+        }
+      }
+
+      // 3. Checkout → descuenta stock y genera la orden
+      const orden = await cartService.checkout(carrito.id)
+
+      clearCart()
+      navigate('/confirmacion', { state: { orderNumber: `#ORD-${orden.id}`, ordenId: orden.id } })
+    } catch (e) {
+      setProcessError(getErrorMessage(e))
+      setProcessing(false)
+    }
   }
 
   if (items.length === 0) {
@@ -236,38 +225,28 @@ export default function Checkout() {
             {step === 1 && (
               <Section eyebrow="01 — Destino" title="Datos de envío">
                 <div className="grid sm:grid-cols-2 gap-4">
-                  <label className="sm:col-span-2 block">
-                    <Label>Nombre completo</Label>
+                  <label className="sm:col-span-2 block"><Label>Nombre completo</Label>
                     <TInput value={ship.nombre} onChange={sF('nombre', (v) => v.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ''))} placeholder="Ana García" error={shipErrors.nombre} />
                   </label>
-                  <label className="sm:col-span-2 block">
-                    <Label>Dirección</Label>
+                  <label className="sm:col-span-2 block"><Label>Dirección</Label>
                     <TInput value={ship.direccion} onChange={sF('direccion')} placeholder="Av. Cordillera 1234, piso 2" error={shipErrors.direccion} />
                   </label>
-                  <label className="block">
-                    <Label>Ciudad</Label>
+                  <label className="block"><Label>Ciudad</Label>
                     <TInput value={ship.ciudad} onChange={sF('ciudad', (v) => v.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-]/g, ''))} placeholder="Bariloche" error={shipErrors.ciudad} />
                   </label>
-                  <label className="block">
-                    <Label>Provincia</Label>
+                  <label className="block"><Label>Provincia</Label>
                     <TInput value={ship.provincia} onChange={sF('provincia', (v) => v.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\-]/g, ''))} placeholder="Río Negro" error={shipErrors.provincia} />
                   </label>
-                  <label className="block">
-                    <Label>Código postal</Label>
+                  <label className="block"><Label>Código postal</Label>
                     <TInput value={ship.cp} onChange={sF('cp', (v) => v.replace(/\D/g, ''))} placeholder="8400" inputMode="numeric" error={shipErrors.cp} />
                   </label>
-                  <label className="block">
-                    <Label>Teléfono</Label>
+                  <label className="block"><Label>Teléfono</Label>
                     <TInput type="tel" value={ship.telefono} onChange={sF('telefono', (v) => v.replace(/\D/g, ''))} placeholder="1112345678" inputMode="numeric" error={shipErrors.telefono} />
                   </label>
                 </div>
                 <div className="flex gap-3 mt-8">
-                  <Button variant="ghost-light" size="md" onClick={() => navigate('/carrito')} icon={<ArrowLeft size={14} />}>
-                    Volver
-                  </Button>
-                  <Button variant="primary" size="lg" onClick={goStep2} iconRight={<ArrowRight size={16} />}>
-                    Continuar al pago
-                  </Button>
+                  <Button variant="ghost-light" size="md" onClick={() => navigate('/carrito')} icon={<ArrowLeft size={14} />}>Volver</Button>
+                  <Button variant="primary" size="lg" onClick={goStep2} iconRight={<ArrowRight size={16} />}>Continuar al pago</Button>
                 </div>
               </Section>
             )}
@@ -276,9 +255,9 @@ export default function Checkout() {
               <Section eyebrow="02 — Método" title="Medio de pago">
                 <div className="grid sm:grid-cols-3 gap-3 mb-6">
                   {[
-                    { id: 'card',     label: 'Tarjeta',       sub: '12 cuotas s/i', Icon: CreditCard },
-                    { id: 'transfer', label: 'Transferencia',  sub: 'CBU / Alias',   Icon: Landmark },
-                    { id: 'wallet',   label: 'Billetera',      sub: 'MP · Modo',     Icon: Wallet },
+                    { id: 'card',     label: 'Tarjeta',      sub: '12 cuotas s/i', Icon: CreditCard },
+                    { id: 'transfer', label: 'Transferencia', sub: 'CBU / Alias',   Icon: Landmark },
+                    { id: 'wallet',   label: 'Billetera',     sub: 'MP · Modo',     Icon: Wallet },
                   ].map(({ id, label, sub, Icon }) => (
                     <button key={id} type="button" onClick={() => { setPayMethod(id); setCardErrors({}) }}
                       className={`p-4 border text-left flex flex-col gap-2 transition-all ${payMethod === id ? 'border-pine bg-pine/5' : 'border-rock/15 hover:border-rock/40'}`}>
@@ -293,22 +272,18 @@ export default function Checkout() {
 
                 {payMethod === 'card' && (
                   <div className="grid sm:grid-cols-2 gap-4 fadein">
-                    <label className="sm:col-span-2 block">
-                      <Label>Número de tarjeta</Label>
+                    <label className="sm:col-span-2 block"><Label>Número de tarjeta</Label>
                       <TInput value={card.numero} onChange={(e) => setCard({ ...card, numero: fmtCard(e.target.value) })} placeholder="•••• •••• •••• ••••" maxLength={19} error={cardErrors.numero} />
                     </label>
-                    <label className="sm:col-span-2 block">
-                      <Label>Titular de la tarjeta</Label>
+                    <label className="sm:col-span-2 block"><Label>Titular de la tarjeta</Label>
                       <TInput value={card.titular}
                         onChange={(e) => setCard({ ...card, titular: e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, '').toUpperCase() })}
                         placeholder="NOMBRE APELLIDO" error={cardErrors.titular} />
                     </label>
-                    <label className="block">
-                      <Label>Vencimiento (MM/AA)</Label>
+                    <label className="block"><Label>Vencimiento (MM/AA)</Label>
                       <TInput value={card.exp} onChange={(e) => setCard({ ...card, exp: fmtExp(e.target.value) })} placeholder="MM/AA" maxLength={5} error={cardErrors.exp} />
                     </label>
-                    <label className="block">
-                      <Label>CVV</Label>
+                    <label className="block"><Label>CVV</Label>
                       <TInput value={card.cvv} onChange={(e) => setCard({ ...card, cvv: e.target.value.replace(/\D/g,'').slice(0,4) })} placeholder="•••" type="password" maxLength={4} error={cardErrors.cvv} />
                     </label>
                     <p className="sm:col-span-2 font-mono text-[10px] tracking-widest-2 uppercase text-rock/40">
@@ -330,7 +305,7 @@ export default function Checkout() {
                         <span className="font-mono text-sm font-bold">{value}</span>
                       </div>
                     ))}
-                    <p className="font-mono text-[10px] text-rock/50 pt-2">Enviá el comprobante a pagos@cumbre.com — confirmamos en 24-48h</p>
+                    <p className="font-mono text-[10px] text-rock/50 pt-2">Enviá el comprobante a pagos@cumbre.com</p>
                   </div>
                 )}
 
@@ -347,12 +322,8 @@ export default function Checkout() {
                 )}
 
                 <div className="flex gap-3 mt-8">
-                  <Button variant="ghost-light" size="md" onClick={() => setStep(1)} icon={<ArrowLeft size={14} />}>
-                    Volver
-                  </Button>
-                  <Button variant="primary" size="lg" onClick={goStep3} iconRight={<ArrowRight size={16} />}>
-                    Revisar pedido
-                  </Button>
+                  <Button variant="ghost-light" size="md" onClick={() => setStep(1)} icon={<ArrowLeft size={14} />}>Volver</Button>
+                  <Button variant="primary" size="lg" onClick={goStep3} iconRight={<ArrowRight size={16} />}>Revisar pedido</Button>
                 </div>
               </Section>
             )}
@@ -367,27 +338,33 @@ export default function Checkout() {
                     <p>{ship.ciudad}, {ship.provincia} {ship.cp}</p>
                     <p>{ship.telefono}</p>
                   </div>
-                  <button onClick={() => setStep(1)} className="mt-3 font-mono text-[10px] tracking-widest-2 uppercase text-pine hover:underline">
-                    Editar →
-                  </button>
+                  <button onClick={() => setStep(1)} className="mt-3 font-mono text-[10px] tracking-widest-2 uppercase text-pine hover:underline">Editar →</button>
                 </div>
 
-                <div className="bg-rock/[0.04] border border-rock/10 p-5 mb-8">
+                <div className="bg-rock/[0.04] border border-rock/10 p-5 mb-4">
                   <div className="font-mono text-[10px] tracking-widest-2 uppercase text-alpenglow mb-3">Método de pago</div>
                   <div className="text-sm text-rock/80">
                     {payMethod === 'card'     && <p>Tarjeta: •••• •••• •••• {card.numero.replace(/\s/g,'').slice(-4) || '••••'}</p>}
                     {payMethod === 'transfer' && <p>Transferencia bancaria</p>}
                     {payMethod === 'wallet'   && <p>Billetera virtual</p>}
                   </div>
-                  <button onClick={() => setStep(2)} className="mt-3 font-mono text-[10px] tracking-widest-2 uppercase text-pine hover:underline">
-                    Editar →
-                  </button>
+                  <button onClick={() => setStep(2)} className="mt-3 font-mono text-[10px] tracking-widest-2 uppercase text-pine hover:underline">Editar →</button>
                 </div>
 
+                {processError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 mb-4 font-mono text-[11px] tracking-widest-2 uppercase">
+                    {processError}
+                  </div>
+                )}
+
+                {items.some((i) => !i.varianteId) && (
+                  <div className="bg-alpenglow/10 border border-alpenglow/30 text-alpenglow px-4 py-3 mb-4 font-mono text-[10px] tracking-widest-2 uppercase">
+                    Algunos productos no tienen variante asignada y no se enviarán al backend.
+                  </div>
+                )}
+
                 <div className="flex gap-3">
-                  <Button variant="ghost-light" size="md" onClick={() => setStep(2)} icon={<ArrowLeft size={14} />}>
-                    Volver
-                  </Button>
+                  <Button variant="ghost-light" size="md" onClick={() => setStep(2)} icon={<ArrowLeft size={14} />}>Volver</Button>
                   <Button variant="secondary" size="lg" onClick={confirmar} disabled={processing}
                     iconRight={!processing && <Check size={16} strokeWidth={2.2} />}>
                     {processing ? <><span className="spinner" /> Procesando…</> : 'Confirmar compra'}

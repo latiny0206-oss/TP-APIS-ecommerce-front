@@ -1,13 +1,15 @@
 import { ArrowRight, Tent, Footprints, Shirt, Box } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { CATEGORIES } from '../data/index.js'
-import { MOCK_PRODUCTOS } from '../mocks/data.js'
+import { useProducts } from '../context/ProductsContext.jsx'
 import SectionHeader from './ui/SectionHeader.jsx'
 
 const ICON_MAP = { tent: Tent, boot: Footprints, jacket: Shirt }
 
 export default function Categories() {
-  const navigate = useNavigate()
+  const navigate      = useNavigate()
+  const { ids, byId } = useProducts()
+  const products      = ids.map(id => byId[id])
 
   return (
     <section id="catalogo" className="relative bg-rock py-20 lg:py-28">
@@ -20,7 +22,9 @@ export default function Categories() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4 mt-12 lg:mt-16">
           {CATEGORIES.map((cat, i) => {
             const Ico   = ICON_MAP[cat.iconKey] || Box
-            const count = MOCK_PRODUCTOS.filter((p) => p.categoria === cat.categoriaKey).length
+            const count = products.filter(p =>
+              (p.categoria ?? '').toLowerCase() === cat.categoriaKey.toLowerCase()
+            ).length
             const subText = `${count} producto${count !== 1 ? 's' : ''} · ${cat.sub}`
             return (
               <button key={cat.id}

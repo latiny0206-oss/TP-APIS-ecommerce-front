@@ -2,25 +2,19 @@ import { ArrowRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import SectionHeader from './ui/SectionHeader.jsx'
 import ProductCard   from './ui/ProductCard.jsx'
-import { MOCK_PRODUCTOS, precioFinal } from '../mocks/data.js'
-
-const CUMBRE_PRO_PRODUCTS = MOCK_PRODUCTOS
-  .filter((p) => p.marca === 'Cumbre Pro')
-  .map((p) => {
-    const pf = precioFinal(p)
-    return {
-      ...p,
-      name:           p.nombre,
-      brand:          p.marca,
-      image:          p.imagen,
-      precioBase:     pf,
-      precioAnterior: p.descuento > 0 ? p.precio : null,
-      descuentoPct:   0,
-    }
-  })
+import { useProducts } from '../context/ProductsContext.jsx'
 
 export default function Featured() {
-  const navigate = useNavigate()
+  const navigate      = useNavigate()
+  const { ids, byId } = useProducts()
+
+  const cumbrePro = ids
+    .map(id => byId[id])
+    .filter(p => p.marca?.toLowerCase() === 'cumbre pro')
+    .slice(0, 3)
+
+  // Mientras carga o si no hay productos Cumbre Pro, muestra 3 skeletons
+  const showSkeletons = cumbrePro.length === 0
 
   return (
     <section className="relative py-20 lg:py-28 bg-ivory text-rock">
@@ -39,7 +33,19 @@ export default function Featured() {
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-10 lg:gap-y-12 mt-12 lg:mt-16">
-          {CUMBRE_PRO_PRODUCTS.map((p) => <ProductCard key={p.id} product={p} dark={false} />)}
+          {showSkeletons
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex flex-col gap-3">
+                  <div className="aspect-[4/5] bg-rock/10 animate-pulse" />
+                  <div className="h-3 w-20 bg-rock/10 animate-pulse" />
+                  <div className="h-4 w-40 bg-rock/10 animate-pulse" />
+                  <div className="h-4 w-24 bg-rock/10 animate-pulse" />
+                </div>
+              ))
+            : cumbrePro.map(p => (
+                <ProductCard key={p.id} product={p} dark={false} />
+              ))
+          }
         </div>
       </div>
     </section>

@@ -54,7 +54,7 @@ export default function ProductCard({ product, dark = false }) {
       <div className={`pt-4 pb-2 flex flex-col gap-1.5 ${dark ? 'text-ivory' : 'text-rock'}`}>
         <div className="flex items-center justify-between">
           <span className={`font-mono text-[10px] tracking-widest-2 uppercase ${dark ? 'text-ivory/50' : 'text-rock/55'}`}>
-            {product.brand}
+            {product.brand || product.marca}
           </span>
           {product.rating && (
             <span className={`font-mono text-[10px] flex items-center gap-1 ${dark ? 'text-ivory/45' : 'text-rock/45'}`}>

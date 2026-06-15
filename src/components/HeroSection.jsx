@@ -3,7 +3,7 @@ import { ArrowRight, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import Button from './ui/Button.jsx'
 import { HERO_IMAGES } from '../data/index.js'
-import { MOCK_PRODUCTOS } from '../mocks/data.js'
+import { useProducts } from '../context/ProductsContext.jsx'
 
 function StatCell({ label, value, mono, accent, sub }) {
   return (
@@ -23,10 +23,11 @@ function StatCell({ label, value, mono, accent, sub }) {
 }
 
 export default function HeroSection() {
-  const navigate     = useNavigate()
-  const [variant]    = useState('midnight')
-  const imgSrc       = HERO_IMAGES[variant] || HERO_IMAGES.midnight
-  const totalStock   = MOCK_PRODUCTOS.length
+  const navigate      = useNavigate()
+  const [variant]     = useState('midnight')
+  const imgSrc        = HERO_IMAGES[variant] || HERO_IMAGES.midnight
+  const { ids }       = useProducts()
+  const totalStock    = ids.length
 
   return (
     <section className="relative grain overflow-hidden bg-rock">

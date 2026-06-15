@@ -1,6 +1,7 @@
-import { createContext, useContext, useReducer } from 'react'
+import { createContext, useContext, useReducer, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MOCK_USERS } from '../mocks/data.js'
+import { authService } from '../api/authService.js'
+import { getErrorMessage } from '../api/api.js'
 
 const initialState = {
   user:       null,
@@ -28,29 +29,49 @@ export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, initialState)
   const navigate = useNavigate()
 
-  const login = async (email, password) => {
-    dispatch({ type: 'LOADING' })
-    await new Promise((r) => setTimeout(r, 600))
-    const user = MOCK_USERS.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-    )
-    if (!user) {
-      dispatch({ type: 'FAILURE', payload: 'Email o contraseña incorrectos' })
-      return
+  // Restaura sesión desde localStorage al cargar la app
+  useEffect(() => {
+    const stored = authService.getStoredUser()
+    if (stored && authService.isAuthenticated()) {
+      dispatch({ type: 'SUCCESS', payload: stored })
     }
-    const { password: _, ...safeUser } = user
-    dispatch({ type: 'SUCCESS', payload: safeUser })
-    navigate(safeUser.rol === 'admin' ? '/admin/dashboard' : (state.returnTo || '/'))
+  }, [])
+
+  // Logout automático ante 401 (disparado por el interceptor de axios)
+  useEffect(() => {
+    const handler = () => {
+      dispatch({ type: 'LOGOUT' })
+      navigate('/login')
+    }
+    window.addEventListener('auth:logout', handler)
+    return () => window.removeEventListener('auth:logout', handler)
+  }, [navigate])
+
+  const login = async (username, password) => {
+    dispatch({ type: 'LOADING' })
+    try {
+      const data = await authService.login({ username, password })
+      // data = { token, username, rol }
+      dispatch({ type: 'SUCCESS', payload: { username: data.username, rol: data.rol } })
+      navigate(data.rol === 'ADMIN' ? '/admin/dashboard' : (state.returnTo || '/'))
+    } catch (e) {
+      dispatch({ type: 'FAILURE', payload: getErrorMessage(e) })
+    }
   }
 
-  const register = async ({ nombre, email, password }) => {
+  const register = async ({ username, email, password, nombre, apellido }) => {
     dispatch({ type: 'LOADING' })
-    await new Promise((r) => setTimeout(r, 600))
-    if (MOCK_USERS.find((u) => u.email.toLowerCase() === email.toLowerCase())) {
-      dispatch({ type: 'FAILURE', payload: 'Ya existe una cuenta con ese email' })
-      return
+    try {
+      await authService.register({ username, email, password, nombre, apellido })
+      navigate('/login')
+    } catch (e) {
+      dispatch({ type: 'FAILURE', payload: getErrorMessage(e) })
     }
-    dispatch({ type: 'SUCCESS', payload: { id: Date.now(), nombre, email } })
+  }
+
+  const logout = () => {
+    authService.logout()
+    dispatch({ type: 'LOGOUT' })
     navigate('/')
   }
 
@@ -62,8 +83,8 @@ export function AuthProvider({ children }) {
     returnTo:    state.returnTo,
     login,
     register,
-    logout:      ()     => dispatch({ type: 'LOGOUT' }),
-    clearError:  ()     => dispatch({ type: 'CLEAR_ERROR' }),
+    logout,
+    clearError:  () => dispatch({ type: 'CLEAR_ERROR' }),
     setReturnTo: (path) => dispatch({ type: 'SET_RETURN_TO', payload: path }),
   }
 
