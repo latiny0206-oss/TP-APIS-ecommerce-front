@@ -18,6 +18,7 @@ function authReducer(state, action) {
     case 'FAILURE':       return { ...state, status: 'error', error: action.payload }
     case 'LOGOUT':        return { ...initialState }
     case 'CLEAR_ERROR':   return { ...state, error: null, status: 'idle' }
+    case 'RESET_STATUS':  return state.status === 'loading' ? { ...state, status: 'idle' } : state
     case 'SET_RETURN_TO': return { ...state, returnTo: action.payload }
     default: return state
   }
@@ -61,6 +62,9 @@ export function AuthProvider({ children }) {
       navigate(data.rol === 'ADMIN' ? '/admin/dashboard' : (state.returnTo || '/'))
     } catch (e) {
       dispatch({ type: 'FAILURE', payload: getErrorMessage(e) })
+    } finally {
+      // Garantiza que status nunca queda en 'loading' si hubo un error inesperado
+      dispatch({ type: 'RESET_STATUS' })
     }
   }
 
@@ -68,9 +72,13 @@ export function AuthProvider({ children }) {
     dispatch({ type: 'LOADING' })
     try {
       await authService.register({ username, email, password, nombre, apellido })
+      // Resetea status a 'idle' ANTES de navegar; sin esto, Login.jsx hereda status='loading'
+      dispatch({ type: 'CLEAR_ERROR' })
       navigate('/login')
     } catch (e) {
       dispatch({ type: 'FAILURE', payload: getErrorMessage(e) })
+    } finally {
+      dispatch({ type: 'RESET_STATUS' })
     }
   }
 

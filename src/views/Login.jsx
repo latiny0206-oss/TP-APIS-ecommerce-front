@@ -167,7 +167,7 @@ export default function Login() {
               <label className="block">
                 <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 block mb-1.5">Usuario</span>
                 <input type="text" value={email} onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu usuario" required className="input-base w-full" autoComplete="username" />
+                  placeholder="usuario" required className="input-base w-full" autoComplete="username" />
               </label>
 
               <label className="block">

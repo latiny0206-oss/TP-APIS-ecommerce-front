@@ -16,7 +16,8 @@ function Field({ label, error, children }) {
   )
 }
 
-const PWD_RE = /^(?=.*[A-Z])(?=.*\d).{8,}$/
+const PWD_RE  = /^(?=.*[A-Z])(?=.*\d).{8,}$/
+const NAME_RE = /^[A-Za-záéíóúüñÁÉÍÓÚÜÑàèìòùÀÈÌÒÙ'\- ]{2,}$/
 
 export default function Registro() {
   const { register, status, error, clearError } = useAuth()
@@ -39,8 +40,8 @@ export default function Registro() {
   const validate = () => {
     const e = {}
     if (!form.username.trim())                              e.username  = 'Ingresá un nombre de usuario'
-    if (!form.nombre.trim())                               e.nombre    = 'Ingresá tu nombre'
-    if (!form.apellido.trim())                             e.apellido  = 'Ingresá tu apellido'
+    if (!NAME_RE.test(form.nombre.trim()))                  e.nombre    = form.nombre.trim().length < 2 ? 'Ingresá tu nombre' : 'El nombre solo puede contener letras'
+    if (!NAME_RE.test(form.apellido.trim()))                e.apellido  = form.apellido.trim().length < 2 ? 'Ingresá tu apellido' : 'El apellido solo puede contener letras'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))   e.email     = 'Email inválido'
     if (!PWD_RE.test(form.password))                       e.password  = 'Mínimo 8 caracteres, una mayúscula y un número'
     if (form.password !== form.confirmar)                  e.confirmar = 'Las contraseñas no coinciden'
@@ -97,7 +98,7 @@ export default function Registro() {
             <form onSubmit={handleSubmit} className="space-y-4" noValidate>
 
               <Field label="Usuario" error={errors.username}>
-                <input type="text" value={form.username} onChange={f('username')} placeholder="mi_usuario"
+                <input type="text" value={form.username} onChange={f('username')} placeholder="usuario"
                   className="input-base w-full" autoComplete="username" />
               </Field>
 

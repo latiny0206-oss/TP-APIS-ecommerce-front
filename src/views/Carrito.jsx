@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Minus, Plus, Trash2, Tag, ArrowRight, ShoppingCart } from 'lucide-react'
 import { useCart } from '../context/CartContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useProducts } from '../context/ProductsContext.jsx'
 import { fmtPrice } from '../utils/format.js'
 import Button from '../components/ui/Button.jsx'
 
@@ -9,6 +10,7 @@ export default function Carrito() {
   const navigate                                           = useNavigate()
   const { items, totals, updateQty, removeFromCart, clearCart } = useCart()
   const { isLoggedIn, setReturnTo }                        = useAuth()
+  const { byId }                                           = useProducts()
 
   const handleCheckout = () => {
     if (!isLoggedIn) {
@@ -68,7 +70,11 @@ export default function Carrito() {
           <div className="grid lg:grid-cols-[1fr_420px] gap-10 lg:gap-16">
 
             <div className="space-y-3">
-              {items.map((line) => (
+              {items.map((line) => {
+                const variantStock = byId[line.productId]?._variantes?.find(v => v.id === line.varianteId)?.stock
+                const maxStock = variantStock ?? Infinity
+                const atMax = maxStock !== Infinity && line.qty >= maxStock
+                return (
                 <div key={line.lineId} className="flex gap-4 sm:gap-6 items-start bg-white border border-rock/10 p-4">
                   <div
                     className="h-24 w-20 sm:h-32 sm:w-28 overflow-hidden bg-rock-700 shrink-0 cursor-pointer"
@@ -106,8 +112,10 @@ export default function Carrito() {
                           <Minus size={13} strokeWidth={2} />
                         </button>
                         <span className="px-4 font-mono font-bold text-sm tabular-nums">{line.qty}</span>
-                        <button onClick={() => updateQty({ lineId: line.lineId, qty: line.qty + 1 })}
-                          className="h-9 w-9 grid place-items-center text-rock hover:bg-rock/5 transition-colors">
+                        <button
+                          onClick={() => !atMax && updateQty({ lineId: line.lineId, qty: line.qty + 1 })}
+                          disabled={atMax}
+                          className={`h-9 w-9 grid place-items-center transition-colors ${atMax ? 'text-rock/25 cursor-not-allowed' : 'text-rock hover:bg-rock/5'}`}>
                           <Plus size={13} strokeWidth={2} />
                         </button>
                       </div>
@@ -116,9 +124,15 @@ export default function Carrito() {
                         <Trash2 size={11} /> Quitar
                       </button>
                     </div>
+                    {atMax && (
+                      <p className="font-mono text-[10px] text-red-600 mt-2">
+                        Stock máximo disponible: {maxStock} unidad{maxStock !== 1 ? 'es' : ''}.
+                      </p>
+                    )}
                   </div>
                 </div>
-              ))}
+                )
+              })}
 
               <button onClick={() => clearCart()}
                 className="sm:hidden w-full mt-2 font-mono text-[10px] tracking-widest-2 uppercase text-rock/45 hover:text-red-700 flex items-center justify-center gap-2 py-3 border border-dashed border-rock/15 transition-colors">

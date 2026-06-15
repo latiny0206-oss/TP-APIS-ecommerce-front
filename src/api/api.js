@@ -17,15 +17,20 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Manejo global de errores: 401 → logout automático
+// Manejo global de errores: 401 → logout automático.
+// Excepción: /auth/login y /auth/register — un 401 ahí son credenciales incorrectas, no sesión expirada.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem(TOKEN_KEY)
-      localStorage.removeItem(USER_KEY)
-      localStorage.removeItem('cumbre_cart')
-      window.dispatchEvent(new Event('auth:logout'))
+      const url = error.config?.url ?? ''
+      const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/register')
+      if (!isAuthEndpoint) {
+        localStorage.removeItem(TOKEN_KEY)
+        localStorage.removeItem(USER_KEY)
+        localStorage.removeItem('cumbre_cart')
+        window.dispatchEvent(new Event('auth:logout'))
+      }
     }
     return Promise.reject(error)
   }

@@ -5,7 +5,8 @@ import Button from '../components/ui/Button.jsx'
 import { contactService } from '../api/contactService.js'
 import { getErrorMessage } from '../api/api.js'
 
-const ASUNTOS = ['Consulta general', 'Pedidos', 'Devoluciones', 'Otro']
+const ASUNTOS  = ['Consulta general', 'Pedidos', 'Devoluciones', 'Otro']
+const NAME_RE  = /^[A-Za-záéíóúüñÁÉÍÓÚÜÑàèìòùÀÈÌÒÙ'\- ]{2,}$/
 
 const CONTACT_INFO = [
   { Icon: Mail,   label: 'Email',     value: 'contacto@cumbre.com' },
@@ -38,10 +39,10 @@ export default function Contacto() {
 
   const validate = () => {
     const e = {}
-    if (!form.nombre.trim())                              e.nombre  = 'Ingresá tu nombre'
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))  e.email   = 'Email inválido'
-    if (!form.asunto)                                     e.asunto  = 'Seleccioná un asunto'
-    if (form.mensaje.trim().length < 10)                  e.mensaje = 'El mensaje debe tener al menos 10 caracteres'
+    if (!NAME_RE.test(form.nombre.trim()))                 e.nombre  = form.nombre.trim().length < 2 ? 'Ingresá tu nombre' : 'El nombre solo puede contener letras'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))   e.email   = 'Email inválido'
+    if (!form.asunto)                                      e.asunto  = 'Seleccioná un asunto'
+    if (form.mensaje.trim().length < 10)                   e.mensaje = 'El mensaje debe tener al menos 10 caracteres'
     return e
   }
 
@@ -93,13 +94,13 @@ export default function Contacto() {
                   <span className="h-10 w-10 rounded-full bg-pine text-ivory grid place-items-center shrink-0">
                     <Check size={18} strokeWidth={2.5} />
                   </span>
-                  <span className="font-mono text-[11px] tracking-widest-2 uppercase text-pine">Mensaje enviado</span>
+                  <span className="font-mono text-[11px] tracking-widest-2 uppercase text-pine">Consulta recibida</span>
                 </div>
                 <h2 className="font-display font-black tracking-tightest uppercase text-3xl mb-3">
                   ¡Gracias, {form.nombre.split(' ')[0]}!
                 </h2>
                 <p className="text-rock/70">
-                  Tu mensaje fue enviado correctamente. Te respondemos en 48 horas hábiles
+                  Tu consulta fue registrada correctamente. Te responderemos en 48 horas hábiles
                   a <span className="font-mono font-bold">{form.email}</span>.
                 </p>
                 <button
