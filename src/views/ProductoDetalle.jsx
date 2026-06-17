@@ -45,12 +45,19 @@ export default function ProductoDetalle() {
       const p = productService.normalizeProducto(raw, variantes)
       setProducto(p)
 
-      // Carga las fotos de la primera variante disponible
+      // Carga las fotos de la primera variante disponible que contenga fotos
       if (variantes.length > 0) {
-        try {
-          const fs = await productService.getFotosByVariante(variantes[0].id)
-          setFotos(fs)
-        } catch { /* sin fotos */ }
+        let fotosCargadas = []
+        for (const v of variantes) {
+          try {
+            const fs = await productService.getFotosByVariante(v.id)
+            if (fs.length > 0) {
+              fotosCargadas = fs
+              break
+            }
+          } catch { /* sin fotos */ }
+        }
+        setFotos(fotosCargadas)
       }
     }).catch(() => setNotFound(true))
       .finally(() => setLoading(false))

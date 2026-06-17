@@ -59,12 +59,12 @@ export function ProductsProvider({ children }) {
       const normalized = productos.map((p) => {
         const vars = variantesByProducto[p.id] ?? []
         const n    = productService.normalizeProducto(p, vars)
-        const primerVariante = vars[0]
-        if (primerVariante) {
-          const fotosVar = (fotosByVariante[primerVariante.id] ?? [])
+        for (const v of vars) {
+          const fotosVar = (fotosByVariante[v.id] ?? [])
             .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
           if (fotosVar.length > 0) {
             n.imagen = productService.buildImageSrc(fotosVar[0])
+            break
           }
         }
         return n

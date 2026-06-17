@@ -145,6 +145,7 @@ function FilterContent({ state, onReset, productos }) {
 
 function ProductoCard({ producto, onNavigate }) {
   const pf = producto.precioFinal ?? producto.precio
+  const outOfStock = (producto.stock ?? 0) === 0
   return (
     <article className="product-card group flex flex-col cursor-pointer" onClick={() => onNavigate(producto.id)}>
       <div className="relative aspect-[4/5] overflow-hidden bg-rock-700">
@@ -157,24 +158,33 @@ function ProductoCard({ producto, onNavigate }) {
             <span className="font-mono text-[10px] text-rock/30 tracking-widest-2 uppercase">Sin foto</span>
           </div>
         )}
-        {producto.tag && (
+        {producto.tag && !outOfStock && (
           <div className="absolute top-3 left-3 z-10">
             <span className="font-mono text-[10px] tracking-widest-2 uppercase px-2 py-1 bg-alpenglow text-ivory">
               {producto.tag}
             </span>
           </div>
         )}
-        {(producto.descuento ?? producto.descuentoPct ?? 0) > 0 && (
+        {(producto.descuento ?? producto.descuentoPct ?? 0) > 0 && !outOfStock && (
           <div className="absolute top-3 right-3 z-10">
             <span className="font-mono text-[10px] tracking-widest-2 uppercase px-2 py-1 bg-rock text-ivory">
               -{producto.descuento ?? producto.descuentoPct}%
             </span>
           </div>
         )}
-        <button onClick={(e) => { e.stopPropagation(); onNavigate(producto.id) }}
-          className="absolute left-3 right-3 bottom-3 z-10 py-3 bg-ivory hover:bg-pine hover:text-ivory text-rock font-narrow font-bold uppercase tracking-widest-2 text-xs transition-all translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 flex items-center justify-center gap-2">
-          <ArrowRight size={14} strokeWidth={2} /> Ver más
-        </button>
+        {outOfStock && (
+          <div className="absolute inset-0 bg-rock/70 grid place-items-center z-10">
+            <span className="font-mono text-[11px] tracking-widest-2 uppercase px-3 py-1.5 bg-rock text-ivory font-bold border border-ivory/25">
+              AGOTADO
+            </span>
+          </div>
+        )}
+        {!outOfStock && (
+          <button onClick={(e) => { e.stopPropagation(); onNavigate(producto.id) }}
+            className="absolute left-3 right-3 bottom-3 z-10 py-3 bg-ivory hover:bg-pine hover:text-ivory text-rock font-narrow font-bold uppercase tracking-widest-2 text-xs transition-all translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 flex items-center justify-center gap-2">
+            <ArrowRight size={14} strokeWidth={2} /> Ver más
+          </button>
+        )}
       </div>
 
       <div className="pt-4 pb-2 flex flex-col gap-1.5 bg-ivory text-rock">

@@ -229,32 +229,72 @@ export default function AdminProducts() {
   const loadAdminProds = useCallback(async () => {
     setAdminLoading(true)
     try {
-      const [prods, vars] = await Promise.all([
+      const [prods, vars, fotos] = await Promise.all([
         productService.getProductosAdmin(),
         productService.getVariantes(),
+        productService.getAllFotos().catch(() => []),
       ])
       const varByProd = vars.reduce((acc, v) => {
         const pid = v.idProducto ?? v.productoId
         if (pid) { acc[pid] = acc[pid] ?? []; acc[pid].push(v) }
         return acc
       }, {})
-      const normalized = prods.map((p) => productService.normalizeProducto(p, varByProd[p.id] ?? []))
+      const fotosByVariante = fotos.reduce((acc, f) => {
+        if (f.varianteId) {
+          acc[f.varianteId] = acc[f.varianteId] ?? []
+          acc[f.varianteId].push(f)
+        }
+        return acc
+      }, {})
+      const normalized = prods.map((p) => {
+        const productVars = varByProd[p.id] ?? []
+        const n = productService.normalizeProducto(p, productVars)
+        for (const v of productVars) {
+          const fotosVar = (fotosByVariante[v.id] ?? [])
+            .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
+          if (fotosVar.length > 0) {
+            n.imagen = productService.buildImageSrc(fotosVar[0])
+            break
+          }
+        }
+        return n
+      })
       setAdminProds(normalized)
       // Sincroniza los productos ACTIVO con el contexto público
       normalized.filter(p => p.estado === 'ACTIVO').forEach((p) => upsert(p))
     } catch {
       // Si el endpoint admin falla (403 u otro), caer al público
       try {
-        const [prods, vars] = await Promise.all([
+        const [prods, vars, fotos] = await Promise.all([
           productService.getProductos(),
           productService.getVariantes(),
+          productService.getAllFotos().catch(() => []),
         ])
         const varByProd = vars.reduce((acc, v) => {
           const pid = v.idProducto ?? v.productoId
           if (pid) { acc[pid] = acc[pid] ?? []; acc[pid].push(v) }
           return acc
         }, {})
-        const normalized = prods.map((p) => productService.normalizeProducto(p, varByProd[p.id] ?? []))
+        const fotosByVariante = fotos.reduce((acc, f) => {
+          if (f.varianteId) {
+            acc[f.varianteId] = acc[f.varianteId] ?? []
+            acc[f.varianteId].push(f)
+          }
+          return acc
+        }, {})
+        const normalized = prods.map((p) => {
+          const productVars = varByProd[p.id] ?? []
+          const n = productService.normalizeProducto(p, productVars)
+          for (const v of productVars) {
+            const fotosVar = (fotosByVariante[v.id] ?? [])
+              .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
+            if (fotosVar.length > 0) {
+              n.imagen = productService.buildImageSrc(fotosVar[0])
+              break
+            }
+          }
+          return n
+        })
         setAdminProds(normalized)
         normalized.forEach((p) => upsert(p))
       } catch {}

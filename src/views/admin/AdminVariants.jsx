@@ -155,7 +155,7 @@ export default function AdminVariants() {
       .finally(() => setLoadingVars(false))
   }, [selectedId]) // eslint-disable-line
 
-  const product  = selectedId ? byId[selectedId] : null
+  const product  = selectedId ? products.find(p => p.id === selectedId) : null
   const variants = allVariants[selectedId] || []
   const totalStock = variants.reduce((s, v) => s + (Number(v.stock) || 0), 0)
 

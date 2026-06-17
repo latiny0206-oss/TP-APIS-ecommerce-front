@@ -3,12 +3,14 @@ import { Upload, Check, Trash2, ChevronRight, ImageOff } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { productService } from '../../api/productService.js'
 import { api, getErrorMessage } from '../../api/api.js'
+import { useProducts } from '../../context/ProductsContext.jsx'
 
-// Sube un archivo de foto a una variante. Retorna { id, tipoContenido, datos }
-async function uploadFoto(varianteId, file, onProgress) {
+async function uploadFoto(varianteId, file, onProgress, nextOrden) {
   const formData = new FormData()
-  formData.append('file', file)
-  const { data } = await api.post(`/fotos/variante/${varianteId}`, formData, {
+  formData.append('varianteId', varianteId)
+  formData.append('orden', nextOrden)
+  formData.append('archivo', file)
+  const { data } = await api.post('/fotos', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: (e) => {
       if (e.total) onProgress(Math.round((e.loaded / e.total) * 100))
@@ -20,6 +22,7 @@ async function uploadFoto(varianteId, file, onProgress) {
 export default function AdminPhotos() {
   const navigate               = useNavigate()
   const { productId: paramId } = useParams()
+  const { reload }             = useProducts()
 
   const [adminProds,   setAdminProds]   = useState([])
   const [prodsLoading, setProdsLoading] = useState(true)
@@ -71,6 +74,7 @@ export default function AdminPhotos() {
     try {
       await api.delete(`/fotos/${fotoId}`)
       setFotos(prev => prev.filter(f => f.id !== fotoId))
+      reload()
     } catch (e) {
       setDeleteError(getErrorMessage(e))
     }
@@ -83,12 +87,14 @@ export default function AdminPhotos() {
       const sizeMb = (file.size / 1024 / 1024).toFixed(1)
       setQueue(q => [...q, { uid, name: file.name, size: `${sizeMb} MB`, progress: 0, done: false, error: null }])
 
+      const nextOrden = fotos.length + 1
       uploadFoto(selectedVar.id, file, (pct) => {
         setQueue(q => q.map(it => it.uid === uid ? { ...it, progress: pct } : it))
-      })
+      }, nextOrden)
         .then((nueva) => {
           setFotos(prev => [...prev, nueva])
           setQueue(q => q.map(it => it.uid === uid ? { ...it, progress: 100, done: true } : it))
+          reload()
         })
         .catch((e) => {
           setQueue(q => q.map(it => it.uid === uid ? { ...it, error: getErrorMessage(e) } : it))

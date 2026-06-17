@@ -162,6 +162,48 @@ export default function Checkout() {
   const [cuponLoading,    setCuponLoading]     = useState(false)
   const [pagoError,       setPagoError]        = useState(null)
 
+  // Tarjeta de crédito/débito
+  const [tarjeta, setTarjeta] = useState({ numero: '', nombre: '', vencimiento: '', cvv: '' })
+  const [tarjetaErrors, setTarjetaErrors] = useState({})
+
+  const handleTarjetaChange = (field, formatFn) => (e) => {
+    let val = e.target.value
+    if (formatFn) val = formatFn(val)
+    setTarjeta(prev => ({ ...prev, [field]: val }))
+    setTarjetaErrors(prev => ({ ...prev, [field]: undefined }))
+  }
+
+  const formatCardNumber = (val) => {
+    let clean = val.replace(/\D/g, '').slice(0, 16)
+    return clean.replace(/(\d{4})(?=\d)/g, '$1 ')
+  }
+
+  const formatExpiry = (val) => {
+    let clean = val.replace(/\D/g, '').slice(0, 4)
+    if (clean.length > 2) return `${clean.slice(0, 2)}/${clean.slice(2)}`
+    return clean
+  }
+
+  const formatCVV = (val) => val.replace(/\D/g, '').slice(0, 4)
+
+  const validateTarjeta = () => {
+    const errs = {}
+    if (!tarjeta.numero.trim() || tarjeta.numero.replace(/\s/g, '').length < 16) {
+      errs.numero = 'Número de tarjeta inválido (16 dígitos)'
+    }
+    if (!tarjeta.nombre.trim()) {
+      errs.nombre = 'Ingresá el nombre como figura en la tarjeta'
+    }
+    const vencRegex = /^(0[1-9]|1[0-2])\/?([0-9]{2})$/
+    if (!tarjeta.vencimiento.trim() || !vencRegex.test(tarjeta.vencimiento)) {
+      errs.vencimiento = 'Formato MM/AA inválido'
+    }
+    if (!tarjeta.cvv.trim() || tarjeta.cvv.length < 3 || tarjeta.cvv.length > 4) {
+      errs.cvv = 'Debe tener 3 o 4 dígitos'
+    }
+    return errs
+  }
+
   // Submit final
   const [submitting,   setSubmitting]   = useState(false)
   const [processError, setProcessError] = useState(null)
@@ -239,6 +281,14 @@ export default function Checkout() {
   const goStep3 = () => {
     if (!metodoPago) { setPagoError('Seleccioná un método de pago'); return }
     setPagoError(null)
+
+    if (metodoPago === 'TARJETA_CREDITO' || metodoPago === 'TARJETA_DEBITO') {
+      const errs = validateTarjeta()
+      if (Object.keys(errs).length) {
+        setTarjetaErrors(errs)
+        return
+      }
+    }
     setStep(3)
     window.scrollTo({ top: 0 })
   }
@@ -479,6 +529,136 @@ export default function Checkout() {
                   )}
                 </div>
 
+                {/* Detalles del método de pago */}
+                {metodoPago === 'TRANSFERENCIA' && (
+                  <div className="mb-8 p-5 border border-pine/25 bg-pine/[0.03] space-y-3 rounded-sm">
+                    <h3 className="font-display font-black text-sm uppercase tracking-tight text-pine flex items-center gap-2">
+                      Cuentas para Transferencia Bancaria
+                    </h3>
+                    <p className="text-xs text-rock/70">
+                      Por favor transferí el monto total del pedido a la siguiente cuenta corriente y guardá el comprobante:
+                    </p>
+                    <div className="grid sm:grid-cols-2 gap-3 text-xs font-mono bg-white border border-rock/10 p-4 rounded-md">
+                      <div>
+                        <span className="text-rock/40 block uppercase text-[9px] tracking-widest">Titular</span>
+                        <span className="font-bold text-rock">Cumbre Expedition Equipment S.A.</span>
+                      </div>
+                      <div>
+                        <span className="text-rock/40 block uppercase text-[9px] tracking-widest">CUIT</span>
+                        <span className="font-bold text-rock">30-71458296-9</span>
+                      </div>
+                      <div className="sm:col-span-2 border-t border-rock/5 pt-2 mt-1">
+                        <span className="text-rock/40 block uppercase text-[9px] tracking-widest">Banco</span>
+                        <span className="font-bold text-rock">Banco Patagonia</span>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <span className="text-rock/40 block uppercase text-[9px] tracking-widest">CBU</span>
+                        <span className="font-bold text-rock">0340250600850025063002</span>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <span className="text-rock/40 block uppercase text-[9px] tracking-widest">Alias</span>
+                        <span className="font-bold text-pine">cumbre.expedition.eco</span>
+                      </div>
+                    </div>
+                    <p className="font-mono text-[9px] text-alpenglow uppercase tracking-widest-2">
+                      ⚠️ Recordá enviar el comprobante de pago por WhatsApp o email indicando tu número de orden para que despachemos tu pedido.
+                    </p>
+                  </div>
+                )}
+
+                {(metodoPago === 'TARJETA_CREDITO' || metodoPago === 'TARJETA_DEBITO') && (
+                  <div className="mb-8 p-5 border border-rock/15 bg-white space-y-6 rounded-sm">
+                    <h3 className="font-display font-black text-sm uppercase tracking-tight text-rock">
+                      Datos de la Tarjeta
+                    </h3>
+                    <div className="flex flex-col md:flex-row gap-6 items-center">
+                      {/* Virtual Card */}
+                      <div className="relative w-full max-w-[280px] aspect-[1.586/1] rounded-2xl bg-gradient-to-br from-rock via-slate-800 to-pine text-ivory p-5 shadow-xl flex flex-col justify-between overflow-hidden select-none border border-ivory/10 shrink-0">
+                        <div className="flex justify-between items-start">
+                          <div className="h-6 w-8 bg-gradient-to-r from-yellow-500 to-yellow-300 rounded-md opacity-80" />
+                          <span className="font-display font-black text-xs tracking-tightest uppercase opacity-75">CUMBRE</span>
+                        </div>
+                        <div className="font-mono text-sm tracking-widest py-2">
+                          {tarjeta.numero || '•••• •••• •••• ••••'}
+                        </div>
+                        <div className="flex justify-between items-end">
+                          <div className="min-w-0 pr-4">
+                            <div className="font-mono text-[8px] uppercase tracking-widest opacity-50">Titular</div>
+                            <div className="font-mono text-[10px] uppercase tracking-wider truncate">
+                              {tarjeta.nombre || 'Nombre y Apellido'}
+                            </div>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <div className="font-mono text-[8px] uppercase tracking-widest opacity-50">Vence</div>
+                            <div className="font-mono text-[10px]">
+                              {tarjeta.vencimiento || 'MM/AA'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Inputs */}
+                      <div className="flex-1 w-full space-y-4">
+                        <Field label="Número de tarjeta" error={tarjetaErrors.numero}>
+                          <input
+                            type="text"
+                            value={tarjeta.numero}
+                            onChange={handleTarjetaChange('numero', formatCardNumber)}
+                            placeholder="4512 3456 7890 1234"
+                            className="input-base w-full font-mono text-sm"
+                          />
+                        </Field>
+                        <Field label="Nombre en la tarjeta" error={tarjetaErrors.nombre}>
+                          <input
+                            type="text"
+                            value={tarjeta.nombre}
+                            onChange={handleTarjetaChange('nombre')}
+                            placeholder="JUAN PEREZ"
+                            className="input-base w-full uppercase text-sm"
+                          />
+                        </Field>
+                        <div className="grid grid-cols-2 gap-4">
+                          <Field label="Vencimiento" error={tarjetaErrors.vencimiento}>
+                            <input
+                              type="text"
+                              value={tarjeta.vencimiento}
+                              onChange={handleTarjetaChange('vencimiento', formatExpiry)}
+                              placeholder="MM/AA"
+                              className="input-base w-full font-mono text-center text-sm"
+                            />
+                          </Field>
+                          <Field label="CVV" error={tarjetaErrors.cvv}>
+                            <input
+                              type="password"
+                              value={tarjeta.cvv}
+                              onChange={handleTarjetaChange('cvv', formatCVV)}
+                              placeholder="•••"
+                              className="input-base w-full font-mono text-center text-sm"
+                            />
+                          </Field>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {metodoPago === 'EFECTIVO' && (
+                  <div className="mb-8 p-5 border border-rock/20 bg-rock/[0.02] space-y-2 rounded-sm">
+                    <h3 className="font-display font-black text-sm uppercase tracking-tight text-rock">
+                      Pago en Sucursal
+                    </h3>
+                    <p className="text-xs text-rock/70">
+                      Podés retirar tu pedido y abonar en efectivo en nuestro local central en San Carlos de Bariloche.
+                    </p>
+                    <p className="text-xs text-rock/70">
+                      Dirección: **Av. Bustillo Km 4.5, Bariloche, Río Negro**.
+                    </p>
+                    <p className="font-mono text-[9px] text-pine uppercase tracking-widest-2 mt-2">
+                      ✓ Recibirás un correo cuando tu pedido esté listo para retirar.
+                    </p>
+                  </div>
+                )}
+
                 {/* Cupón por código */}
                 <div className="border-t border-rock/10 pt-6">
                   <div className="font-mono text-[11px] tracking-widest-2 uppercase text-alpenglow mb-2">
@@ -599,6 +779,11 @@ export default function Checkout() {
                   <p className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/80">
                     {METODOS_PAGO.find((m) => m.value === metodoPago)?.label ?? metodoPago}
                   </p>
+                  {(metodoPago === 'TARJETA_CREDITO' || metodoPago === 'TARJETA_DEBITO') && tarjeta.numero && (
+                    <p className="font-mono text-xs text-rock/50 mt-1">
+                      Tarjeta: •••• •••• •••• {tarjeta.numero.slice(-4)}
+                    </p>
+                  )}
                   {cuponInfo && (
                     <div className="flex items-center gap-2 mt-3 text-pine">
                       <Tag size={13} />
