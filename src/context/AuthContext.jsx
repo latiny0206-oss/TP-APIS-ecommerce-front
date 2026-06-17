@@ -4,23 +4,25 @@ import { authService } from '../api/authService.js'
 import { getErrorMessage } from '../api/api.js'
 
 const initialState = {
-  user:       null,
-  isLoggedIn: false,
-  status:     'idle',
-  error:      null,
-  returnTo:   '/',
+  user:         null,
+  isLoggedIn:   false,
+  status:       'idle',
+  error:        null,
+  returnTo:     '/',
+  initializing: true,   // true mientras se restaura la sesión desde localStorage
 }
 
 function authReducer(state, action) {
   switch (action.type) {
     case 'LOADING':       return { ...state, status: 'loading', error: null }
-    case 'SUCCESS':       return { ...state, user: action.payload, isLoggedIn: true, status: 'idle', error: null }
+    case 'SUCCESS':       return { ...state, user: action.payload, isLoggedIn: true, status: 'idle', error: null, initializing: false }
     case 'FAILURE':       return { ...state, status: 'error', error: action.payload }
-    case 'LOGOUT':        return { ...initialState }
-    case 'REGISTERED':    return { ...state, user: action.payload, isLoggedIn: true, status: 'registered', error: null }
+    case 'LOGOUT':        return { ...initialState, initializing: false }
+    case 'REGISTERED':    return { ...state, user: action.payload, isLoggedIn: true, status: 'registered', error: null, initializing: false }
     case 'CLEAR_ERROR':   return { ...state, error: null, status: 'idle' }
     case 'RESET_STATUS':  return state.status === 'loading' ? { ...state, status: 'idle' } : state
     case 'SET_RETURN_TO': return { ...state, returnTo: action.payload }
+    case 'INIT_DONE':     return { ...state, initializing: false }
     default: return state
   }
 }
@@ -36,6 +38,8 @@ export function AuthProvider({ children }) {
     const stored = authService.getStoredUser()
     if (stored && authService.isAuthenticated()) {
       dispatch({ type: 'SUCCESS', payload: stored })
+    } else {
+      dispatch({ type: 'INIT_DONE' })
     }
   }, [])
 
@@ -98,16 +102,17 @@ export function AuthProvider({ children }) {
   }
 
   const value = {
-    user:        state.user,
-    isLoggedIn:  state.isLoggedIn,
-    status:      state.status,
-    error:       state.error,
-    returnTo:    state.returnTo,
+    user:         state.user,
+    isLoggedIn:   state.isLoggedIn,
+    status:       state.status,
+    error:        state.error,
+    returnTo:     state.returnTo,
+    initializing: state.initializing,
     login,
     register,
     logout,
-    clearError:  () => dispatch({ type: 'CLEAR_ERROR' }),
-    setReturnTo: (path) => dispatch({ type: 'SET_RETURN_TO', payload: path }),
+    clearError:   () => dispatch({ type: 'CLEAR_ERROR' }),
+    setReturnTo:  (path) => dispatch({ type: 'SET_RETURN_TO', payload: path }),
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

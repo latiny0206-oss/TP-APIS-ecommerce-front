@@ -97,8 +97,9 @@ function ShellLayout() {
 
 // ─── Protección de rutas de cuenta — requiere auth ────────────────────────
 function AccountGuard() {
-  const { isLoggedIn, setReturnTo } = useAuth()
+  const { isLoggedIn, initializing, setReturnTo } = useAuth()
   const location = useLocation()
+  if (initializing) return <PageLoader />
   if (!isLoggedIn) {
     setReturnTo(location.pathname)
     return <Navigate to="/login" replace />
@@ -108,7 +109,8 @@ function AccountGuard() {
 
 // ─── Protección de rutas admin — requiere rol 'admin' ────────────────────
 function AdminGuard() {
-  const { isLoggedIn, user } = useAuth()
+  const { isLoggedIn, user, initializing } = useAuth()
+  if (initializing) return <PageLoader />
   if (!isLoggedIn || user?.rol?.toUpperCase() !== 'ADMIN') {
     return <Navigate to="/login" replace />
   }
