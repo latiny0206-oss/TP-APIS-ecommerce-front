@@ -96,7 +96,7 @@ export default function CuentaOrdenDetalle() {
           </ul>
           <div className="flex justify-between items-center border-t border-rock/10 pt-4 mt-4">
             <span className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/55">Total</span>
-            <span className="font-display font-black tracking-tightest text-2xl">{fmtPrice(orden.total ?? 0)}</span>
+            <span className="font-display font-black tracking-tightest text-2xl">{fmtPrice(orden.total ?? orden.montoFinal ?? 0)}</span>
           </div>
         </div>
 

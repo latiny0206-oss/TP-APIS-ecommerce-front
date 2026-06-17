@@ -65,11 +65,9 @@ function ProductDrawer({ product: existing, onClose, onSaved }) {
         nombre:      form.nombre,
         descripcion: form.descripcion,
         precioBase:  Number(form.precioBase),
-        descuentoPct: Number(form.descuentoPct),
         estado:      form.estado,
-        tag:         form.tag || null,
-        marca:       { id: Number(form.marcaId) },
-        categoria:   { id: Number(form.categoriaId) },
+        marcaId:     Number(form.marcaId),
+        categoriaId: Number(form.categoriaId),
       }
       if (existing) {
         await productService.actualizarProducto(existing.id, payload)

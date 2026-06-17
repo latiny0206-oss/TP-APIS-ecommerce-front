@@ -57,28 +57,7 @@ export const CATEGORIES = [
   },
 ]
 
-// ─── Taxonomías ───────────────────────────────────────────────────────────────
-export const MARCAS = [
-  { id: 1, nombre: 'Osprey' },
-  { id: 2, nombre: 'Marmot' },
-  { id: 3, nombre: 'Petzl' },
-  { id: 4, nombre: 'Black Diamond' },
-  { id: 5, nombre: 'Cumbre Pro' },
-  { id: 6, nombre: 'Salomon' },
-  { id: 7, nombre: 'MSR' },
-]
-
-export const CATEGORIAS = [
-  { id: 1, nombre: 'Mochilas' },
-  { id: 2, nombre: 'Carpas' },
-  { id: 3, nombre: 'Sacos de Dormir' },
-  { id: 4, nombre: 'Calzado Técnico' },
-  { id: 5, nombre: 'Ropa Técnica' },
-  { id: 6, nombre: 'Accesorios' },
-  { id: 7, nombre: 'Escalada' },
-]
-
-// ─── Productos completos (con variantes para el admin) ───────────────────────
+// ─── Productos seed (referencia visual, no se usa en producción) ──────────────
 export const PRODUCTS_SEED = [
   {
     id: 101, marcaId: 1, categoriaId: 1, estado: 'ACTIVO',

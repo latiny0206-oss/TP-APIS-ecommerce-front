@@ -17,6 +17,14 @@ export const authService = {
 
   async register({ username, email, password, nombre, apellido }) {
     const { data } = await api.post('/auth/register', { username, email, password, nombre, apellido })
+    tokenStorage.set(data.token)
+    userStorage.set({
+      id:       data.id,
+      username: data.username,
+      nombre:   data.nombre,
+      email:    data.email,
+      rol:      data.rol,
+    })
     return data
   },
 
@@ -29,6 +37,7 @@ export const authService = {
     tokenStorage.remove()
     userStorage.remove()
     localStorage.removeItem('cumbre_cart')
+    localStorage.removeItem('cumbre_cart_uid')
   },
 
   getStoredUser() {

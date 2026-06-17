@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { Mountain, Eye, EyeOff, AlertTriangle } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Mountain, Eye, EyeOff, AlertTriangle, CheckCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import Button from '../components/ui/Button.jsx'
 
@@ -21,6 +21,14 @@ const NAME_RE = /^[A-Za-záéíóúüñÁÉÍÓÚÜÑàèìòùÀÈÌÒÙ'\- ]{2
 
 export default function Registro() {
   const { register, status, error, clearError } = useAuth()
+  const navigate = useNavigate()
+
+  // Redirect to home after successful registration (auto-logged in)
+  useEffect(() => {
+    if (status !== 'registered') return
+    const t = setTimeout(() => navigate('/'), 2000)
+    return () => clearTimeout(t)
+  }, [status, navigate])
 
   const [form, setForm] = useState({
     username: '', nombre: '', apellido: '', email: '', password: '', confirmar: '',
@@ -59,6 +67,25 @@ export default function Registro() {
       email:     form.email,
       password:  form.password,
     })
+  }
+
+  if (status === 'registered') {
+    return (
+      <div className="min-h-screen bg-rock flex flex-col items-center justify-center px-4">
+        <div className="bg-ivory text-rock p-10 max-w-sm w-full text-center">
+          <CheckCircle size={48} className="text-pine mx-auto mb-4" strokeWidth={1.5} />
+          <div className="font-mono text-[11px] tracking-widest-2 uppercase text-alpenglow mb-2">
+            ¡Todo listo!
+          </div>
+          <h2 className="font-display font-black tracking-tightest uppercase text-3xl leading-[0.9] mb-3">
+            Cuenta creada
+          </h2>
+          <p className="font-mono text-[11px] text-rock/60 tracking-widest-2 uppercase">
+            Redirigiendo al inicio…
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (

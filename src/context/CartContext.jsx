@@ -88,12 +88,26 @@ export function CartProvider({ children }) {
   // Vaciar carrito en auto-logout (401 del interceptor) o logout manual
   useEffect(() => {
     const handler = () => dispatch({ type: 'CLEAR' })
-    window.addEventListener('auth:logout', handler)   // 401 → auto-logout
-    window.addEventListener('cart:clear',  handler)   // logout manual
+    window.addEventListener('auth:logout', handler)
+    window.addEventListener('cart:clear',  handler)
     return () => {
       window.removeEventListener('auth:logout', handler)
       window.removeEventListener('cart:clear',  handler)
     }
+  }, [])
+
+  // Limpiar carrito si el usuario que inicia sesión es distinto al anterior
+  useEffect(() => {
+    const handler = (e) => {
+      const newId    = String(e.detail.id)
+      const storedId = localStorage.getItem('cumbre_cart_uid')
+      if (storedId && storedId !== newId) {
+        dispatch({ type: 'CLEAR' })
+      }
+      localStorage.setItem('cumbre_cart_uid', newId)
+    }
+    window.addEventListener('auth:login', handler)
+    return () => window.removeEventListener('auth:login', handler)
   }, [])
 
   const applyCoupon = useCallback(async (code) => {
@@ -108,7 +122,7 @@ export function CartProvider({ children }) {
         dispatch({ type: 'SET_COUPON_ERROR', payload: `Código "${trimmed}" inválido o vencido` })
         return
       }
-      const pct   = found.tipo === 'PORCENTAJE' ? found.porcentaje : 0
+      const pct   = found.tipo === 'PORCENTAJE' ? Number(found.valor) : 0
       const label = found.tipo === 'PORCENTAJE'
         ? `${found.codigo} · ${pct}% OFF`
         : `${found.codigo} · -$${Number(found.valor).toLocaleString('es-CL')}`

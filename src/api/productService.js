@@ -24,6 +24,7 @@ export const productService = {
   isStockDisponible:    (id, qty) => api.get(`/variantes/${id}/stock/disponible`, { params: { cantidad: qty } }).then((r) => r.data),
 
   // Fotos Base64: [{ tipoContenido, datos }]
+  getAllFotos:          ()            => api.get('/fotos').then((r) => r.data),
   getFotosByVariante:   (varianteId) => api.get(`/fotos/variante/${varianteId}`).then((r) => r.data),
   buildImageSrc: (foto) => `data:${foto.tipoContenido};base64,${foto.datos}`,
 
@@ -53,8 +54,8 @@ export const productService = {
       ? Math.round(precioBase * (1 - descuentoPct / 100))
       : precioBase
 
-    const categoriaNombre = (producto.categoria?.nombre ?? '').toLowerCase()
-    const marcaNombre     = producto.marca?.nombre ?? ''
+    const categoriaNombre = (producto.categoriaNombre ?? producto.categoria?.nombre ?? '').toLowerCase()
+    const marcaNombre     = producto.marcaNombre ?? producto.marca?.nombre ?? ''
 
     const talles   = variantes.map((v) => v.talla ?? v.talle).filter(Boolean)
     const stock    = variantes.reduce((s, v) => s + (v.stock ?? 0), 0)

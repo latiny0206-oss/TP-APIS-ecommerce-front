@@ -17,6 +17,7 @@ function authReducer(state, action) {
     case 'SUCCESS':       return { ...state, user: action.payload, isLoggedIn: true, status: 'idle', error: null }
     case 'FAILURE':       return { ...state, status: 'error', error: action.payload }
     case 'LOGOUT':        return { ...initialState }
+    case 'REGISTERED':    return { ...state, user: action.payload, isLoggedIn: true, status: 'registered', error: null }
     case 'CLEAR_ERROR':   return { ...state, error: null, status: 'idle' }
     case 'RESET_STATUS':  return state.status === 'loading' ? { ...state, status: 'idle' } : state
     case 'SET_RETURN_TO': return { ...state, returnTo: action.payload }
@@ -52,6 +53,7 @@ export function AuthProvider({ children }) {
     dispatch({ type: 'LOADING' })
     try {
       const data = await authService.login({ username, password })
+      window.dispatchEvent(new CustomEvent('auth:login', { detail: { id: data.id } }))
       dispatch({ type: 'SUCCESS', payload: {
         id:       data.id,
         username: data.username,
@@ -71,10 +73,15 @@ export function AuthProvider({ children }) {
   const register = async ({ username, email, password, nombre, apellido }) => {
     dispatch({ type: 'LOADING' })
     try {
-      await authService.register({ username, email, password, nombre, apellido })
-      // Resetea status a 'idle' ANTES de navegar; sin esto, Login.jsx hereda status='loading'
-      dispatch({ type: 'CLEAR_ERROR' })
-      navigate('/login')
+      const data = await authService.register({ username, email, password, nombre, apellido })
+      window.dispatchEvent(new CustomEvent('auth:login', { detail: { id: data.id } }))
+      dispatch({ type: 'REGISTERED', payload: {
+        id:       data.id,
+        username: data.username,
+        nombre:   data.nombre,
+        email:    data.email,
+        rol:      data.rol,
+      } })
     } catch (e) {
       dispatch({ type: 'FAILURE', payload: getErrorMessage(e) })
     } finally {

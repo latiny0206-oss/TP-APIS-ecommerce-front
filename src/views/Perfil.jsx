@@ -128,7 +128,7 @@ export default function Perfil() {
                     <div className="flex justify-end border-t border-rock/10 pt-3">
                       <span className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 mr-3">Total</span>
                       <span className="font-display font-black tracking-tightest text-lg uppercase">
-                        {fmtPrice(orden.total ?? 0)}
+                        {fmtPrice(orden.total ?? orden.montoFinal ?? 0)}
                       </span>
                     </div>
                   </div>
