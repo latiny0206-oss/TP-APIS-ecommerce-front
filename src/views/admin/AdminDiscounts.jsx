@@ -24,7 +24,7 @@ function fmtDateShort(dateStr) {
 function DiscountCard({ d, onToggle, onEdit, onDelete }) {
   const active     = d.estado === 'ACTIVO'
   const valueLabel = d.tipo === 'PORCENTAJE'
-    ? `${d.porcentaje}% OFF`
+    ? `${d.valor}% OFF`
     : `$${Number(d.valor).toLocaleString('es-CL')} OFF`
 
   return (
@@ -103,18 +103,26 @@ export default function AdminDiscounts() {
   function openNew()   { setEditData(null); setForm(EMPTY_FORM); setShowForm(true) }
   function openEdit(d) {
     setEditData(d)
-    setForm({ codigo: d.codigo, tipo: d.tipo, porcentaje: d.porcentaje ?? '', valor: d.valor || '', fechaInicio: d.fechaInicio, fechaFin: d.fechaFin })
+    setForm({
+      codigo:     d.codigo,
+      tipo:       d.tipo,
+      porcentaje: d.tipo === 'PORCENTAJE' ? (d.valor ?? '') : '',
+      valor:      d.tipo === 'FIJO'       ? (d.valor ?? '') : '',
+      fechaInicio: d.fechaInicio,
+      fechaFin:   d.fechaFin,
+    })
     setShowForm(true)
   }
 
   async function handleSubmit() {
     if (!form.codigo.trim()) return
     setSaving(true)
+    const codigoUpper = form.codigo.trim().toUpperCase()
     const payload = {
-      codigo:     form.codigo.trim().toUpperCase(),
+      nombre:     codigoUpper,
+      codigo:     codigoUpper,
       tipo:       form.tipo,
-      valor:      form.tipo === 'FIJO'       ? Number(form.valor)      : 0,
-      porcentaje: form.tipo === 'PORCENTAJE' ? Number(form.porcentaje) : null,
+      valor:      form.tipo === 'PORCENTAJE' ? Number(form.porcentaje) : Number(form.valor),
       fechaInicio: form.fechaInicio,
       fechaFin:   form.fechaFin,
       estado:     editData?.estado ?? 'ACTIVO',
@@ -134,10 +142,18 @@ export default function AdminDiscounts() {
   }
 
   async function handleToggle(d) {
-    const newEstado = d.estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO'
+    const newEstado = d.estado === 'ACTIVO' ? 'EXPIRADO' : 'ACTIVO'
     setToggleError(null)
     try {
-      await discountService.actualizarDescuento(d.id, { ...d, estado: newEstado })
+      await discountService.actualizarDescuento(d.id, {
+        nombre:      d.nombre ?? d.codigo,
+        codigo:      d.codigo,
+        tipo:        d.tipo,
+        valor:       d.valor,
+        fechaInicio: d.fechaInicio,
+        fechaFin:    d.fechaFin,
+        estado:      newEstado,
+      })
       setDescuentos(prev => prev.map(item => item.id === d.id ? { ...item, estado: newEstado } : item))
     } catch (e) { setToggleError(getErrorMessage(e)) }
   }

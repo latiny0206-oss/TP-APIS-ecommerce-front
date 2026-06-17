@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
+import { createContext, useContext, useReducer, useEffect, useCallback, useMemo } from 'react'
 import { productService } from '../api/productService.js'
 import { getErrorMessage } from '../api/api.js'
 
@@ -36,7 +36,8 @@ export function ProductsProvider({ children }) {
     Promise.all([
       productService.getProductos(),
       productService.getVariantes(),
-    ]).then(([productos, variantes]) => {
+      productService.getAllFotos().catch(() => []),
+    ]).then(([productos, variantes, fotos]) => {
       const variantesByProducto = variantes.reduce((acc, v) => {
         const pid = v.idProducto ?? v.productoId
         if (pid) {
@@ -46,9 +47,28 @@ export function ProductsProvider({ children }) {
         return acc
       }, {})
 
-      const normalized = productos.map((p) =>
-        productService.normalizeProducto(p, variantesByProducto[p.id] ?? [])
-      )
+      // Agrupa fotos por varianteId y ordena por campo 'orden'
+      const fotosByVariante = fotos.reduce((acc, f) => {
+        if (f.varianteId) {
+          acc[f.varianteId] = acc[f.varianteId] ?? []
+          acc[f.varianteId].push(f)
+        }
+        return acc
+      }, {})
+
+      const normalized = productos.map((p) => {
+        const vars = variantesByProducto[p.id] ?? []
+        const n    = productService.normalizeProducto(p, vars)
+        const primerVariante = vars[0]
+        if (primerVariante) {
+          const fotosVar = (fotosByVariante[primerVariante.id] ?? [])
+            .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
+          if (fotosVar.length > 0) {
+            n.imagen = productService.buildImageSrc(fotosVar[0])
+          }
+        }
+        return n
+      })
       dispatch({ type: 'SET_ALL', payload: normalized })
     }).catch((e) => {
       dispatch({ type: 'SET_ERROR', payload: getErrorMessage(e) })
@@ -57,15 +77,18 @@ export function ProductsProvider({ children }) {
 
   useEffect(() => { load() }, [load])
 
-  const value = {
+  const upsert = useCallback((product) => dispatch({ type: 'UPSERT', payload: product }), [])
+  const remove = useCallback((id)      => dispatch({ type: 'REMOVE', payload: id }),      [])
+
+  const value = useMemo(() => ({
     byId:    state.byId,
     ids:     state.ids,
     loading: state.loading,
     error:   state.error,
     reload:  load,
-    upsert:  (product) => dispatch({ type: 'UPSERT', payload: product }),
-    remove:  (id)      => dispatch({ type: 'REMOVE', payload: id }),
-  }
+    upsert,
+    remove,
+  }), [state.byId, state.ids, state.loading, state.error, load, upsert, remove])
 
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>
 }

@@ -18,9 +18,9 @@ export default function ProductCard({ product, dark = false }) {
         className="relative aspect-[4/5] overflow-hidden"
         style={{ backgroundColor: product.color || '#1F252B' }}
       >
-        {(product.image || product.images?.[0]) && (
+        {(product.imagen || product.image || product.images?.[0]) && (
           <img
-            src={product.image || product.images[0]}
+            src={product.imagen || product.image || product.images?.[0]}
             alt={product.name || product.nombre}
             className="product-img absolute inset-0 w-full h-full object-cover opacity-95"
             loading="lazy"
