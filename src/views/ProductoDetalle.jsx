@@ -304,9 +304,9 @@ export default function ProductoDetalle() {
                   <Plus size={14} strokeWidth={2} />
                 </button>
               </div>
-              {talleSeleccionado && (
+              {(talleSeleccionado || !hayTalles) && (
                 <span className="ml-4 font-mono text-[10px] tracking-widest-2 uppercase text-rock/45">
-                  {stockDisponible} disponibles
+                  {stockDisponible} disponible{stockDisponible !== 1 ? 's' : ''}
                   {enCarrito > 0 && ` (${enCarrito} ya en carrito)`}
                 </span>
               )}

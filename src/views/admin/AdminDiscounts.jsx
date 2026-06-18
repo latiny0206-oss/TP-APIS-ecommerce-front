@@ -42,11 +42,7 @@ function DiscountCard({ d, onToggle, onEdit, onDelete }) {
         <ToggleSwitch active={active} onToggle={() => onToggle(d)} />
       </div>
 
-      <div className="grid grid-cols-3 divide-x divide-rock/10 border-t border-b border-rock/10">
-        <div className="px-4 py-3 text-center">
-          <div className="font-display font-black tracking-tightest text-xl">{d.usos ?? 0}</div>
-          <div className="font-mono text-[9px] tracking-widest-2 uppercase text-rock/45 mt-0.5">usos</div>
-        </div>
+      <div className="grid grid-cols-2 divide-x divide-rock/10 border-t border-b border-rock/10">
         <div className="px-4 py-3 text-center">
           <div className="font-mono text-[10px] font-bold whitespace-nowrap">
             {fmtDateShort(d.fechaInicio)} → {fmtDateShort(d.fechaFin)}
