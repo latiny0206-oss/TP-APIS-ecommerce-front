@@ -130,9 +130,11 @@ export default function ProductoDetalle() {
   const stockDisponible = Math.max(0, stockActual - enCarrito)
   const atMaxStock      = stockDisponible === 0 && stockActual > 0
 
+  const faltaColor = coloresUnicos.length > 0 && !colorSeleccionado
+  const faltaTalle = hayTalles && !talleSeleccionado
+
   const handleAgregar = () => {
-    if (hayTalles && !talleSeleccionado) return
-    if (atMaxStock) return
+    if (faltaColor || faltaTalle || atMaxStock) return
     const cantidadAgregar = Math.min(cantidad, stockDisponible)
     if (cantidadAgregar <= 0) return
     addToCart({
@@ -244,20 +246,6 @@ export default function ProductoDetalle() {
               </div>
             )}
 
-            {/* Materiales disponibles */}
-            {materialesUnicos.length > 0 && (
-              <div className="mb-5">
-                <div className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 mb-2">Material</div>
-                <div className="flex flex-wrap gap-2">
-                  {materialesUnicos.map(m => (
-                    <span key={m}
-                      className="px-3 py-1.5 border border-rock/15 font-mono text-[10px] tracking-widest-2 uppercase text-rock/70 bg-rock/[0.03]">
-                      {m}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {hayTalles && (
               <div className="mb-6">
@@ -301,15 +289,15 @@ export default function ProductoDetalle() {
               <div className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 mb-3">Cantidad</div>
               <div className={`inline-flex items-center border ${hayTalles && !talleSeleccionado ? 'border-rock/10 opacity-40 pointer-events-none' : 'border-rock/20'}`}>
                 <button onClick={() => setCantidad((q) => Math.max(1, q - 1))}
-                  disabled={hayTalles && !talleSeleccionado}
+                  disabled={faltaColor || faltaTalle}
                   className="h-11 w-11 grid place-items-center text-rock hover:bg-rock/5 transition-colors">
                   <Minus size={14} strokeWidth={2} />
                 </button>
                 <span className="px-5 font-mono font-bold text-sm tabular-nums w-12 text-center">{cantidad}</span>
                 <button onClick={() => setCantidad((q) => Math.min(stockDisponible || 99, q + 1))}
-                  disabled={(hayTalles && !talleSeleccionado) || cantidad >= stockDisponible}
+                  disabled={faltaColor || faltaTalle || cantidad >= stockDisponible}
                   className={`h-11 w-11 grid place-items-center transition-colors ${
-                    cantidad >= stockDisponible || (hayTalles && !talleSeleccionado)
+                    cantidad >= stockDisponible || faltaColor || faltaTalle
                       ? 'text-rock/25 cursor-not-allowed'
                       : 'text-rock hover:bg-rock/5'
                   }`}>
@@ -332,14 +320,37 @@ export default function ProductoDetalle() {
 
             <div className="flex flex-col sm:flex-row gap-3">
               <Button variant="primary" size="lg" className="flex-1" onClick={handleAgregar}
-                disabled={(hayTalles && !talleSeleccionado) || atMaxStock}
+                disabled={faltaColor || faltaTalle || atMaxStock}
                 icon={agregado ? <Check size={18} strokeWidth={2.5} /> : <ShoppingCart size={18} strokeWidth={2} />}>
-                {agregado ? '¡Agregado!' : atMaxStock ? 'Sin stock adicional' : 'Agregar al carrito'}
+                {agregado 
+                  ? '¡Agregado!' 
+                  : faltaColor 
+                    ? 'Seleccioná un color'
+                    : faltaTalle
+                      ? 'Seleccioná un talle'
+                      : atMaxStock 
+                        ? 'Sin stock adicional' 
+                        : 'Agregar al carrito'}
               </Button>
               <Button variant="ghost-light" size="lg" onClick={() => navigate('/carrito')}>
                 Ver carrito
               </Button>
             </div>
+
+            {/* Materiales disponibles reubicados */}
+            {materialesUnicos.length > 0 && (
+              <div className="mt-8">
+                <div className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 mb-2">Material</div>
+                <div className="flex flex-wrap gap-2">
+                  {materialesUnicos.map(m => (
+                    <span key={m}
+                      className="px-3 py-1.5 border border-rock/15 font-mono text-[10px] tracking-widest-2 uppercase text-rock/70 bg-rock/[0.03]">
+                      {m}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="mt-8 pt-8 border-t border-rock/10">
               <button onClick={handleVolver}

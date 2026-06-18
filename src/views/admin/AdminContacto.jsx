@@ -28,7 +28,7 @@ function MensajeDetail({ msg, onClose }) {
       </div>
       <div className="font-mono text-[10px] tracking-widest-2 uppercase text-alpenglow">{msg.asunto}</div>
       <p className="text-sm text-rock/80 leading-relaxed whitespace-pre-wrap">{msg.mensaje}</p>
-      <div className="font-mono text-[10px] text-rock/35">{fmtFecha(msg.fecha ?? msg.fechaCreacion ?? msg.createdAt)}</div>
+      <div className="font-mono text-[10px] text-rock/35">{fmtFecha(msg.fechaEnvio ?? msg.fecha ?? msg.fechaCreacion ?? msg.createdAt)}</div>
     </div>
   )
 }
@@ -115,7 +115,7 @@ export default function AdminContacto() {
                       <td className="px-5 py-3 font-mono text-xs text-rock/65 truncate max-w-[160px]">{m.email}</td>
                       <td className="px-5 py-3 font-mono text-xs text-rock/70 truncate max-w-[140px]">{m.asunto}</td>
                       <td className="px-5 py-3 font-mono text-xs text-rock/50 whitespace-nowrap">
-                        {fmtFecha(m.fecha ?? m.fechaCreacion ?? m.createdAt)}
+                        {fmtFecha(m.fechaEnvio ?? m.fecha ?? m.fechaCreacion ?? m.createdAt)}
                       </td>
                       <td className="px-5 py-3 font-mono text-[10px] tracking-widest-2 uppercase text-alpenglow">
                         {isActive ? '▲' : 'Ver'}

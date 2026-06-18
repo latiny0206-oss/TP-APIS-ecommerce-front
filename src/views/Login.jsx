@@ -6,111 +6,7 @@ import { authService } from '../api/authService.js'
 import { getErrorMessage } from '../api/api.js'
 import Button from '../components/ui/Button.jsx'
 
-function ForgotPasswordModal({ onClose }) {
-  const [email,   setEmail]   = useState('')
-  const [loading, setLoading] = useState(false)
-  const [sent,    setSent]    = useState(false)
-  const [error,   setError]   = useState(null)
 
-  useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [onClose])
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!email.trim()) return
-    setLoading(true)
-    setError(null)
-    try {
-      await authService.forgotPassword(email.trim())
-      setSent(true)
-    } catch (err) {
-      // No revelamos si el email existe o no
-      setSent(true)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <>
-      <div className="fixed inset-0 bg-rock/70 z-50 fadein" onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 fadein">
-        <div className="bg-ivory text-rock w-full max-w-sm shadow-2xl">
-          <div className="flex items-center justify-between p-5 border-b border-rock/10">
-            <h2 className="font-display font-black tracking-tightest uppercase text-xl">
-              Recuperar contraseña
-            </h2>
-            <button
-              onClick={onClose}
-              className="h-8 w-8 grid place-items-center border border-rock/15 hover:bg-rock/5 transition-colors"
-            >
-              <X size={14} />
-            </button>
-          </div>
-
-          <div className="p-5">
-            {sent ? (
-              <div className="text-center py-4">
-                <span className="h-12 w-12 rounded-full bg-pine text-ivory grid place-items-center mx-auto mb-4">
-                  <Check size={20} strokeWidth={2.5} />
-                </span>
-                <p className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/70 leading-relaxed">
-                  Si el email existe en nuestro sistema, se enviaron instrucciones de recuperación.
-                </p>
-                <button
-                  onClick={onClose}
-                  className="mt-5 font-mono text-[11px] tracking-widest-2 uppercase text-pine hover:underline"
-                >
-                  Cerrar →
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <p className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 leading-relaxed">
-                  Ingresá tu email y te enviamos instrucciones para restablecer tu contraseña.
-                </p>
-
-                {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 font-mono text-[10px] tracking-widest-2 uppercase">
-                    {error}
-                  </div>
-                )}
-
-                <label className="block">
-                  <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 block mb-1.5">
-                    Email
-                  </span>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="tu@correo.com"
-                    required
-                    autoFocus
-                    className="input-base w-full"
-                    autoComplete="email"
-                  />
-                </label>
-
-                <div className="flex gap-2 pt-1">
-                  <Button type="button" variant="ghost-light" size="md" className="flex-1" onClick={onClose}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" variant="primary" size="md" className="flex-1" disabled={loading}>
-                    {loading ? <span className="flex items-center gap-2"><span className="spinner" /> Enviando…</span> : 'Enviar'}
-                  </Button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      </div>
-    </>
-  )
-}
 
 export default function Login() {
   const { login, status, error, clearError, isLoggedIn } = useAuth()
@@ -123,7 +19,6 @@ export default function Login() {
   const [email,       setEmail]       = useState('')
   const [password,    setPassword]    = useState('')
   const [showPwd,     setShowPwd]     = useState(false)
-  const [forgotOpen,  setForgotOpen]  = useState(false)
 
   useEffect(() => {
     if (error) clearError()
@@ -189,13 +84,12 @@ export default function Login() {
               </label>
 
               <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setForgotOpen(true)}
+                <Link
+                  to="/forgot-password"
                   className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 hover:text-alpenglow transition-colors"
                 >
                   Olvidé mi contraseña
-                </button>
+                </Link>
               </div>
 
               <Button type="submit" variant="primary" size="lg" className="w-full" disabled={status === 'loading'}>
@@ -218,7 +112,6 @@ export default function Login() {
         </div>
       </div>
 
-      {forgotOpen && <ForgotPasswordModal onClose={() => setForgotOpen(false)} />}
     </div>
   )
 }

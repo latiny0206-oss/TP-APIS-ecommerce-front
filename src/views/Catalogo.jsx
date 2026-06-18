@@ -371,7 +371,7 @@ export default function Catalogo() {
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value)}
-                  className="hidden lg:block input-base h-9 font-mono text-[10px] tracking-widest uppercase pr-8 cursor-pointer"
+                  className="hidden lg:block input-base h-9 py-0 pl-3 pr-8 font-mono text-[10px] tracking-widest uppercase cursor-pointer"
                 >
                   <option value="">Ordenar por</option>
                   <option value="nombre_asc">Nombre A → Z</option>

@@ -16,6 +16,8 @@ import Featured    from './components/Featured.jsx'
 // Public views — lazy loaded per route
 const Login              = lazy(() => import('./views/Login.jsx'))
 const Registro           = lazy(() => import('./views/Registro.jsx'))
+const ForgotPassword     = lazy(() => import('./views/ForgotPassword.jsx'))
+const ResetPassword      = lazy(() => import('./views/ResetPassword.jsx'))
 const Catalogo           = lazy(() => import('./views/Catalogo.jsx'))
 const ProductoDetalle    = lazy(() => import('./views/ProductoDetalle.jsx'))
 const Carrito            = lazy(() => import('./views/Carrito.jsx'))
@@ -137,8 +139,10 @@ export default function App() {
           <Route path="/" element={<LandingPage />} />
 
           {/* Auth — sin Navbar ni Footer */}
-          <Route path="/login"    element={<Login />} />
-          <Route path="/registro" element={<Registro />} />
+          <Route path="/login"           element={<Login />} />
+          <Route path="/registro"        element={<Registro />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password"  element={<ResetPassword />} />
 
           {/* Checkout y confirmación — sin Navbar ni Footer */}
           <Route path="/checkout"     element={<Checkout />} />

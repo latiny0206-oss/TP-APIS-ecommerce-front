@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Check, Ban, Package, ChevronRight } from 'lucide-react'
+import { X, Check, Ban, Package, ChevronRight, Tag } from 'lucide-react'
 import Button from '../../components/ui/Button.jsx'
 import { fmtPrice }    from '../../utils/format.js'
 import { useOrdenes }  from '../../hooks/useOrders.js'
@@ -100,10 +100,24 @@ function OrderDetail({ order, onClose, onConfirm, onCancel, actionLoading, actio
             </ul>
           </div>
 
+          {order.cuponCodigo && (
+            <div className="flex items-center justify-between py-2 border-t border-rock/10">
+              <div className="flex flex-col">
+                <span className="font-mono text-[10px] tracking-widest-2 uppercase text-alpenglow flex items-center gap-1.5">
+                  <Tag size={10} /> Cupón aplicado
+                </span>
+                <span className="font-mono text-[10px] uppercase text-rock/60 mt-0.5">{order.cuponCodigo}</span>
+              </div>
+              <span className="font-mono text-xs font-bold text-alpenglow tabular-nums">
+                -{order.cuponTipo === 'PORCENTAJE' ? `${order.cuponValor}%` : fmtPrice(order.cuponValor)}
+              </span>
+            </div>
+          )}
+
           <div className="flex items-center justify-between py-2 border-t-2 border-rock/10">
             <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55">Total</span>
             <span className="font-display font-black tracking-tightest text-2xl tabular-nums">
-              {fmtPrice(order.total ?? 0)}
+              {fmtPrice(order.montoFinal ?? order.total ?? 0)}
             </span>
           </div>
         </div>

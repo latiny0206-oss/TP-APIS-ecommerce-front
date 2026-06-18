@@ -386,7 +386,7 @@ export default function Checkout() {
           await cartService.addItem(carritoId, { idVariante: item.varianteId, cantidad: item.qty })
         } catch (itemErr) {
           await cartService.vaciar(carritoId).catch(() => {})
-          throw new Error(`Sin stock suficiente para "${item.nombre}": ${getErrorMessage(itemErr)}`)
+          throw new Error(`Error en "${item.nombre}": ${getErrorMessage(itemErr)}`)
         }
       }
 
