@@ -96,8 +96,6 @@ export function AuthProvider({ children }) {
   const logout = () => {
     authService.logout()
     dispatch({ type: 'LOGOUT' })
-    // cart:clear limpia el estado React del carrito sin disparar la redirección a /login
-    window.dispatchEvent(new Event('cart:clear'))
     navigate('/')
   }
 

@@ -62,12 +62,13 @@ function ProductDrawer({ product: existing, onClose, onSaved }) {
     setSaveError(null)
     try {
       const payload = {
-        nombre:      form.nombre,
-        descripcion: form.descripcion,
-        precioBase:  Number(form.precioBase),
-        estado:      form.estado,
-        marcaId:     Number(form.marcaId),
-        categoriaId: Number(form.categoriaId),
+        nombre:       form.nombre,
+        descripcion:  form.descripcion,
+        precioBase:   Number(form.precioBase),
+        estado:       form.estado,
+        marcaId:      Number(form.marcaId),
+        categoriaId:  Number(form.categoriaId),
+        descuentoPct: Number(form.descuentoPct) || 0,
       }
       if (existing) {
         await productService.actualizarProducto(existing.id, payload)
@@ -224,6 +225,8 @@ export default function AdminProducts() {
   const [editProduct,  setEditProduct]  = useState(null)
   const [deleting,     setDeleting]     = useState(null)
   const [deleteError,  setDeleteError]  = useState(null)
+  const [delId,        setDelId]        = useState(null)
+  const [delNombre,    setDelNombre]    = useState('')
 
   // Carga todos los productos (ACTIVO + PAUSADO + ELIMINADO) para el admin
   const loadAdminProds = useCallback(async () => {
@@ -330,13 +333,21 @@ export default function AdminProducts() {
     if (paramId) navigate('/admin/productos', { replace: true })
   }
 
-  const handleDelete = async (id) => {
-    setDeleting(id)
+  const confirmDelete = (p) => {
+    setDelId(p.id)
+    setDelNombre(p.nombre)
+    setDeleteError(null)
+  }
+
+  const handleDelete = async () => {
+    if (!delId) return
+    setDeleting(delId)
     setDeleteError(null)
     try {
-      await productService.eliminarProducto(id)
-      setAdminProds(prev => prev.filter(p => p.id !== id))
-      remove(id)
+      await productService.eliminarProducto(delId)
+      setAdminProds(prev => prev.filter(p => p.id !== delId))
+      remove(delId)
+      setDelId(null)
     } catch (e) {
       setDeleteError(getErrorMessage(e))
     }
@@ -440,7 +451,7 @@ export default function AdminProducts() {
                         className="h-8 w-8 grid place-items-center text-rock/55 hover:text-pine border border-rock/15 transition-colors">
                         <Image size={13} />
                       </button>
-                      <button onClick={() => handleDelete(p.id)} disabled={deleting === p.id}
+                      <button onClick={() => confirmDelete(p)} disabled={deleting === p.id}
                         className="h-8 w-8 grid place-items-center text-rock/55 hover:text-red-700 border border-rock/15 transition-colors disabled:opacity-40">
                         <Trash2 size={13} />
                       </button>
@@ -460,6 +471,36 @@ export default function AdminProducts() {
 
       {drawerOpen && (
         <ProductDrawer product={editProduct} onClose={closeDrawer} onSaved={loadAdminProds} />
+      )}
+
+      {delId !== null && (
+        <>
+          <div className="fixed inset-0 bg-rock/60 z-40 fadein" onClick={() => { setDelId(null); setDeleteError(null) }} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 fadein">
+            <div className="bg-ivory w-full max-w-xs border border-rock/15 shadow-2xl p-6">
+              <h3 className="font-display font-black tracking-tightest uppercase text-lg">¿Eliminar producto?</h3>
+              <p className="font-narrow text-sm text-rock/65 mt-1 mb-4 truncate">"{delNombre}"</p>
+              <p className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/50 mb-5">
+                Esta acción no se puede deshacer.
+              </p>
+              {deleteError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 font-mono text-[10px] tracking-widest-2 uppercase mb-4">
+                  {deleteError}
+                </div>
+              )}
+              <div className="flex gap-3">
+                <Button variant="ghost-light" size="sm" className="flex-1"
+                  onClick={() => { setDelId(null); setDeleteError(null) }}>
+                  Cancelar
+                </Button>
+                <Button variant="danger" size="sm" className="flex-1"
+                  onClick={handleDelete} disabled={!!deleting}>
+                  {deleting ? 'Eliminando…' : 'Eliminar'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   )

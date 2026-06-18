@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Mountain, Eye, EyeOff, AlertTriangle, X, Check } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { authService } from '../api/authService.js'
@@ -113,7 +113,12 @@ function ForgotPasswordModal({ onClose }) {
 }
 
 export default function Login() {
-  const { login, status, error, clearError } = useAuth()
+  const { login, status, error, clearError, isLoggedIn } = useAuth()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (isLoggedIn) navigate('/', { replace: true })
+  }, [isLoggedIn, navigate])
 
   const [email,       setEmail]       = useState('')
   const [password,    setPassword]    = useState('')

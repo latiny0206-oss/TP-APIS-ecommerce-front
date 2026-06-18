@@ -28,7 +28,6 @@ api.interceptors.response.use(
       if (!isAuthEndpoint) {
         localStorage.removeItem(TOKEN_KEY)
         localStorage.removeItem(USER_KEY)
-        localStorage.removeItem('cumbre_cart')
         window.dispatchEvent(new Event('auth:logout'))
       }
     }

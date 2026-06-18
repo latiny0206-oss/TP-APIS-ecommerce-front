@@ -81,15 +81,15 @@ export default function CuentaOrdenDetalle() {
                   {(item.cantidad ?? item.qty ?? 1) > 1 && (
                     <span className="font-mono text-[10px] mr-1.5">{item.cantidad ?? item.qty}×</span>
                   )}
-                  {item.nombreProducto ?? item.nombre}
-                  {(item.talla ?? item.talle) && (
+                  {item.productoNombre ?? item.nombreProducto ?? item.nombre}
+                  {(item.varianteTalla ?? item.talla ?? item.talle) && (
                     <span className="font-mono text-[10px] text-rock/45 ml-2">
-                      · talle {item.talla ?? item.talle}
+                      · talle {item.varianteTalla ?? item.talla ?? item.talle}
                     </span>
                   )}
                 </span>
                 <span className="font-mono text-[11px] text-rock/55 shrink-0">
-                  {fmtPrice((item.precioUnitario ?? item.precio ?? 0) * (item.cantidad ?? item.qty ?? 1))}
+                  {fmtPrice((item.precioAlMomento ?? item.precioUnitario ?? item.precio ?? 0) * (item.cantidad ?? item.qty ?? 1))}
                 </span>
               </li>
             ))}

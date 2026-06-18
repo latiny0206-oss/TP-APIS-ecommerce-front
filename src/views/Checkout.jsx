@@ -47,8 +47,21 @@ function Field({ label, error, children }) {
   )
 }
 
+const SHIPPING_THRESHOLD = 80000
+const SHIPPING_COST      = 10000
+
 // ─── Resumen del pedido (sidebar) ───────────────────────────────────────────
-function OrderSummary({ items, totals, cuponCodigo }) {
+function OrderSummary({ items, totals, cuponCodigo, cuponInfo }) {
+  let descuentoAmt = 0
+  if (cuponInfo) {
+    const val = Number(cuponInfo.porcentaje ?? cuponInfo.valor ?? 0)
+    if (cuponInfo.tipo === 'PORCENTAJE') descuentoAmt = Math.round(totals.subtotal * val / 100)
+    else if (cuponInfo.tipo === 'FIJO')  descuentoAmt = Math.min(val, totals.subtotal)
+  }
+  const subtotalConDesc = Math.max(0, totals.subtotal - descuentoAmt)
+  const shippingCost    = subtotalConDesc >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST
+  const totalFinal      = subtotalConDesc + shippingCost
+
   return (
     <aside className="lg:sticky lg:top-24 h-fit bg-rock text-ivory p-7 lg:p-9">
       <div className="font-mono text-[11px] tracking-widest-2 uppercase text-alpenglow mb-2">Resumen</div>
@@ -75,25 +88,37 @@ function OrderSummary({ items, totals, cuponCodigo }) {
           <span>Subtotal</span>
           <span className="font-mono">{fmtPrice(totals.subtotal)}</span>
         </div>
-        {cuponCodigo && (
+        {descuentoAmt > 0 && (
+          <div className="flex items-center justify-between text-alpenglow">
+            <div className="flex items-center gap-2">
+              <Tag size={12} />
+              <span className="font-mono text-[10px] tracking-widest-2 uppercase truncate">{cuponCodigo}</span>
+            </div>
+            <span className="font-mono text-sm">-{fmtPrice(descuentoAmt)}</span>
+          </div>
+        )}
+        {cuponCodigo && descuentoAmt === 0 && (
           <div className="flex items-center gap-2 text-alpenglow">
             <Tag size={12} />
-            <span className="flex-1 font-mono text-[10px] tracking-widest-2 uppercase truncate">
-              {cuponCodigo}
-            </span>
+            <span className="font-mono text-[10px] tracking-widest-2 uppercase truncate">{cuponCodigo}</span>
           </div>
         )}
         <div className="flex justify-between text-ivory/45">
           <span>Envío</span>
-          <span className="font-mono">Gratis</span>
+          <span className="font-mono">{shippingCost === 0 ? 'Gratis' : fmtPrice(shippingCost)}</span>
         </div>
+        {shippingCost > 0 && (
+          <p className="font-mono text-[9px] text-ivory/30">
+            Envío gratis en compras mayores a {fmtPrice(SHIPPING_THRESHOLD)}
+          </p>
+        )}
       </div>
 
       <div className="flex items-baseline justify-between border-t border-ivory/15 pt-4">
         <span className="font-narrow font-bold uppercase tracking-widest-2">Total</span>
-        <span className="font-display font-black tracking-tightest text-3xl">{fmtPrice(totals.subtotal)}</span>
+        <span className="font-display font-black tracking-tightest text-3xl">{fmtPrice(totalFinal)}</span>
       </div>
-      {cuponCodigo && (
+      {cuponCodigo && descuentoAmt === 0 && (
         <p className="font-mono text-[9px] tracking-widest-2 uppercase text-ivory/35 mt-2">
           Descuento aplicado al confirmar
         </p>
@@ -218,8 +243,21 @@ export default function Checkout() {
     if (!envio.direccion.trim())          errs.direccion          = 'Requerido'
     if (!envio.ciudad.trim())             errs.ciudad             = 'Requerido'
     if (!envio.provincia.trim())          errs.provincia          = 'Requerido'
-    if (!envio.codigoPostal.trim())       errs.codigoPostal       = 'Requerido'
-    if (!envio.telefono.trim())           errs.telefono           = 'Requerido'
+
+    const cp = envio.codigoPostal.trim()
+    if (!cp)
+      errs.codigoPostal = 'Requerido'
+    else if (!/^[A-Za-z]{0,2}\d{4}$/.test(cp))
+      errs.codigoPostal = 'Formato inválido (ej: 8400 o B1000)'
+
+    const tel = envio.telefono.trim()
+    if (!tel)
+      errs.telefono = 'Requerido'
+    else if (/[a-zA-Z]/.test(tel))
+      errs.telefono = 'El teléfono no puede contener letras'
+    else if (tel.replace(/\D/g, '').length < 8)
+      errs.telefono = 'Ingresá al menos 8 dígitos'
+
     return errs
   }
 
@@ -834,6 +872,7 @@ export default function Checkout() {
             items={items}
             totals={totals}
             cuponCodigo={cuponCodigo || null}
+            cuponInfo={cuponInfo}
           />
         </div>
       </div>

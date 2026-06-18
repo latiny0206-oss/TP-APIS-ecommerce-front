@@ -48,8 +48,6 @@ function UserDrawer({ editing, onClose, onSave }) {
     setSaving(false)
   }
 
-  const endpoint = isNew ? 'POST /api/usuarios' : `PUT /api/usuarios/${user?.id}`
-
   return (
     <>
       <div className="fixed inset-0 bg-rock/60 z-40 fadein" onClick={onClose} />
@@ -57,7 +55,9 @@ function UserDrawer({ editing, onClose, onSave }) {
 
         <header className="flex items-center justify-between p-5 border-b border-rock/10">
           <div>
-            <div className="font-mono text-[10px] tracking-widest-2 uppercase text-alpenglow">{endpoint}</div>
+            <div className="font-mono text-[10px] tracking-widest-2 uppercase text-alpenglow">
+              {isNew ? 'Nuevo registro' : 'Editar registro'}
+            </div>
             <h2 className="font-display font-black tracking-tightest uppercase text-xl mt-0.5">
               {isNew ? 'Nuevo usuario' : `Editar ${user.username}`}
             </h2>
@@ -118,7 +118,7 @@ function UserDrawer({ editing, onClose, onSave }) {
             <span className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 block mb-1.5">estado</span>
             <select value={form.estado} onChange={setF('estado')} className="input-base w-full">
               <option value="ACTIVO">ACTIVO</option>
-              <option value="INACTIVE">INACTIVE</option>
+              <option value="INACTIVO">INACTIVO</option>
             </select>
           </label>
         </div>

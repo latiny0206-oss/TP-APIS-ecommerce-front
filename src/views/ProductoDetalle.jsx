@@ -85,7 +85,8 @@ export default function ProductoDetalle() {
   }
 
   const pf              = producto.precioFinal ?? producto.precio
-  const hayTalles       = producto.talles && producto.talles.length > 0 && producto.talles[0] !== 'Único'
+  const hayTalles       = producto.talles && producto.talles.length > 0 && producto.talles[0] !== 'Único' && producto.talles[0] !== 'U'
+  const displayTalle    = (t) => t === 'U' ? 'Único' : t
   const categoriaLabel  = CATEGORIA_LABELS[producto.categoria] || producto.categoria
   const primeraFoto     = fotos[0]
   const imagenSrc       = primeraFoto
@@ -129,9 +130,9 @@ export default function ProductoDetalle() {
         <nav className="flex items-center gap-2 font-mono text-[11px] tracking-widest-2 uppercase text-rock/55 mb-8">
           <Link to="/" className="hover:text-alpenglow transition-colors">Inicio</Link>
           <span className="text-rock/30">›</span>
-          <button onClick={handleVolver} className="hover:text-alpenglow transition-colors">
+          <Link to={`/catalogo?categoria=${producto.categoria}`} className="hover:text-alpenglow transition-colors">
             {categoriaLabel}
-          </button>
+          </Link>
           <span className="text-rock/30">›</span>
           <span className="text-rock truncate max-w-[200px]">{producto.nombre}</span>
         </nav>
@@ -194,7 +195,7 @@ export default function ProductoDetalle() {
             {hayTalles && (
               <div className="mb-6">
                 <div className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 mb-3">
-                  Talle {talleSeleccionado ? `— ${talleSeleccionado}` : '— Seleccioná uno'}
+                  Talle {talleSeleccionado ? `— ${displayTalle(talleSeleccionado)}` : '— Seleccioná uno'}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {producto.talles.map((t) => {
@@ -211,7 +212,7 @@ export default function ProductoDetalle() {
                               ? 'bg-rock text-ivory border-rock'
                               : 'border-rock/20 text-rock hover:border-rock'
                         }`}>
-                        <span className={agotado ? 'opacity-40' : ''}>{t}</span>
+                        <span className={agotado ? 'opacity-40' : ''}>{displayTalle(t)}</span>
                         {agotado && (
                           <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <X size={14} strokeWidth={2} className="text-rock/40" />
@@ -231,13 +232,15 @@ export default function ProductoDetalle() {
 
             <div className="mb-8">
               <div className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 mb-3">Cantidad</div>
-              <div className="inline-flex items-center border border-rock/20">
+              <div className={`inline-flex items-center border ${hayTalles && !talleSeleccionado ? 'border-rock/10 opacity-40 pointer-events-none' : 'border-rock/20'}`}>
                 <button onClick={() => setCantidad((q) => Math.max(1, q - 1))}
+                  disabled={hayTalles && !talleSeleccionado}
                   className="h-11 w-11 grid place-items-center text-rock hover:bg-rock/5 transition-colors">
                   <Minus size={14} strokeWidth={2} />
                 </button>
                 <span className="px-5 font-mono font-bold text-sm tabular-nums w-12 text-center">{cantidad}</span>
                 <button onClick={() => setCantidad((q) => Math.min(stockActual || 99, q + 1))}
+                  disabled={hayTalles && !talleSeleccionado}
                   className="h-11 w-11 grid place-items-center text-rock hover:bg-rock/5 transition-colors">
                   <Plus size={14} strokeWidth={2} />
                 </button>

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { UserCircle, Package, LogOut, ShoppingBag } from 'lucide-react'
 import { useAuth }     from '../context/AuthContext.jsx'
@@ -24,9 +25,20 @@ export default function Perfil() {
   if (!user) return null
 
   // user?.id ?? null: si id no existe (sesión vieja), el hook muestra error en lugar de llamar /ordenes
-  const { ordenes, loading, error } = useOrdenes(user?.id ?? null)
+  const { ordenes, loading, error, cancelar } = useOrdenes(user?.id ?? null)
+  const [cancelError, setCancelError] = useState(null)
 
   const handleLogout = () => { logout(); navigate('/') }
+
+  const handleCancelar = async (ordenId) => {
+    setCancelError(null)
+    if (!window.confirm('¿Estás seguro de que querés cancelar este pedido?')) return
+    try {
+      await cancelar(ordenId)
+    } catch (e) {
+      setCancelError('No se pudo cancelar el pedido. Intentá de nuevo.')
+    }
+  }
 
   return (
     <div className="bg-ivory text-rock min-h-[calc(100vh-160px)]">
@@ -64,6 +76,12 @@ export default function Perfil() {
             <Package size={16} strokeWidth={2} className="text-alpenglow" />
             <h2 className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/70">Historial de pedidos</h2>
           </div>
+
+          {cancelError && (
+            <div className="border border-red-200 bg-red-50 p-3 mb-4 font-mono text-[11px] text-red-700 tracking-widest-2 uppercase">
+              {cancelError}
+            </div>
+          )}
 
           {loading ? (
             <div className="border border-rock/10 p-10 text-center">
@@ -104,6 +122,13 @@ export default function Perfil() {
                           className="font-mono text-[10px] tracking-widest-2 uppercase text-pine hover:underline">
                           Ver detalle →
                         </Link>
+                        {orden.estado === 'PENDIENTE' && (
+                          <button
+                            onClick={() => handleCancelar(orden.id)}
+                            className="font-mono text-[10px] tracking-widest-2 uppercase text-red-600 hover:text-red-800 transition-colors">
+                            Cancelar →
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -115,10 +140,10 @@ export default function Perfil() {
                               {(item.cantidad ?? item.qty) > 1 && (
                                 <span className="font-mono text-[10px] mr-1.5">{item.cantidad ?? item.qty}×</span>
                               )}
-                              {item.nombreProducto ?? item.nombre}
+                              {item.productoNombre ?? item.nombreProducto ?? item.nombre}
                             </span>
                             <span className="font-mono text-[11px] text-rock/55 shrink-0">
-                              {fmtPrice((item.precioUnitario ?? item.precio) * (item.cantidad ?? item.qty ?? 1))}
+                              {fmtPrice((item.precioAlMomento ?? item.precioUnitario ?? item.precio ?? 0) * (item.cantidad ?? item.qty ?? 1))}
                             </span>
                           </li>
                         ))}

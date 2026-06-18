@@ -225,14 +225,32 @@ export default function Catalogo() {
   const marcas     = searchParams.getAll('marca')
   const temporadas = searchParams.getAll('temporada')
   const busqueda   = searchParams.get('q') ?? ''
-  const [precioMin, setPrecioMin] = useState(0)
-  const [precioMax, setPrecioMax] = useState(0)
+  const sort       = searchParams.get('sort') ?? ''
+
+  // Precio en URL (E5)
+  const precioMinParam = parseInt(searchParams.get('precioMin') ?? '0') || 0
+  const precioMaxParam = parseInt(searchParams.get('precioMax') ?? '0') || 0
+  const [precioMinLocal, setPrecioMinLocal] = useState(precioMinParam)
+  const [precioMaxLocal, setPrecioMaxLocal] = useState(precioMaxParam)
+  const precioMin = precioMinLocal
+  const precioMax = precioMaxLocal || precioGlobalMax
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  // Sincroniza precioMax con el máximo real
+  // Sincroniza precioMax local con el máximo real cuando los productos cargan
   useEffect(() => {
-    if (precioGlobalMax > 0 && precioMax === 0) setPrecioMax(precioGlobalMax)
+    if (precioGlobalMax > 0 && precioMaxLocal === 0) setPrecioMaxLocal(precioGlobalMax)
   }, [precioGlobalMax]) // eslint-disable-line
+
+  // Scroll al inicio cuando cambian los filtros (E7)
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [categorias.join(), marcas.join(), temporadas.join(), busqueda, sort]) // eslint-disable-line
+
+  const setParam = (key, value) => {
+    const params = new URLSearchParams(searchParams)
+    if (value) params.set(key, value); else params.delete(key)
+    setSearchParams(params, { replace: true })
+  }
 
   const toggleItem = (key, value) => {
     const current = searchParams.getAll(key)
@@ -243,20 +261,31 @@ export default function Catalogo() {
     setSearchParams(params, { replace: true })
   }
 
-  const setBusqueda = (value) => {
+  const setBusqueda = (value) => setParam('q', value)
+  const setSort     = (value) => setParam('sort', value)
+
+  const setPrecioMin = (value) => {
+    setPrecioMinLocal(value)
     const params = new URLSearchParams(searchParams)
-    if (value) params.set('q', value); else params.delete('q')
+    if (value > 0) params.set('precioMin', String(value)); else params.delete('precioMin')
+    setSearchParams(params, { replace: true })
+  }
+
+  const setPrecioMax = (value) => {
+    setPrecioMaxLocal(value)
+    const params = new URLSearchParams(searchParams)
+    if (value > 0 && value < precioGlobalMax) params.set('precioMax', String(value)); else params.delete('precioMax')
     setSearchParams(params, { replace: true })
   }
 
   const hasActiveFilters =
     busqueda !== '' || categorias.length > 0 || marcas.length > 0 ||
-    temporadas.length > 0 || precioMin > 0 || precioMax < precioGlobalMax
+    temporadas.length > 0 || precioMin > 0 || precioMax < precioGlobalMax || sort !== ''
 
   const resetFilters = () => {
     setSearchParams({}, { replace: true })
-    setPrecioMin(0)
-    setPrecioMax(precioGlobalMax)
+    setPrecioMinLocal(0)
+    setPrecioMaxLocal(precioGlobalMax)
   }
 
   const filterState = {
@@ -269,16 +298,26 @@ export default function Catalogo() {
   }
 
   const filtrados = useMemo(
-    () => productos.filter((p) => {
-      if (categorias.length && !categorias.includes(p.categoria)) return false
-      if (marcas.length     && !marcas.includes(p.marca))         return false
-      if (temporadas.length && !temporadas.includes(p.temporada)) return false
-      const pf = p.precioFinal ?? p.precio
-      if (pf < precioMin || (precioMax > 0 && pf > precioMax)) return false
-      if (busqueda && !p.nombre.toLowerCase().includes(busqueda.toLowerCase())) return false
-      return true
-    }),
-    [busqueda, categorias, marcas, temporadas, precioMin, precioMax, productos]
+    () => {
+      const base = productos.filter((p) => {
+        if (categorias.length && !categorias.includes(p.categoria)) return false
+        if (marcas.length     && !marcas.includes(p.marca))         return false
+        if (temporadas.length && !temporadas.includes(p.temporada)) return false
+        const pf = p.precioFinal ?? p.precio
+        if (pf < precioMin || (precioMax > 0 && pf > precioMax)) return false
+        if (busqueda && !p.nombre.toLowerCase().includes(busqueda.toLowerCase())) return false
+        return true
+      })
+      return [...base].sort((a, b) => {
+        if (sort === 'nombre_asc')  return a.nombre.localeCompare(b.nombre)
+        if (sort === 'nombre_desc') return b.nombre.localeCompare(a.nombre)
+        const pa = a.precioFinal ?? a.precio; const pb = b.precioFinal ?? b.precio
+        if (sort === 'precio_asc')  return pa - pb
+        if (sort === 'precio_desc') return pb - pa
+        return 0
+      })
+    },
+    [busqueda, categorias, marcas, temporadas, precioMin, precioMax, productos, sort]
   )
 
   const breadcrumbLabel =
@@ -328,13 +367,26 @@ export default function Catalogo() {
                   {filtrados.length === 1 ? 'producto encontrado' : 'productos encontrados'}</>
                 )}
               </p>
-              <button onClick={() => setMobileOpen(true)}
-                className="lg:hidden inline-flex items-center gap-2 border border-rock/20 px-4 h-9 font-mono text-[10px] tracking-widest-2 uppercase hover:border-rock transition-colors">
-                <SlidersHorizontal size={13} /> Filtros
-                {hasActiveFilters && (
-                  <span className="h-4 w-4 rounded-full bg-pine text-ivory text-[9px] grid place-items-center font-bold leading-none">✓</span>
-                )}
-              </button>
+              <div className="flex items-center gap-2">
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value)}
+                  className="hidden lg:block input-base h-9 font-mono text-[10px] tracking-widest uppercase pr-8 cursor-pointer"
+                >
+                  <option value="">Ordenar por</option>
+                  <option value="nombre_asc">Nombre A → Z</option>
+                  <option value="nombre_desc">Nombre Z → A</option>
+                  <option value="precio_asc">Precio: menor a mayor</option>
+                  <option value="precio_desc">Precio: mayor a menor</option>
+                </select>
+                <button onClick={() => setMobileOpen(true)}
+                  className="lg:hidden inline-flex items-center gap-2 border border-rock/20 px-4 h-9 font-mono text-[10px] tracking-widest-2 uppercase hover:border-rock transition-colors">
+                  <SlidersHorizontal size={13} /> Filtros
+                  {hasActiveFilters && (
+                    <span className="h-4 w-4 rounded-full bg-pine text-ivory text-[9px] grid place-items-center font-bold leading-none">✓</span>
+                  )}
+                </button>
+              </div>
             </div>
 
             {loadingData ? (

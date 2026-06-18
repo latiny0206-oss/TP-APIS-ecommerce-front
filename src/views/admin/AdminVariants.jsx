@@ -155,7 +155,7 @@ export default function AdminVariants() {
       .finally(() => setLoadingVars(false))
   }, [selectedId]) // eslint-disable-line
 
-  const product  = selectedId ? products.find(p => p.id === selectedId) : null
+  const product  = selectedId ? products.find(p => p.id === selectedId) ?? null : null
   const variants = allVariants[selectedId] || []
   const totalStock = variants.reduce((s, v) => s + (Number(v.stock) || 0), 0)
 
@@ -172,9 +172,14 @@ export default function AdminVariants() {
     setActionMsg(null)
     try {
       const created = await productService.crearVariante({
-        ...newVariant,
-        talle: newVariant.talla ?? newVariant.talle,
-        idProducto: selectedId,
+        productoId: selectedId,
+        color:    newVariant.color,
+        talla:    newVariant.talla ?? newVariant.talle,
+        material: newVariant.material,
+        peso:     Number(newVariant.peso),
+        precio:   Number(newVariant.precio),
+        stock:    newVariant.stock,
+        estacion: newVariant.estacion ?? 'TODAS',
       })
       setAllVariants(prev => ({
         ...prev,
@@ -206,13 +211,14 @@ export default function AdminVariants() {
       await Promise.all(
         variants.map((v) =>
           productService.actualizarVariante(v.id, {
+            productoId: selectedId,
             color:    v.color,
-            talle:    v.talle ?? v.talla,
+            talla:    v.talla ?? v.talle,
             material: v.material,
-            peso:     v.peso,
-            precio:   v.precio,
+            peso:     Number(v.peso),
+            precio:   Number(v.precio),
             stock:    v.stock,
-            estacion: v.estacion,
+            estacion: v.estacion ?? 'TODAS',
           })
         )
       )

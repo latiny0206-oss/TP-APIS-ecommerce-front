@@ -85,16 +85,6 @@ export function CartProvider({ children }) {
     } catch {}
   }, [state])
 
-  // Vaciar carrito en auto-logout (401 del interceptor) o logout manual
-  useEffect(() => {
-    const handler = () => dispatch({ type: 'CLEAR' })
-    window.addEventListener('auth:logout', handler)
-    window.addEventListener('cart:clear',  handler)
-    return () => {
-      window.removeEventListener('auth:logout', handler)
-      window.removeEventListener('cart:clear',  handler)
-    }
-  }, [])
 
   // Limpiar carrito si el usuario que inicia sesión es distinto al anterior
   useEffect(() => {

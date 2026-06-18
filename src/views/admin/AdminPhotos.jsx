@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Upload, Check, Trash2, ChevronRight, ImageOff } from 'lucide-react'
+import { Upload, Check, Trash2, ChevronRight, ImageOff, Layers } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { productService } from '../../api/productService.js'
 import { api, getErrorMessage } from '../../api/api.js'
@@ -115,6 +115,36 @@ export default function AdminPhotos() {
       <p className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/55">
         No hay productos disponibles.
       </p>
+    )
+  }
+
+  if (variantes.length === 0) {
+    return (
+      <div className="space-y-6">
+        <nav className="flex items-center gap-2 font-mono text-[11px] tracking-widest-2 uppercase text-rock/55">
+          <button onClick={() => navigate('/admin/productos')} className="hover:text-pine transition-colors">
+            Productos
+          </button>
+          <ChevronRight size={10} className="text-rock/30" />
+          <span className="truncate max-w-[180px]">{product.nombre}</span>
+          <ChevronRight size={10} className="text-rock/30" />
+          <span className="text-rock">Imágenes</span>
+        </nav>
+        <div className="bg-white border border-rock/10 p-10 flex flex-col items-center gap-4 text-center">
+          <Layers size={36} strokeWidth={1.4} className="text-rock/30" />
+          <div>
+            <p className="font-display font-black tracking-tightest uppercase text-xl mb-1">Sin variantes</p>
+            <p className="font-mono text-[11px] tracking-widest-2 uppercase text-rock/55">
+              Creá al menos una variante para poder subir fotos a este producto.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/admin/variantes')}
+            className="mt-2 font-mono text-[10px] tracking-widest-2 uppercase px-5 py-2.5 bg-pine text-ivory hover:opacity-80 transition-opacity">
+            Ir a Variantes →
+          </button>
+        </div>
+      </div>
     )
   }
 
