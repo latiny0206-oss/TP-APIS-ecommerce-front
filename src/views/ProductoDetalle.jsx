@@ -46,6 +46,10 @@ export default function ProductoDetalle() {
       const p = productService.normalizeProducto(raw, variantes)
       setProducto(p)
 
+      // Auto-seleccionar primer color si hay
+      const colors = [...new Set((p._variantes ?? []).map(v => v.color).filter(Boolean))]
+      if (colors.length > 0) setColorSeleccionado(colors[0])
+
       // Carga las fotos de la primera variante disponible que contenga fotos
       if (variantes.length > 0) {
         let fotosCargadas = []
@@ -86,7 +90,6 @@ export default function ProductoDetalle() {
   }
 
   const pf              = producto.precioFinal ?? producto.precio
-  const hayTalles       = producto.talles && producto.talles.length > 0 && producto.talles[0] !== 'Único' && producto.talles[0] !== 'U'
   const displayTalle    = (t) => t === 'U' ? 'Único' : t
   const categoriaLabel  = CATEGORIA_LABELS[producto.categoria] || producto.categoria
   const primeraFoto     = fotos[0]
@@ -98,10 +101,17 @@ export default function ProductoDetalle() {
   const coloresUnicos    = [...new Set((producto._variantes ?? []).map(v => v.color).filter(Boolean))]
   const materialesUnicos = [...new Set((producto._variantes ?? []).map(v => v.material).filter(Boolean))]
 
+  // Derivar variantes filtradas por color
+  const variantesFiltradas = colorSeleccionado
+    ? (producto._variantes ?? []).filter(v => v.color === colorSeleccionado)
+    : (producto._variantes ?? [])
+
+  const tallesFiltrados = [...new Set(variantesFiltradas.map(v => v.talla ?? v.talle).filter(Boolean))]
+  const hayTalles = tallesFiltrados.length > 0 && tallesFiltrados[0] !== 'Único' && tallesFiltrados[0] !== 'U'
+
   const getStockParaTalle = (talle) => {
     if (!hayTalles) return producto.stock
-    if (producto.stockPorTalle) return producto.stockPorTalle[talle] ?? 0
-    const v = producto._variantes?.find((v) => (v.talla ?? v.talle) === talle)
+    const v = variantesFiltradas.find((v) => (v.talla ?? v.talle) === talle)
     return v?.stock ?? 0
   }
 
@@ -110,8 +120,8 @@ export default function ProductoDetalle() {
     : producto.stock
 
   const varianteSeleccionada = talleSeleccionado
-    ? producto._variantes?.find((v) => (v.talla ?? v.talle) === talleSeleccionado)
-    : producto._variantes?.[0]
+    ? variantesFiltradas.find((v) => (v.talla ?? v.talle) === talleSeleccionado)
+    : variantesFiltradas[0]
 
   // Stock disponible descontando lo que ya está en el carrito (previene bypass)
   const enCarrito = varianteSeleccionada
@@ -131,7 +141,7 @@ export default function ProductoDetalle() {
       nombre:     producto.nombre,
       precio:     pf,
       imagen:     imagenSrc,
-      talle:      talleSeleccionado ?? (producto.talles?.[0] ?? null),
+      talle:      talleSeleccionado ?? (tallesFiltrados?.[0] ?? null),
       qty:        cantidadAgregar,
     })
     setAgregado(true)
@@ -216,7 +226,11 @@ export default function ProductoDetalle() {
                 <div className="flex flex-wrap gap-2">
                   {coloresUnicos.map(c => (
                     <button key={c}
-                      onClick={() => setColorSeleccionado(colorSeleccionado === c ? null : c)}
+                      onClick={() => {
+                        setColorSeleccionado(colorSeleccionado === c ? null : c)
+                        setTalleSeleccionado(null)
+                        setCantidad(1)
+                      }}
                       className={`px-3 py-1.5 border font-mono text-[10px] tracking-widest-2 uppercase transition-all ${
                         colorSeleccionado === c
                           ? 'bg-rock text-ivory border-rock'
@@ -251,7 +265,7 @@ export default function ProductoDetalle() {
                   Talle {talleSeleccionado ? `— ${displayTalle(talleSeleccionado)}` : '— Seleccioná uno'}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {producto.talles.map((t) => {
+                  {tallesFiltrados.map((t) => {
                     const stockT  = getStockParaTalle(t)
                     const agotado = stockT === 0
                     return (
