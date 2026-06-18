@@ -6,6 +6,10 @@ import { useProducts } from '../context/ProductsContext.jsx'
 import { fmtPrice } from '../utils/format.js'
 import Button from '../components/ui/Button.jsx'
 
+const SHIPPING_THRESHOLD = 80000
+const SHIPPING_COST      = 10000
+
+
 export default function Carrito() {
   const navigate                                           = useNavigate()
   const { items, totals, updateQty, removeFromCart, clearCart } = useCart()
@@ -158,13 +162,23 @@ export default function Carrito() {
                   <span>Subtotal</span><span className="font-mono">{fmtPrice(totals.subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-ivory/45">
-                  <span>Envío</span><span className="font-mono">Gratis</span>
+                  <span>Envío</span>
+                  <span className="font-mono">
+                    {totals.subtotal >= SHIPPING_THRESHOLD ? 'Gratis' : fmtPrice(SHIPPING_COST)}
+                  </span>
                 </div>
+                {totals.subtotal < SHIPPING_THRESHOLD && (
+                  <p className="font-mono text-[9px] text-ivory/30">
+                    Envío gratis en compras mayores a {fmtPrice(SHIPPING_THRESHOLD)}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-baseline justify-between border-t border-ivory/15 pt-5 mb-7">
                 <span className="font-narrow font-bold uppercase tracking-widest-2">Total</span>
-                <span className="font-display font-black tracking-tightest text-3xl">{fmtPrice(totals.total)}</span>
+                <span className="font-display font-black tracking-tightest text-3xl">
+                  {fmtPrice(totals.subtotal + (totals.subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST))}
+                </span>
               </div>
 
               <Button variant="primary" size="lg" className="w-full" onClick={handleCheckout}

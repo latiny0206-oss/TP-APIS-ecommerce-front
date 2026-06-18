@@ -16,14 +16,15 @@ export default function ProductoDetalle() {
   const navigate  = useNavigate()
   const location  = useLocation()
   const { id }    = useParams()
-  const { addToCart } = useCart()
+  const { addToCart, items: cartItems } = useCart()
 
   const [producto, setProducto] = useState(null)
   const [fotos,    setFotos]    = useState([])
   const [loading,  setLoading]  = useState(true)
   const [notFound, setNotFound] = useState(false)
 
-  const [talleSeleccionado, setTalleSeleccionado] = useState(null)
+  const [talleSeleccionado, setTalleSeleccionado]   = useState(null)
+  const [colorSeleccionado, setColorSeleccionado]   = useState(null)
   const [cantidad,  setCantidad]  = useState(1)
   const [agregado,  setAgregado]  = useState(false)
 
@@ -93,6 +94,10 @@ export default function ProductoDetalle() {
     ? productService.buildImageSrc(primeraFoto)
     : producto.imagen
 
+  // Colores y materiales únicos de las variantes
+  const coloresUnicos    = [...new Set((producto._variantes ?? []).map(v => v.color).filter(Boolean))]
+  const materialesUnicos = [...new Set((producto._variantes ?? []).map(v => v.material).filter(Boolean))]
+
   const getStockParaTalle = (talle) => {
     if (!hayTalles) return producto.stock
     if (producto.stockPorTalle) return producto.stockPorTalle[talle] ?? 0
@@ -108,8 +113,18 @@ export default function ProductoDetalle() {
     ? producto._variantes?.find((v) => (v.talla ?? v.talle) === talleSeleccionado)
     : producto._variantes?.[0]
 
+  // Stock disponible descontando lo que ya está en el carrito (previene bypass)
+  const enCarrito = varianteSeleccionada
+    ? (cartItems.find(i => i.varianteId === varianteSeleccionada.id)?.qty ?? 0)
+    : 0
+  const stockDisponible = Math.max(0, stockActual - enCarrito)
+  const atMaxStock      = stockDisponible === 0 && stockActual > 0
+
   const handleAgregar = () => {
     if (hayTalles && !talleSeleccionado) return
+    if (atMaxStock) return
+    const cantidadAgregar = Math.min(cantidad, stockDisponible)
+    if (cantidadAgregar <= 0) return
     addToCart({
       productId:  producto.id,
       varianteId: varianteSeleccionada?.id ?? null,
@@ -117,7 +132,7 @@ export default function ProductoDetalle() {
       precio:     pf,
       imagen:     imagenSrc,
       talle:      talleSeleccionado ?? (producto.talles?.[0] ?? null),
-      qty:        cantidad,
+      qty:        cantidadAgregar,
     })
     setAgregado(true)
     setTimeout(() => setAgregado(false), 2000)
@@ -192,6 +207,44 @@ export default function ProductoDetalle() {
               {producto.descripcion}
             </p>
 
+            {/* Colores disponibles */}
+            {coloresUnicos.length > 0 && (
+              <div className="mb-5">
+                <div className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 mb-2">
+                  Color {colorSeleccionado ? `— ${colorSeleccionado}` : ''}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {coloresUnicos.map(c => (
+                    <button key={c}
+                      onClick={() => setColorSeleccionado(colorSeleccionado === c ? null : c)}
+                      className={`px-3 py-1.5 border font-mono text-[10px] tracking-widest-2 uppercase transition-all ${
+                        colorSeleccionado === c
+                          ? 'bg-rock text-ivory border-rock'
+                          : 'border-rock/20 text-rock hover:border-rock'
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Materiales disponibles */}
+            {materialesUnicos.length > 0 && (
+              <div className="mb-5">
+                <div className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 mb-2">Material</div>
+                <div className="flex flex-wrap gap-2">
+                  {materialesUnicos.map(m => (
+                    <span key={m}
+                      className="px-3 py-1.5 border border-rock/15 font-mono text-[10px] tracking-widest-2 uppercase text-rock/70 bg-rock/[0.03]">
+                      {m}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {hayTalles && (
               <div className="mb-6">
                 <div className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/55 mb-3">
@@ -239,24 +292,35 @@ export default function ProductoDetalle() {
                   <Minus size={14} strokeWidth={2} />
                 </button>
                 <span className="px-5 font-mono font-bold text-sm tabular-nums w-12 text-center">{cantidad}</span>
-                <button onClick={() => setCantidad((q) => Math.min(stockActual || 99, q + 1))}
-                  disabled={hayTalles && !talleSeleccionado}
-                  className="h-11 w-11 grid place-items-center text-rock hover:bg-rock/5 transition-colors">
+                <button onClick={() => setCantidad((q) => Math.min(stockDisponible || 99, q + 1))}
+                  disabled={(hayTalles && !talleSeleccionado) || cantidad >= stockDisponible}
+                  className={`h-11 w-11 grid place-items-center transition-colors ${
+                    cantidad >= stockDisponible || (hayTalles && !talleSeleccionado)
+                      ? 'text-rock/25 cursor-not-allowed'
+                      : 'text-rock hover:bg-rock/5'
+                  }`}>
                   <Plus size={14} strokeWidth={2} />
                 </button>
               </div>
               {talleSeleccionado && (
                 <span className="ml-4 font-mono text-[10px] tracking-widest-2 uppercase text-rock/45">
-                  {stockActual} disponibles
+                  {stockDisponible} disponibles
+                  {enCarrito > 0 && ` (${enCarrito} ya en carrito)`}
                 </span>
               )}
             </div>
 
+            {atMaxStock && (
+              <p className="font-mono text-[10px] text-red-600 mb-4 tracking-widest-2 uppercase">
+                Ya tenés el máximo disponible en el carrito
+              </p>
+            )}
+
             <div className="flex flex-col sm:flex-row gap-3">
               <Button variant="primary" size="lg" className="flex-1" onClick={handleAgregar}
-                disabled={hayTalles && !talleSeleccionado}
+                disabled={(hayTalles && !talleSeleccionado) || atMaxStock}
                 icon={agregado ? <Check size={18} strokeWidth={2.5} /> : <ShoppingCart size={18} strokeWidth={2} />}>
-                {agregado ? '¡Agregado!' : 'Agregar al carrito'}
+                {agregado ? '¡Agregado!' : atMaxStock ? 'Sin stock adicional' : 'Agregar al carrito'}
               </Button>
               <Button variant="ghost-light" size="lg" onClick={() => navigate('/carrito')}>
                 Ver carrito

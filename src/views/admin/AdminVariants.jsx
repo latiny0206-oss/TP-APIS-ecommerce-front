@@ -114,12 +114,37 @@ export default function AdminVariants() {
   const [products,       setProducts]       = useState([])
   const [productsLoading, setProductsLoading] = useState(true)
 
-  // Carga ACTIVO + PAUSADO + ELIMINADO para que admin pueda gestionar variantes de cualquier estado
+  // Carga ACTIVO + PAUSADO + ELIMINADO junto con sus fotos
   useEffect(() => {
-    productService.getProductosAdmin()
-      .catch(() => productService.getProductos())
-      .then((prods) => setProducts(prods.map((p) => productService.normalizeProducto(p, []))))
-      .finally(() => setProductsLoading(false))
+    Promise.all([
+      productService.getProductosAdmin().catch(() => productService.getProductos()),
+      productService.getVariantes(),
+      productService.getAllFotos().catch(() => []),
+    ]).then(([prods, vars, fotos]) => {
+      const varByProd = vars.reduce((acc, v) => {
+        const pid = v.idProducto ?? v.productoId
+        if (pid) { acc[pid] = acc[pid] ?? []; acc[pid].push(v) }
+        return acc
+      }, {})
+      const fotosByVariante = fotos.reduce((acc, f) => {
+        if (f.varianteId) { acc[f.varianteId] = acc[f.varianteId] ?? []; acc[f.varianteId].push(f) }
+        return acc
+      }, {})
+      const normalized = prods.map((p) => {
+        const productVars = varByProd[p.id] ?? []
+        const n = productService.normalizeProducto(p, productVars)
+        // Asignar la primera foto disponible de alguna variante
+        for (const v of productVars) {
+          const fotosVar = (fotosByVariante[v.id] ?? []).sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
+          if (fotosVar.length > 0) {
+            n.imagen = productService.buildImageSrc(fotosVar[0])
+            break
+          }
+        }
+        return n
+      })
+      setProducts(normalized)
+    }).finally(() => setProductsLoading(false))
   }, [])
 
   const [selectedId,  setSelectedId]  = useState(null)

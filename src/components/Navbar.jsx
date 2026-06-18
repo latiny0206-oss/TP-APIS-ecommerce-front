@@ -115,16 +115,24 @@ export default function Navbar() {
               {/* Auth — desktop */}
               {isLoggedIn ? (
                 <div className="hidden sm:flex items-center gap-2">
-                  <Link to="/cuenta/ordenes" onClick={closeMobile}
-                    className="flex items-center gap-1.5 font-mono text-[11px] tracking-widest-2 uppercase text-ivory/70 hover:text-ivory transition-colors">
-                    <UserCircle size={14} />
-                    {user?.nombre?.split(' ')[0]}
-                  </Link>
+                  {user?.rol === 'ADMIN' ? (
+                    <Link to="/admin/dashboard" onClick={closeMobile}
+                      className="flex items-center gap-1.5 h-9 px-3 bg-pine text-ivory font-mono text-[10px] tracking-widest-2 uppercase hover:opacity-80 transition-opacity">
+                      Dashboard
+                    </Link>
+                  ) : (
+                    <Link to="/cuenta/ordenes" onClick={closeMobile}
+                      className="flex items-center gap-1.5 font-mono text-[11px] tracking-widest-2 uppercase text-ivory/70 hover:text-ivory transition-colors">
+                      <UserCircle size={14} />
+                      {user?.nombre?.split(' ')[0]}
+                    </Link>
+                  )}
                   <button onClick={handleLogout}
                     className="h-9 flex items-center gap-1.5 px-3 border border-ivory/20 text-ivory/70 hover:text-ivory hover:border-ivory/50 font-mono text-[10px] tracking-widest-2 uppercase transition-colors">
                     <LogOut size={12} /> Salir
                   </button>
                 </div>
+
               ) : (
                 <div className="hidden sm:flex items-center gap-2">
                   <Link to="/login" onClick={closeMobile}
@@ -180,10 +188,17 @@ export default function Navbar() {
             <div className="flex gap-2 mt-4">
               {isLoggedIn ? (
                 <>
-                  <Link to="/cuenta/ordenes" onClick={closeMobile}
-                    className="flex-1 flex items-center gap-2 px-3 py-3 border border-ivory/20 text-ivory/70 hover:text-ivory font-mono text-[10px] tracking-widest-2 uppercase transition-colors">
-                    <UserCircle size={14} /> {user?.nombre?.split(' ')[0]}
-                  </Link>
+                  {user?.rol === 'ADMIN' ? (
+                    <Link to="/admin/dashboard" onClick={closeMobile}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-3 bg-pine text-ivory font-mono text-[10px] tracking-widest-2 uppercase hover:opacity-80 transition-opacity">
+                      Dashboard
+                    </Link>
+                  ) : (
+                    <Link to="/cuenta/ordenes" onClick={closeMobile}
+                      className="flex-1 flex items-center gap-2 px-3 py-3 border border-ivory/20 text-ivory/70 hover:text-ivory font-mono text-[10px] tracking-widest-2 uppercase transition-colors">
+                      <UserCircle size={14} /> {user?.nombre?.split(' ')[0]}
+                    </Link>
+                  )}
                   <button onClick={handleLogout}
                     className="flex-1 py-3 border border-ivory/20 text-ivory font-mono text-[10px] tracking-widest-2 uppercase hover:bg-ivory/5 flex items-center justify-center gap-2 transition-colors">
                     <LogOut size={13} /> Cerrar sesión

@@ -107,7 +107,7 @@ export default function FAQ() {
             </p>
           </div>
           <Link to="/contacto"
-            className="shrink-0 h-11 px-6 bg-alpenglow hover:bg-alpenglow-700 text-ivory font-narrow font-bold uppercase tracking-widest-2 text-sm transition-colors">
+            className="shrink-0 inline-flex items-center justify-center h-11 px-6 bg-alpenglow hover:bg-alpenglow-700 text-ivory font-narrow font-bold uppercase tracking-widest-2 text-sm transition-colors">
             Contactarnos
           </Link>
         </div>

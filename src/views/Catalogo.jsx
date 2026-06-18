@@ -380,7 +380,7 @@ export default function Catalogo() {
                   <option value="precio_desc">Precio: mayor a menor</option>
                 </select>
                 <button onClick={() => setMobileOpen(true)}
-                  className="lg:hidden inline-flex items-center gap-2 border border-rock/20 px-4 h-9 font-mono text-[10px] tracking-widest-2 uppercase hover:border-rock transition-colors">
+                  className="lg:hidden inline-flex items-center gap-2 border border-rock/20 px-4 h-9 font-mono text-[10px] tracking-widest-2 uppercase hover:border-rock transition-colors whitespace-nowrap">
                   <SlidersHorizontal size={13} /> Filtros
                   {hasActiveFilters && (
                     <span className="h-4 w-4 rounded-full bg-pine text-ivory text-[9px] grid place-items-center font-bold leading-none">✓</span>

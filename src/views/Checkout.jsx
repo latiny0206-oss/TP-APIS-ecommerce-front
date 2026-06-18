@@ -216,18 +216,32 @@ export default function Checkout() {
     if (!tarjeta.numero.trim() || tarjeta.numero.replace(/\s/g, '').length < 16) {
       errs.numero = 'Número de tarjeta inválido (16 dígitos)'
     }
-    if (!tarjeta.nombre.trim()) {
+    const nombreTarjeta = tarjeta.nombre.trim()
+    if (!nombreTarjeta) {
       errs.nombre = 'Ingresá el nombre como figura en la tarjeta'
+    } else if (/\d/.test(nombreTarjeta)) {
+      errs.nombre = 'El nombre no puede contener números'
     }
-    const vencRegex = /^(0[1-9]|1[0-2])\/?([0-9]{2})$/
+    const vencRegex = /^(0[1-9]|1[0-2])\/([0-9]{2})$/
     if (!tarjeta.vencimiento.trim() || !vencRegex.test(tarjeta.vencimiento)) {
       errs.vencimiento = 'Formato MM/AA inválido'
+    } else {
+      const [mm, aa] = tarjeta.vencimiento.split('/')
+      const now = new Date()
+      const cardYear  = 2000 + parseInt(aa, 10)
+      const cardMonth = parseInt(mm, 10)
+      const nowYear   = now.getFullYear()
+      const nowMonth  = now.getMonth() + 1
+      if (cardYear < nowYear || (cardYear === nowYear && cardMonth < nowMonth)) {
+        errs.vencimiento = 'La tarjeta está vencida'
+      }
     }
     if (!tarjeta.cvv.trim() || tarjeta.cvv.length < 3 || tarjeta.cvv.length > 4) {
       errs.cvv = 'Debe tener 3 o 4 dígitos'
     }
     return errs
   }
+
 
   // Submit final
   const [submitting,   setSubmitting]   = useState(false)
@@ -239,10 +253,30 @@ export default function Checkout() {
   // ── Validación envío ──────────────────────────────────────────────────────
   function validateEnvio() {
     const errs = {}
-    if (!envio.nombreDestinatario.trim()) errs.nombreDestinatario = 'Requerido'
-    if (!envio.direccion.trim())          errs.direccion          = 'Requerido'
-    if (!envio.ciudad.trim())             errs.ciudad             = 'Requerido'
-    if (!envio.provincia.trim())          errs.provincia          = 'Requerido'
+
+    const nombre = envio.nombreDestinatario.trim()
+    if (!nombre)
+      errs.nombreDestinatario = 'Requerido'
+    else if (/\d/.test(nombre))
+      errs.nombreDestinatario = 'No puede contener números'
+
+    const dir = envio.direccion.trim()
+    if (!dir)
+      errs.direccion = 'Requerido'
+    else if (!/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(dir) || !/[0-9]/.test(dir))
+      errs.direccion = 'Debe contener letras y números (ej: Av. San Martín 1234)'
+
+    const ciudad = envio.ciudad.trim()
+    if (!ciudad)
+      errs.ciudad = 'Requerido'
+    else if (!/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(ciudad))
+      errs.ciudad = 'Debe contener letras'
+
+    const provincia = envio.provincia.trim()
+    if (!provincia)
+      errs.provincia = 'Requerido'
+    else if (!/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(provincia))
+      errs.provincia = 'Debe contener letras'
 
     const cp = envio.codigoPostal.trim()
     if (!cp)
@@ -260,6 +294,7 @@ export default function Checkout() {
 
     return errs
   }
+
 
   const setEnvioField = (field) => (e) => {
     setEnvio((prev) => ({ ...prev, [field]: e.target.value }))

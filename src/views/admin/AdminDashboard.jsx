@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Package, ClipboardList, Ticket, Users, AlertTriangle, RefreshCw } from 'lucide-react'
-import { useProducts } from '../../context/ProductsContext.jsx'
+import { Package, ClipboardList, Ticket, Users, AlertTriangle, RefreshCw, TrendingUp, TrendingDown } from 'lucide-react'
 import { adminService } from '../../api/adminService.js'
 import { getErrorMessage } from '../../api/api.js'
 import { fmtPrice as fmt } from '../../utils/format.js'
@@ -31,10 +30,6 @@ function KpiCard({ Icon, label, value, accentClass }) {
 }
 
 export default function AdminDashboard() {
-  const { ids, byId } = useProducts()
-  const products      = ids.map((id) => byId[id])
-  const lowStock      = products.filter((p) => p.stock > 0 && p.stock <= 3)
-
   const [kpis,    setKpis]    = useState(null)
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState(null)
@@ -50,7 +45,11 @@ export default function AdminDashboard() {
 
   useEffect(() => { loadDashboard() }, [])
 
-  const ordenesRecientes = Array.isArray(kpis?.ordenesRecientes) ? kpis.ordenesRecientes : []
+  const ordenesRecientes   = Array.isArray(kpis?.ordenesRecientes)   ? kpis.ordenesRecientes   : []
+  const variantesBajoStock = Array.isArray(kpis?.variantesBajoStock) ? kpis.variantesBajoStock : []
+
+  const crecPct             = kpis?.crecimientoVentasPct
+  const crecimientoPositivo = crecPct != null && crecPct >= 0
 
   return (
     <div className="space-y-8">
@@ -71,30 +70,36 @@ export default function AdminDashboard() {
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard
-            Icon={Package}
-            label="Productos activos"
-            value={kpis?.productosActivos ?? '—'}
-            accentClass="bg-pine/15 text-pine"
-          />
-          <KpiCard
-            Icon={ClipboardList}
-            label="Órdenes pendientes"
-            value={kpis?.ordenesPendientes ?? '—'}
-            accentClass="bg-alpenglow/15 text-alpenglow"
-          />
-          <KpiCard
-            Icon={Ticket}
-            label="Descuentos activos"
-            value={kpis?.descuentosActivos ?? '—'}
-            accentClass="bg-rock/10 text-rock"
-          />
-          <KpiCard
-            Icon={Users}
-            label="Clientes registrados"
-            value={kpis?.clientesRegistrados ?? '—'}
-            accentClass="bg-pine/15 text-pine"
-          />
+          <KpiCard Icon={Package}       label="Productos activos"      value={kpis?.productosActivos ?? '—'}     accentClass="bg-pine/15 text-pine" />
+          <KpiCard Icon={ClipboardList} label="Órdenes pendientes"     value={kpis?.ordenesPendientes ?? '—'}    accentClass="bg-alpenglow/15 text-alpenglow" />
+          <KpiCard Icon={Ticket}        label="Descuentos activos"     value={kpis?.descuentosActivos ?? '—'}    accentClass="bg-rock/10 text-rock" />
+          <KpiCard Icon={Users}         label="Clientes registrados"   value={kpis?.clientesRegistrados ?? '—'}  accentClass="bg-pine/15 text-pine" />
+        </div>
+      )}
+
+      {/* KPI Semanal */}
+      {!loading && !error && kpis && (
+        <div className="bg-white border border-rock/10 p-5 flex flex-col sm:flex-row gap-6 items-start sm:items-center">
+          <div className="flex-1">
+            <div className="font-mono text-[10px] tracking-widest-2 uppercase text-alpenglow mb-1">Ventas confirmadas esta semana</div>
+            <div className="font-display font-black tracking-tightest text-3xl">{fmt(kpis.ventasSemanaActual ?? 0)}</div>
+            <div className="font-mono text-[10px] text-rock/45 mt-1">
+              Semana anterior: {fmt(kpis.ventasSemanaAnterior ?? 0)}
+            </div>
+          </div>
+          {crecPct != null ? (
+            <div className={`flex items-center gap-2 px-4 py-3 ${crecimientoPositivo ? 'bg-pine/10 text-pine' : 'bg-red-50 text-red-700'}`}>
+              {crecimientoPositivo ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
+              <div>
+                <div className="font-display font-black text-2xl">
+                  {crecimientoPositivo ? '+' : ''}{crecPct.toFixed(1)}%
+                </div>
+                <div className="font-mono text-[10px] tracking-widest-2 uppercase opacity-70">vs semana ant.</div>
+              </div>
+            </div>
+          ) : (
+            <div className="font-mono text-[10px] text-rock/40 tracking-widest-2 uppercase">Sin datos semana anterior</div>
+          )}
         </div>
       )}
 
@@ -111,13 +116,9 @@ export default function AdminDashboard() {
             )}
           </div>
           {loading ? (
-            <div className="p-10 text-center">
-              <span className="spinner" />
-            </div>
+            <div className="p-10 text-center"><span className="spinner" /></div>
           ) : ordenesRecientes.length === 0 ? (
-            <div className="p-10 text-center font-mono text-[11px] tracking-widest-2 uppercase text-rock/35">
-              Sin órdenes recientes
-            </div>
+            <div className="p-10 text-center font-mono text-[11px] tracking-widest-2 uppercase text-rock/35">Sin órdenes recientes</div>
           ) : (
             <table className="w-full text-sm">
               <thead>
@@ -129,9 +130,11 @@ export default function AdminDashboard() {
               </thead>
               <tbody>
                 {ordenesRecientes.map((o) => {
-                  const cliente   = o.usuario?.nombre ?? o.usuario?.username ?? '—'
-                  const initials  = cliente.slice(0, 2).toUpperCase()
-                  const fecha     = o.fecha ? new Date(o.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'
+                  const cliente  = o.usuario?.nombre ?? o.usuario?.username ?? '—'
+                  const initials = cliente.slice(0, 2).toUpperCase()
+                  const fecha    = o.fecha
+                    ? new Date(o.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                    : '—'
                   return (
                     <tr key={o.id} className="border-t border-rock/10 hover:bg-rock/[0.02]">
                       <td className="px-5 py-3 font-mono text-xs font-bold">#{o.id}</td>
@@ -158,7 +161,7 @@ export default function AdminDashboard() {
           )}
         </section>
 
-        {/* Stock bajo */}
+        {/* Stock bajo — datos reales de variantes del backend */}
         <section className="bg-white border border-rock/10">
           <div className="flex items-center justify-between p-5 border-b border-rock/10">
             <div className="flex items-center gap-2.5">
@@ -168,32 +171,26 @@ export default function AdminDashboard() {
               <h2 className="font-display font-black tracking-tightest uppercase text-base">Stock bajo</h2>
             </div>
             <span className="font-mono text-[10px] tracking-widest-2 uppercase text-alpenglow">
-              {lowStock.length} alertas
+              {variantesBajoStock.length} alertas
             </span>
           </div>
           <ul>
-            {lowStock.length > 0 ? (
-              lowStock.slice(0, 5).map((p) => (
-                <li key={p.id} className="flex items-center gap-3 p-4 border-t border-rock/10">
-                  <div className="h-10 w-10 bg-rock/10 shrink-0 flex items-center justify-center overflow-hidden">
-                    {p.imagen
-                      ? <img src={p.imagen} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} />
-                      : <span className="font-mono text-[8px] text-rock/30 uppercase">IMG</span>
-                    }
-                  </div>
+            {variantesBajoStock.length > 0 ? (
+              variantesBajoStock.slice(0, 5).map((v) => (
+                <li key={v.id} className="flex items-center gap-3 p-4 border-t border-rock/10">
                   <div className="flex-1 min-w-0">
-                    <div className="font-narrow font-bold text-xs uppercase tracking-tight truncate">{p.nombre}</div>
-                    <div className="font-mono text-[10px] text-rock/55 mt-0.5">{p.marca}</div>
+                    <div className="font-narrow font-bold text-xs uppercase tracking-tight truncate">{v.nombreProducto}</div>
+                    <div className="font-mono text-[10px] text-rock/55 mt-0.5">{v.color} · {v.talla}</div>
                   </div>
                   <span className="font-mono text-[10px] tracking-widest-2 uppercase text-alpenglow whitespace-nowrap">
-                    Quedan {p.stock}
+                    Quedan {v.stock}
                   </span>
                 </li>
               ))
+            ) : loading ? (
+              <li className="p-5 text-center"><span className="spinner" /></li>
             ) : (
-              <li className="p-5 text-center font-mono text-[11px] tracking-widest-2 uppercase text-rock/40">
-                Sin alertas
-              </li>
+              <li className="p-5 text-center font-mono text-[11px] tracking-widest-2 uppercase text-rock/40">Sin alertas</li>
             )}
           </ul>
         </section>
