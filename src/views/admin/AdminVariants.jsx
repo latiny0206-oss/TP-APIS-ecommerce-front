@@ -144,6 +144,7 @@ export default function AdminVariants() {
         return n
       })
       setProducts(normalized)
+      setAllVariants(varByProd)
     }).finally(() => setProductsLoading(false))
   }, [])
 
@@ -153,7 +154,7 @@ export default function AdminVariants() {
   const [saving,      setSaving]      = useState(false)
   const [saveMsg,     setSaveMsg]     = useState(null)  // { type: 'ok'|'err', text: string }
   const [actionMsg,   setActionMsg]   = useState(null)  // inline error for add/delete
-  const [loadingVars, setLoadingVars] = useState(false)
+  const [loadingVars] = useState(false)
 
   // Selecciona el primer producto disponible
   useEffect(() => {
@@ -161,24 +162,6 @@ export default function AdminVariants() {
       setSelectedId(products[0].id)
     }
   }, [products.length]) // eslint-disable-line
-
-  // Carga variantes del producto seleccionado
-  useEffect(() => {
-    if (!selectedId) return
-    if (allVariants[selectedId]) return
-    setLoadingVars(true)
-    productService.getVariantes()
-      .then((vars) => {
-        const byProd = vars.reduce((acc, v) => {
-          const pid = v.idProducto ?? v.productoId
-          if (pid) { acc[pid] = acc[pid] ?? []; acc[pid].push(v) }
-          return acc
-        }, {})
-        // Guarda todas las variantes agrupadas
-        setAllVariants(byProd)
-      })
-      .finally(() => setLoadingVars(false))
-  }, [selectedId]) // eslint-disable-line
 
   const product  = selectedId ? products.find(p => p.id === selectedId) ?? null : null
   const variants = allVariants[selectedId] || []

@@ -4,6 +4,14 @@ import { contactService } from '../../api/contactService.js'
 import { getErrorMessage } from '../../api/api.js'
 import Button from '../../components/ui/Button.jsx'
 
+let cachedMensajes = null
+let cachedMensajesPromise = null
+if (typeof window !== 'undefined') {
+  const clear = () => { cachedMensajes = null; cachedMensajesPromise = null }
+  window.addEventListener('auth:logout', clear)
+  window.addEventListener('auth:login',  clear)
+}
+
 function fmtFecha(str) {
   if (!str) return '—'
   return new Date(str).toLocaleDateString('es-AR', {
@@ -39,16 +47,24 @@ export default function AdminContacto() {
   const [error,    setError]    = useState(null)
   const [selected, setSelected] = useState(null)
 
-  const load = () => {
+  const load = (forceRefresh = false) => {
+    if (!forceRefresh && cachedMensajes !== null) {
+      setMensajes(cachedMensajes)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
-    contactService.getMensajes()
-      .then((data) => setMensajes(Array.isArray(data) ? data : []))
-      .catch((e) => setError(getErrorMessage(e)))
+    if (!cachedMensajesPromise || forceRefresh) {
+      cachedMensajesPromise = contactService.getMensajes()
+    }
+    cachedMensajesPromise
+      .then((data) => { const arr = Array.isArray(data) ? data : []; cachedMensajes = arr; setMensajes(arr) })
+      .catch((e) => { cachedMensajesPromise = null; setError(getErrorMessage(e)) })
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, []) // eslint-disable-line
 
   const selectedMsg = mensajes.find((m) => m.id === selected) ?? null
 
@@ -61,7 +77,7 @@ export default function AdminContacto() {
             <><span className="font-bold text-rock">{mensajes.length}</span> mensajes recibidos</>
           )}
         </div>
-        <Button variant="ghost-light" size="sm" icon={<RefreshCw size={13} />} onClick={load}>
+        <Button variant="ghost-light" size="sm" icon={<RefreshCw size={13} />} onClick={() => load(true)}>
           Actualizar
         </Button>
       </div>

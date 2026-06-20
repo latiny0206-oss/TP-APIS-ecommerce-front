@@ -1,49 +1,147 @@
 import { api } from './api.js'
 
+let categoriasPromise = null
+let marcasPromise = null
+let variantesPromise = null
+let fotosPromise = null
+let productosPromise = null
+let productosAdminPromise = null
+
 export const productService = {
+  invalidateCache: () => {
+    categoriasPromise = null
+    marcasPromise = null
+    variantesPromise = null
+    fotosPromise = null
+    productosPromise = null
+    productosAdminPromise = null
+  },
+
   // Catálogo (GET públicos)
-  getCategorias:  () => api.get('/categorias').then((r) => r.data),
-  getMarcas:      () => api.get('/marcas').then((r) => r.data),
-  getProductos:   () => api.get('/productos').then((r) => r.data),
+  getCategorias:  () => {
+    if (!categoriasPromise) {
+      categoriasPromise = api.get('/categorias').then((r) => r.data)
+    }
+    return categoriasPromise
+  },
+  getMarcas:      () => {
+    if (!marcasPromise) {
+      marcasPromise = api.get('/marcas').then((r) => r.data)
+    }
+    return marcasPromise
+  },
+  getProductos:   () => {
+    if (!productosPromise) {
+      productosPromise = api.get('/productos').then((r) => r.data)
+    }
+    return productosPromise
+  },
   getProducto:    (id) => api.get(`/productos/${id}`).then((r) => r.data),
 
   // Admin: trae ACTIVO + PAUSADO + ELIMINADO (requiere ADMIN)
-  getProductosAdmin: () =>
-    Promise.allSettled([
-      api.get('/productos/estado/ACTIVO').then((r) => r.data),
-      api.get('/productos/estado/PAUSADO').then((r) => r.data),
-      api.get('/productos/estado/ELIMINADO').then((r) => r.data),
-    ]).then((results) => results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []))),
+  getProductosAdmin: () => {
+    if (!productosAdminPromise) {
+      productosAdminPromise = Promise.allSettled([
+        api.get('/productos/estado/ACTIVO').then((r) => r.data),
+        api.get('/productos/estado/PAUSADO').then((r) => r.data),
+        api.get('/productos/estado/ELIMINADO').then((r) => r.data),
+      ]).then((results) => results.flatMap((r) => (r.status === 'fulfilled' ? r.value : [])))
+    }
+    return productosAdminPromise
+  },
   getProductosByCategoria: (id) => api.get(`/productos/categoria/${id}`).then((r) => r.data),
   getProductosByMarca:     (id) => api.get(`/productos/marca/${id}`).then((r) => r.data),
   isProductoDisponible:    (id) => api.get(`/productos/${id}/disponible`).then((r) => r.data),
 
   // Variantes
-  getVariantes:         ()        => api.get('/variantes').then((r) => r.data),
+  getVariantes:         ()        => {
+    if (!variantesPromise) {
+      variantesPromise = api.get('/variantes').then((r) => r.data)
+    }
+    return variantesPromise
+  },
   getVariante:          (id)      => api.get(`/variantes/${id}`).then((r) => r.data),
   isStockDisponible:    (id, qty) => api.get(`/variantes/${id}/stock/disponible`, { params: { cantidad: qty } }).then((r) => r.data),
 
   // Fotos Base64: [{ tipoContenido, datos }]
-  getAllFotos:          ()            => api.get('/fotos').then((r) => r.data),
-  getFotosByVariante:   (varianteId) => api.get(`/fotos/variante/${varianteId}`).then((r) => r.data),
+  getAllFotos:          ()            => {
+    if (!fotosPromise) {
+      fotosPromise = api.get('/fotos').then((r) => r.data)
+    }
+    return fotosPromise
+  },
+  getFotosByVariante:   (varianteId) => {
+    if (fotosPromise) {
+      return fotosPromise.then((fotos) =>
+        fotos.filter((f) => String(f.varianteId) === String(varianteId))
+      )
+    }
+    return api.get(`/fotos/variante/${varianteId}`).then((r) => r.data)
+  },
   buildImageSrc: (foto) => `data:${foto.tipoContenido};base64,${foto.datos}`,
 
   // CRUD admin (RESTful estándar)
-  crearProducto:    (data)       => api.post('/productos', data).then((r) => r.data),
-  actualizarProducto: (id, data) => api.put(`/productos/${id}`, data).then((r) => r.data),
-  eliminarProducto: (id)         => api.delete(`/productos/${id}`).then((r) => r.data),
+  crearProducto:    (data)       => api.post('/productos', data).then((r) => {
+    productService.invalidateCache()
+    return r.data
+  }),
+  actualizarProducto: (id, data) => api.put(`/productos/${id}`, data).then((r) => {
+    productService.invalidateCache()
+    return r.data
+  }),
+  eliminarProducto: (id)         => api.delete(`/productos/${id}`).then((r) => {
+    productService.invalidateCache()
+    return r.data
+  }),
 
-  crearVariante:    (data)       => api.post('/variantes', data).then((r) => r.data),
-  actualizarVariante: (id, data) => api.put(`/variantes/${id}`, data).then((r) => r.data),
-  eliminarVariante: (id)         => api.delete(`/variantes/${id}`).then((r) => r.data),
+  crearVariante:    (data)       => api.post('/variantes', data).then((r) => {
+    productService.invalidateCache()
+    return r.data
+  }),
+  actualizarVariante: (id, data) => api.put(`/variantes/${id}`, data).then((r) => {
+    productService.invalidateCache()
+    return r.data
+  }),
+  eliminarVariante: (id)         => api.delete(`/variantes/${id}`).then((r) => {
+    productService.invalidateCache()
+    return r.data
+  }),
 
-  crearCategoria:   (data)       => api.post('/categorias', data).then((r) => r.data),
-  actualizarCategoria: (id, data)=> api.put(`/categorias/${id}`, data).then((r) => r.data),
-  eliminarCategoria:(id)         => api.delete(`/categorias/${id}`).then((r) => r.data),
+  crearCategoria:   (data)       => api.post('/categorias', data).then((r) => {
+    productService.invalidateCache()
+    return r.data
+  }),
+  actualizarCategoria: (id, data)=> api.put(`/categorias/${id}`, data).then((r) => {
+    productService.invalidateCache()
+    return r.data
+  }),
+  eliminarCategoria:(id)         => api.delete(`/categorias/${id}`).then((r) => {
+    productService.invalidateCache()
+    return r.data
+  }),
 
-  crearMarca:       (data)       => api.post('/marcas', data).then((r) => r.data),
-  actualizarMarca:  (id, data)   => api.put(`/marcas/${id}`, data).then((r) => r.data),
-  eliminarMarca:    (id)         => api.delete(`/marcas/${id}`).then((r) => r.data),
+  crearMarca:       (data)       => api.post('/marcas', data).then((r) => {
+    productService.invalidateCache()
+    return r.data
+  }),
+  actualizarMarca:  (id, data)   => api.put(`/marcas/${id}`, data).then((r) => {
+    productService.invalidateCache()
+    return r.data
+  }),
+  eliminarMarca:    (id)         => api.delete(`/marcas/${id}`).then((r) => {
+    productService.invalidateCache()
+    return r.data
+  }),
+
+  // Fotos CRUD wrappers
+  subirFoto:        (formData, config) => api.post('/fotos', formData, config).then((r) => {
+    productService.invalidateCache()
+    return r.data
+  }),
+  eliminarFoto:     (id)         => api.delete(`/fotos/${id}`).then((r) => {
+    productService.invalidateCache()
+    return r.data
+  }),
 
   // Normaliza un producto del backend al formato esperado por las vistas.
   // variantes: array de variantes de ESTE producto (ya filtradas).
@@ -90,4 +188,10 @@ export const productService = {
       _variantes:  variantes,   // referencia para obtener varianteId por talle
     }
   },
+}
+
+// Limpieza de caché al cambiar la sesión
+if (typeof window !== 'undefined') {
+  window.addEventListener('auth:logout', () => productService.invalidateCache())
+  window.addEventListener('auth:login', () => productService.invalidateCache())
 }

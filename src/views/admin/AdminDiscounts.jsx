@@ -4,6 +4,14 @@ import Button from '../../components/ui/Button.jsx'
 import { discountService } from '../../api/discountService.js'
 import { getErrorMessage }  from '../../api/api.js'
 
+let cachedDescuentos = null
+let cachedDescuentosPromise = null
+if (typeof window !== 'undefined') {
+  const clear = () => { cachedDescuentos = null; cachedDescuentosPromise = null }
+  window.addEventListener('auth:logout', clear)
+  window.addEventListener('auth:login',  clear)
+}
+
 function ToggleSwitch({ active, onToggle }) {
   return (
     <button onClick={onToggle}
@@ -84,12 +92,18 @@ export default function AdminDiscounts() {
   const [deleteError,  setDeleteError]  = useState(null)
 
   useEffect(() => {
-    discountService.getDescuentos()
-      .then(setDescuentos)
-      .catch(() => {
-        // Fallback: intenta con endpoint de activos
-        discountService.getDescuentosActivos().then(setDescuentos).catch(() => {})
-      })
+    if (cachedDescuentos !== null) {
+      setDescuentos(cachedDescuentos)
+      setLoading(false)
+      return
+    }
+    if (!cachedDescuentosPromise) {
+      cachedDescuentosPromise = discountService.getDescuentos()
+        .catch(() => discountService.getDescuentosActivos())
+    }
+    cachedDescuentosPromise
+      .then((data) => { cachedDescuentos = data; setDescuentos(data) })
+      .catch(() => { cachedDescuentosPromise = null })
       .finally(() => setLoading(false))
   }, [])
 
@@ -127,10 +141,18 @@ export default function AdminDiscounts() {
     try {
       if (editData) {
         const updated = await discountService.actualizarDescuento(editData.id, payload)
-        setDescuentos(prev => prev.map(d => d.id === editData.id ? { ...d, ...updated } : d))
+        setDescuentos(prev => {
+          const next = prev.map(d => d.id === editData.id ? { ...d, ...updated } : d)
+          cachedDescuentos = next
+          return next
+        })
       } else {
         const created = await discountService.crearDescuento(payload)
-        setDescuentos(prev => [...prev, created])
+        setDescuentos(prev => {
+          const next = [...prev, created]
+          cachedDescuentos = next
+          return next
+        })
       }
       setShowForm(false)
     } catch (e) { setFormError(getErrorMessage(e)) }
@@ -150,7 +172,11 @@ export default function AdminDiscounts() {
         fechaFin:    d.fechaFin,
         estado:      newEstado,
       })
-      setDescuentos(prev => prev.map(item => item.id === d.id ? { ...item, estado: newEstado } : item))
+      setDescuentos(prev => {
+        const next = prev.map(item => item.id === d.id ? { ...item, estado: newEstado } : item)
+        cachedDescuentos = next
+        return next
+      })
     } catch (e) { setToggleError(getErrorMessage(e)) }
   }
 
@@ -158,7 +184,11 @@ export default function AdminDiscounts() {
     setDeleteError(null)
     try {
       await discountService.eliminarDescuento(id)
-      setDescuentos(prev => prev.filter(d => d.id !== id))
+      setDescuentos(prev => {
+        const next = prev.filter(d => d.id !== id)
+        cachedDescuentos = next
+        return next
+      })
       setDeleteId(null)
     } catch (e) {
       setDeleteError(getErrorMessage(e))

@@ -4,6 +4,14 @@ import Button from '../../components/ui/Button.jsx'
 import { userService } from '../../api/userService.js'
 import { getErrorMessage } from '../../api/api.js'
 
+let cachedUsers = null
+let cachedUsersPromise = null
+if (typeof window !== 'undefined') {
+  const clear = () => { cachedUsers = null; cachedUsersPromise = null }
+  window.addEventListener('auth:logout', clear)
+  window.addEventListener('auth:login',  clear)
+}
+
 const EMPTY_FORM = {
   username: '', email: '', password: '', nombre: '', apellido: '', rol: 'CLIENTE', estado: 'ACTIVO',
 }
@@ -143,9 +151,17 @@ export default function AdminUsers() {
   const [delId,   setDelId]   = useState(null)
 
   useEffect(() => {
-    userService.getUsuarios()
-      .then(setUsers)
-      .catch(() => {})
+    if (cachedUsers !== null) {
+      setUsers(cachedUsers)
+      setLoading(false)
+      return
+    }
+    if (!cachedUsersPromise) {
+      cachedUsersPromise = userService.getUsuarios()
+    }
+    cachedUsersPromise
+      .then((data) => { cachedUsers = data; setUsers(data) })
+      .catch(() => { cachedUsersPromise = null })
       .finally(() => setLoading(false))
   }, [])
 
@@ -161,10 +177,18 @@ export default function AdminUsers() {
   async function handleSave(data) {
     if (data.id) {
       const updated = await userService.actualizarUsuario(data.id, data)
-      setUsers(prev => prev.map(u => u.id === data.id ? { ...u, ...updated } : u))
+      setUsers(prev => {
+        const next = prev.map(u => u.id === data.id ? { ...u, ...updated } : u)
+        cachedUsers = next
+        return next
+      })
     } else {
       const created = await userService.crearUsuario(data)
-      setUsers(prev => [created, ...prev])
+      setUsers(prev => {
+        const next = [created, ...prev]
+        cachedUsers = next
+        return next
+      })
     }
   }
 
@@ -172,7 +196,11 @@ export default function AdminUsers() {
     setDeleteError(null)
     try {
       await userService.eliminarUsuario(id)
-      setUsers(prev => prev.filter(u => u.id !== id))
+      setUsers(prev => {
+        const next = prev.filter(u => u.id !== id)
+        cachedUsers = next
+        return next
+      })
       setDelId(null)
     } catch (e) {
       setDeleteError(getErrorMessage(e))

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Upload, Check, Trash2, ChevronRight, ImageOff, Layers } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { productService } from '../../api/productService.js'
-import { api, getErrorMessage } from '../../api/api.js'
+import { getErrorMessage } from '../../api/api.js'
 import { useProducts } from '../../context/ProductsContext.jsx'
 
 async function uploadFoto(varianteId, file, onProgress, nextOrden) {
@@ -10,7 +10,7 @@ async function uploadFoto(varianteId, file, onProgress, nextOrden) {
   formData.append('varianteId', varianteId)
   formData.append('orden', nextOrden)
   formData.append('archivo', file)
-  const { data } = await api.post('/fotos', formData, {
+  const data = await productService.subirFoto(formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: (e) => {
       if (e.total) onProgress(Math.round((e.loaded / e.total) * 100))
@@ -72,7 +72,7 @@ export default function AdminPhotos() {
   async function handleDelete(fotoId) {
     setDeleteError(null)
     try {
-      await api.delete(`/fotos/${fotoId}`)
+      await productService.eliminarFoto(fotoId)
       setFotos(prev => prev.filter(f => f.id !== fotoId))
       reload()
     } catch (e) {

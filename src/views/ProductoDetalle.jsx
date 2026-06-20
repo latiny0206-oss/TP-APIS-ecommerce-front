@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { ArrowLeft, ShoppingCart, Minus, Plus, Check, X } from 'lucide-react'
-import { useCart }         from '../context/CartContext.jsx'
-import { productService }  from '../api/productService.js'
-import { fmtPrice }        from '../utils/format.js'
+import { useCart }          from '../context/CartContext.jsx'
+import { useProductDetail } from '../hooks/useProductDetail.js'
+import { productService }   from '../api/productService.js'
+import { fmtPrice }         from '../utils/format.js'
 import Button from '../components/ui/Button.jsx'
 
 const CATEGORIA_LABELS = {
@@ -18,55 +19,41 @@ export default function ProductoDetalle() {
   const { id }    = useParams()
   const { addToCart, items: cartItems } = useCart()
 
-  const [producto, setProducto] = useState(null)
-  const [fotos,    setFotos]    = useState([])
-  const [loading,  setLoading]  = useState(true)
-  const [notFound, setNotFound] = useState(false)
+  const { producto, loading, notFound } = useProductDetail(id)
 
   const [talleSeleccionado, setTalleSeleccionado]   = useState(null)
   const [colorSeleccionado, setColorSeleccionado]   = useState(null)
   const [cantidad,  setCantidad]  = useState(1)
   const [agregado,  setAgregado]  = useState(false)
+  const [fotos,    setFotos]    = useState([])
 
   const handleVolver = () => {
     if (location.state?.from === 'catalogo') navigate(-1)
     else navigate('/catalogo')
   }
 
+  // Auto-seleccionar primer color e inicializar fotos cuando cambia el producto
   useEffect(() => {
-    setLoading(true)
-    setNotFound(false)
-    Promise.all([
-      productService.getProducto(id),
-      productService.getVariantes(),
-    ]).then(async ([raw, allVariantes]) => {
-      const variantes = allVariantes.filter(
-        (v) => (v.idProducto ?? v.productoId) === raw.id
-      )
-      const p = productService.normalizeProducto(raw, variantes)
-      setProducto(p)
+    if (!producto) return
+    const colors = [...new Set((producto._variantes ?? []).map(v => v.color).filter(Boolean))]
+    if (colors.length > 0) {
+      setColorSeleccionado(colors[0])
+    } else {
+      setColorSeleccionado(null)
+    }
 
-      // Auto-seleccionar primer color si hay
-      const colors = [...new Set((p._variantes ?? []).map(v => v.color).filter(Boolean))]
-      if (colors.length > 0) setColorSeleccionado(colors[0])
-
-      // Carga las fotos de la primera variante disponible que contenga fotos
-      if (variantes.length > 0) {
-        let fotosCargadas = []
-        for (const v of variantes) {
-          try {
-            const fs = await productService.getFotosByVariante(v.id)
-            if (fs.length > 0) {
-              fotosCargadas = fs
-              break
-            }
-          } catch { /* sin fotos */ }
-        }
-        setFotos(fotosCargadas)
+    // Obtener fotos de la primera variante que las tenga
+    let fotosIniciales = []
+    for (const v of producto._variantes ?? []) {
+      if (v.fotos && v.fotos.length > 0) {
+        fotosIniciales = v.fotos
+        break
       }
-    }).catch(() => setNotFound(true))
-      .finally(() => setLoading(false))
-  }, [id])
+    }
+    setFotos(fotosIniciales)
+    setTalleSeleccionado(null)
+    setCantidad(1)
+  }, [producto])
 
   // --- Derivar variante seleccionada ANTES de los early returns (hooks deben ir arriba) ---
   const variantesProducto   = producto?._variantes ?? []
@@ -78,12 +65,11 @@ export default function ProductoDetalle() {
     ? variantesFiltradas.find((v) => (v.talla ?? v.talle) === talleSeleccionado)
     : variantesFiltradas[0] ?? null
 
-  // Recargar fotos cuando cambia la variante seleccionada (hook debe ejecutarse siempre)
+  // Actualizar fotos cuando cambia la variante seleccionada
   useEffect(() => {
-    if (!varianteSeleccionada?.id) return
-    productService.getFotosByVariante(varianteSeleccionada.id)
-      .then(fs => { if (fs.length > 0) setFotos(fs) })
-      .catch(() => {})
+    if (varianteSeleccionada?.fotos && varianteSeleccionada.fotos.length > 0) {
+      setFotos(varianteSeleccionada.fotos)
+    }
   }, [varianteSeleccionada?.id])
 
   // --- Early returns (después de todos los hooks) ---

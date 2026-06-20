@@ -5,6 +5,14 @@ import { getErrorMessage } from '../../api/api.js'
 import { fmtPrice as fmt } from '../../utils/format.js'
 import Button from '../../components/ui/Button.jsx'
 
+let cachedDashboard = null
+let cachedDashboardPromise = null
+if (typeof window !== 'undefined') {
+  const clear = () => { cachedDashboard = null; cachedDashboardPromise = null }
+  window.addEventListener('auth:logout', clear)
+  window.addEventListener('auth:login',  clear)
+}
+
 const STATUS_COLORS = {
   PENDIENTE:  'bg-alpenglow/15 text-alpenglow',
   CONFIRMADA: 'bg-pine/15 text-pine',
@@ -30,20 +38,28 @@ function KpiCard({ Icon, label, value, accentClass }) {
 }
 
 export default function AdminDashboard() {
-  const [kpis,    setKpis]    = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [kpis,    setKpis]    = useState(cachedDashboard)
+  const [loading, setLoading] = useState(cachedDashboard === null)
   const [error,   setError]   = useState(null)
 
-  const loadDashboard = () => {
+  const loadDashboard = (forceRefresh = false) => {
+    if (!forceRefresh && cachedDashboard !== null) {
+      setKpis(cachedDashboard)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
-    adminService.getDashboard()
-      .then(setKpis)
-      .catch((e) => setError(getErrorMessage(e)))
+    if (!cachedDashboardPromise || forceRefresh) {
+      cachedDashboardPromise = adminService.getDashboard()
+    }
+    cachedDashboardPromise
+      .then((data) => { cachedDashboard = data; setKpis(data) })
+      .catch((e) => { cachedDashboardPromise = null; setError(getErrorMessage(e)) })
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { loadDashboard() }, [])
+  useEffect(() => { loadDashboard() }, []) // eslint-disable-line
 
   const ordenesRecientes   = Array.isArray(kpis?.ordenesRecientes)   ? kpis.ordenesRecientes   : []
   const variantesBajoStock = Array.isArray(kpis?.variantesBajoStock) ? kpis.variantesBajoStock : []
@@ -64,7 +80,7 @@ export default function AdminDashboard() {
       ) : error ? (
         <div className="bg-red-50 border border-red-200 text-red-700 p-6 flex items-center justify-between">
           <span className="font-mono text-[11px] tracking-widest-2 uppercase">{error}</span>
-          <Button variant="ghost-light" size="sm" icon={<RefreshCw size={13} />} onClick={loadDashboard}>
+          <Button variant="ghost-light" size="sm" icon={<RefreshCw size={13} />} onClick={() => loadDashboard(true)}>
             Reintentar
           </Button>
         </div>

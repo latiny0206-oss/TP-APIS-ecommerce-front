@@ -380,14 +380,16 @@ export default function Checkout() {
       // 2. Vaciar el carrito para evitar mezcla con items viejos
       await cartService.vaciar(carritoId)
 
-      // 3. Agregar items del carrito local
-      for (const item of items) {
-        try {
-          await cartService.addItem(carritoId, { idVariante: item.varianteId, cantidad: item.qty })
-        } catch (itemErr) {
-          await cartService.vaciar(carritoId).catch(() => {})
-          throw new Error(`Error en "${item.nombre}": ${getErrorMessage(itemErr)}`)
-        }
+      // 3. Agregar items del carrito local en paralelo
+      const addResults = await Promise.allSettled(
+        items.map((item) =>
+          cartService.addItem(carritoId, { idVariante: item.varianteId, cantidad: item.qty })
+        )
+      )
+      const firstFailed = addResults.findIndex((r) => r.status === 'rejected')
+      if (firstFailed !== -1) {
+        await cartService.vaciar(carritoId).catch(() => {})
+        throw new Error(`Error en "${items[firstFailed].nombre}": ${getErrorMessage(addResults[firstFailed].reason)}`)
       }
 
       // 4. Aplicar cupón o limpiar descuento previo
