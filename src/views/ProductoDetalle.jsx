@@ -68,6 +68,25 @@ export default function ProductoDetalle() {
       .finally(() => setLoading(false))
   }, [id])
 
+  // --- Derivar variante seleccionada ANTES de los early returns (hooks deben ir arriba) ---
+  const variantesProducto   = producto?._variantes ?? []
+  const variantesFiltradas  = colorSeleccionado
+    ? variantesProducto.filter(v => v.color === colorSeleccionado)
+    : variantesProducto
+
+  const varianteSeleccionada = talleSeleccionado
+    ? variantesFiltradas.find((v) => (v.talla ?? v.talle) === talleSeleccionado)
+    : variantesFiltradas[0] ?? null
+
+  // Recargar fotos cuando cambia la variante seleccionada (hook debe ejecutarse siempre)
+  useEffect(() => {
+    if (!varianteSeleccionada?.id) return
+    productService.getFotosByVariante(varianteSeleccionada.id)
+      .then(fs => { if (fs.length > 0) setFotos(fs) })
+      .catch(() => {})
+  }, [varianteSeleccionada?.id])
+
+  // --- Early returns (después de todos los hooks) ---
   if (loading) {
     return (
       <div className="min-h-screen bg-ivory flex items-center justify-center text-rock">
@@ -89,7 +108,8 @@ export default function ProductoDetalle() {
     )
   }
 
-  const pf              = producto.precioFinal ?? producto.precio
+  const precioVariante  = varianteSeleccionada?.precio
+  const pf              = precioVariante != null ? Number(precioVariante) : (producto.precioFinal ?? producto.precio)
   const displayTalle    = (t) => t === 'U' ? 'Único' : t
   const categoriaLabel  = CATEGORIA_LABELS[producto.categoria] || producto.categoria
   const primeraFoto     = fotos[0]
@@ -98,13 +118,8 @@ export default function ProductoDetalle() {
     : producto.imagen
 
   // Colores y materiales únicos de las variantes
-  const coloresUnicos    = [...new Set((producto._variantes ?? []).map(v => v.color).filter(Boolean))]
-  const materialesUnicos = [...new Set((producto._variantes ?? []).map(v => v.material).filter(Boolean))]
-
-  // Derivar variantes filtradas por color
-  const variantesFiltradas = colorSeleccionado
-    ? (producto._variantes ?? []).filter(v => v.color === colorSeleccionado)
-    : (producto._variantes ?? [])
+  const coloresUnicos    = [...new Set(variantesProducto.map(v => v.color).filter(Boolean))]
+  const materialesUnicos = [...new Set(variantesProducto.map(v => v.material).filter(Boolean))]
 
   const tallesFiltrados = [...new Set(variantesFiltradas.map(v => v.talla ?? v.talle).filter(Boolean))]
   const hayTalles = tallesFiltrados.length > 0 && tallesFiltrados[0] !== 'Único' && tallesFiltrados[0] !== 'U'
@@ -118,10 +133,6 @@ export default function ProductoDetalle() {
   const stockActual = talleSeleccionado
     ? getStockParaTalle(talleSeleccionado)
     : producto.stock
-
-  const varianteSeleccionada = talleSeleccionado
-    ? variantesFiltradas.find((v) => (v.talla ?? v.talle) === talleSeleccionado)
-    : variantesFiltradas[0]
 
   // Stock disponible descontando lo que ya está en el carrito (previene bypass)
   const enCarrito = varianteSeleccionada
@@ -141,7 +152,7 @@ export default function ProductoDetalle() {
       productId:  producto.id,
       varianteId: varianteSeleccionada?.id ?? null,
       nombre:     producto.nombre,
-      precio:     pf,
+      precio:     precioVariante != null ? Number(precioVariante) : pf,
       imagen:     imagenSrc,
       talle:      talleSeleccionado ?? (tallesFiltrados?.[0] ?? null),
       qty:        cantidadAgregar,
