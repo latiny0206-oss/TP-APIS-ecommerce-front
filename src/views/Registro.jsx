@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Mountain, Eye, EyeOff, AlertTriangle, CheckCircle } from 'lucide-react'
-import { useAuth } from '../context/AuthContext.jsx'
+import { useSelector, useDispatch } from 'react-redux'
+import { registerThunk, clearError } from '../store/authSlice.js'
 import Button from '../components/ui/Button.jsx'
 
 function Field({ label, error, children }) {
@@ -20,8 +21,9 @@ const PWD_RE  = /^(?=.*[A-Z])(?=.*\d).{8,}$/
 const NAME_RE = /^[A-Za-záéíóúüñÁÉÍÓÚÜÑàèìòùÀÈÌÒÙ'\- ]{2,}$/
 
 export default function Registro() {
-  const { register, status, error, clearError } = useAuth()
+  const dispatch = useDispatch()
   const navigate = useNavigate()
+  const { status, error } = useSelector((state) => state.auth)
 
   // Redirect to home after successful registration (auto-logged in)
   useEffect(() => {
@@ -37,7 +39,7 @@ export default function Registro() {
   const [errors,  setErrors]  = useState({})
 
   useEffect(() => {
-    if (error) clearError()
+    if (error) dispatch(clearError())
   }, [form.email, form.password]) // eslint-disable-line
 
   const f = (field) => (e) => {
@@ -60,13 +62,13 @@ export default function Registro() {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
-    register({
+    dispatch(registerThunk({
       username:  form.username,
       nombre:    form.nombre,
       apellido:  form.apellido,
       email:     form.email,
       password:  form.password,
-    })
+    }))
   }
 
   if (status === 'registered') {

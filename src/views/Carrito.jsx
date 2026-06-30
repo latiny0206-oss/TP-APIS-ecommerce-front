@@ -1,7 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Minus, Plus, Trash2, Tag, ArrowRight, ShoppingCart } from 'lucide-react'
-import { useCart } from '../context/CartContext.jsx'
-import { useAuth } from '../context/AuthContext.jsx'
+import { useSelector, useDispatch } from 'react-redux'
+import { updateQty, removeFromCart, clearCart, computeTotals } from '../store/cartSlice.js'
+import { setReturnTo } from '../store/authSlice.js'
 import { useProducts } from '../context/ProductsContext.jsx'
 import { fmtPrice } from '../utils/format.js'
 import Button from '../components/ui/Button.jsx'
@@ -11,14 +12,16 @@ const SHIPPING_COST      = 10000
 
 
 export default function Carrito() {
-  const navigate                                           = useNavigate()
-  const { items, totals, updateQty, removeFromCart, clearCart } = useCart()
-  const { isLoggedIn, setReturnTo }                        = useAuth()
-  const { byId }                                           = useProducts()
+  const navigate   = useNavigate()
+  const dispatch   = useDispatch()
+  const items      = useSelector((state) => state.cart.items)
+  const totals     = computeTotals(items)
+  const isLoggedIn = useSelector((state) => state.auth.isLoggedIn)
+  const { byId }   = useProducts()
 
   const handleCheckout = () => {
     if (!isLoggedIn) {
-      setReturnTo('/checkout')
+      dispatch(setReturnTo('/checkout'))
       navigate('/login')
       return
     }
@@ -45,7 +48,7 @@ export default function Carrito() {
             </p>
           </div>
           {items.length > 0 && (
-            <button onClick={() => clearCart()}
+            <button onClick={() => dispatch(clearCart())}
               className="hidden sm:inline-flex items-center gap-1.5 font-mono text-[10px] tracking-widest-2 uppercase text-rock/45 hover:text-red-700 transition-colors">
               <Trash2 size={11} /> Vaciar carrito
             </button>
@@ -111,19 +114,19 @@ export default function Carrito() {
 
                     <div className="flex items-center gap-4 mt-4">
                       <div className="inline-flex items-center border border-rock/20">
-                        <button onClick={() => updateQty({ lineId: line.lineId, qty: line.qty - 1 })}
+                        <button onClick={() => dispatch(updateQty({ lineId: line.lineId, qty: line.qty - 1 }))}
                           className="h-9 w-9 grid place-items-center text-rock hover:bg-rock/5 transition-colors">
                           <Minus size={13} strokeWidth={2} />
                         </button>
                         <span className="px-4 font-mono font-bold text-sm tabular-nums">{line.qty}</span>
                         <button
-                          onClick={() => !atMax && updateQty({ lineId: line.lineId, qty: line.qty + 1 })}
+                          onClick={() => !atMax && dispatch(updateQty({ lineId: line.lineId, qty: line.qty + 1 }))}
                           disabled={atMax}
                           className={`h-9 w-9 grid place-items-center transition-colors ${atMax ? 'text-rock/25 cursor-not-allowed' : 'text-rock hover:bg-rock/5'}`}>
                           <Plus size={13} strokeWidth={2} />
                         </button>
                       </div>
-                      <button onClick={() => removeFromCart(line.lineId)}
+                      <button onClick={() => dispatch(removeFromCart(line.lineId))}
                         className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/45 hover:text-red-700 flex items-center gap-1.5 transition-colors">
                         <Trash2 size={11} /> Quitar
                       </button>
@@ -138,7 +141,7 @@ export default function Carrito() {
                 )
               })}
 
-              <button onClick={() => clearCart()}
+              <button onClick={() => dispatch(clearCart())}
                 className="sm:hidden w-full mt-2 font-mono text-[10px] tracking-widest-2 uppercase text-rock/45 hover:text-red-700 flex items-center justify-center gap-2 py-3 border border-dashed border-rock/15 transition-colors">
                 <Trash2 size={11} /> Vaciar carrito
               </button>

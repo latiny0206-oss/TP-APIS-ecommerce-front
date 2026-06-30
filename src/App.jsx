@@ -1,7 +1,10 @@
 import { useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useSelector, useDispatch } from 'react-redux'
 import { ArrowRight } from 'lucide-react'
-import { useAuth } from './context/AuthContext.jsx'
+import { authService } from './api/authService.js'
+import { sessionRestored, initDone, logout, setReturnTo } from './store/authSlice.js'
+import { clearCart } from './store/cartSlice.js'
 
 // Layout — always needed, load eagerly
 import Navbar  from './components/Navbar.jsx'
@@ -40,6 +43,67 @@ const AdminDiscounts = lazy(() => import('./views/admin/AdminDiscounts.jsx'))
 const AdminUsers     = lazy(() => import('./views/admin/AdminUsers.jsx'))
 const AdminCatalog   = lazy(() => import('./views/admin/AdminCatalog.jsx'))
 const AdminContacto  = lazy(() => import('./views/admin/AdminContacto.jsx'))
+
+// ─── Restaura sesión y escucha logout automático por 401 ──────────────────
+function AuthInit() {
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const stored = authService.getStoredUser()
+    if (stored && authService.isAuthenticated()) {
+      dispatch(sessionRestored(stored))
+    } else {
+      dispatch(initDone())
+    }
+  }, [dispatch])
+
+  useEffect(() => {
+    const handler = () => {
+      dispatch(logout())
+      navigate('/login')
+    }
+    window.addEventListener('auth:logout', handler)
+    return () => window.removeEventListener('auth:logout', handler)
+  }, [dispatch, navigate])
+
+  return null
+}
+
+// ─── Persiste items y cupón en localStorage (solo esas dos porciones) ─────
+// Al depender solo de items y coupon, un cambio de toast NO dispara este efecto.
+function CartPersist() {
+  const items  = useSelector((state) => state.cart.items)
+  const coupon = useSelector((state) => state.cart.coupon)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cumbre_cart', JSON.stringify({ items, coupon }))
+    } catch {}
+  }, [items, coupon])
+
+  return null
+}
+
+// ─── Limpia el carrito si el usuario que inicia sesión es distinto ─────────
+function CartUserCheck() {
+  const dispatch = useDispatch()
+
+  useEffect(() => {
+    const handler = (e) => {
+      const newId    = String(e.detail.id)
+      const storedId = localStorage.getItem('cumbre_cart_uid')
+      if (storedId && storedId !== newId) {
+        dispatch(clearCart())
+      }
+      localStorage.setItem('cumbre_cart_uid', newId)
+    }
+    window.addEventListener('auth:login', handler)
+    return () => window.removeEventListener('auth:login', handler)
+  }, [dispatch])
+
+  return null
+}
 
 // ─── Scroll al inicio en cada navegación ──────────────────────────────────
 function ScrollToTop() {
@@ -99,11 +163,13 @@ function ShellLayout() {
 
 // ─── Protección de rutas de cuenta — requiere auth ────────────────────────
 function AccountGuard() {
-  const { isLoggedIn, initializing, setReturnTo } = useAuth()
-  const location = useLocation()
+  const { isLoggedIn, initializing } = useSelector((state) => state.auth)
+  const dispatch                     = useDispatch()
+  const location                     = useLocation()
+
   if (initializing) return <PageLoader />
   if (!isLoggedIn) {
-    setReturnTo(location.pathname)
+    dispatch(setReturnTo(location.pathname))
     return <Navigate to="/login" replace />
   }
   return <Outlet />
@@ -111,7 +177,7 @@ function AccountGuard() {
 
 // ─── Protección de rutas admin — requiere rol 'admin' ────────────────────
 function AdminGuard() {
-  const { isLoggedIn, user, initializing } = useAuth()
+  const { isLoggedIn, user, initializing } = useSelector((state) => state.auth)
   if (initializing) return <PageLoader />
   if (!isLoggedIn || user?.rol?.toUpperCase() !== 'ADMIN') {
     return <Navigate to="/login" replace />
@@ -131,6 +197,9 @@ function PageLoader() {
 export default function App() {
   return (
     <div className="bg-rock min-h-screen">
+      <AuthInit />
+      <CartPersist />
+      <CartUserCheck />
       <Toast />
       <ScrollToTop />
       <Suspense fallback={<PageLoader />}>

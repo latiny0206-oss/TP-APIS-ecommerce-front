@@ -3,7 +3,9 @@ import {
   Ticket, ClipboardList, Users, Mail, Plus, LogOut, ChevronRight,
 } from 'lucide-react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext.jsx'
+import { useSelector, useDispatch } from 'react-redux'
+import { logout } from '../../store/authSlice.js'
+import { authService } from '../../api/authService.js'
 import Button from '../../components/ui/Button.jsx'
 
 const ADMIN_NAV = [
@@ -36,9 +38,10 @@ function weekdayDate() {
 }
 
 export default function AdminLayout() {
-  const navigate        = useNavigate()
-  const { pathname }    = useLocation()
-  const { logout, user } = useAuth()
+  const navigate     = useNavigate()
+  const { pathname } = useLocation()
+  const dispatch     = useDispatch()
+  const user         = useSelector((state) => state.auth.user)
 
   // Obtiene el último segmento de la ruta para el label del header
   const currentSegment  = pathname.split('/').pop()
@@ -93,7 +96,7 @@ export default function AdminLayout() {
               Nuevo producto
             </Button>
             <div className="flex items-center justify-end mt-3 px-2">
-              <button onClick={() => { logout(); navigate('/') }}
+              <button onClick={() => { authService.logout(); dispatch(logout()); navigate('/') }}
                 className="font-mono text-[10px] tracking-widest-2 uppercase text-ivory/55 hover:text-alpenglow flex items-center gap-1.5">
                 <LogOut size={12} /> Salir
               </button>

@@ -1,10 +1,10 @@
 import { Mountain } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { FOOTER_COLUMNS, FOOTER_LEGAL_LINKS } from '../data/index.js'
-import { useAuth } from '../context/AuthContext.jsx'
+import { useSelector } from 'react-redux'
 
 export default function Footer() {
-  const { isLoggedIn } = useAuth()
+  const isLoggedIn = useSelector((state) => state.auth.isLoggedIn)
 
   const resolveLink = ({ to, requiresAuth }) => {
     if (requiresAuth && !isLoggedIn) return '/login'

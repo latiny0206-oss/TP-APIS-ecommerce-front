@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { UserCircle, Package, LogOut, ShoppingBag } from 'lucide-react'
-import { useAuth }     from '../context/AuthContext.jsx'
+import { useSelector, useDispatch } from 'react-redux'
+import { logout } from '../store/authSlice.js'
+import { authService } from '../api/authService.js'
 import { useOrdenes }  from '../hooks/useOrders.js'
 import { fmtPrice }    from '../utils/format.js'
 import Button from '../components/ui/Button.jsx'
@@ -19,8 +21,9 @@ function fmtFecha(dateStr) {
 }
 
 export default function Perfil() {
-  const navigate        = useNavigate()
-  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  const dispatch = useDispatch()
+  const user     = useSelector((state) => state.auth.user)
 
   if (!user) return null
 
@@ -28,7 +31,7 @@ export default function Perfil() {
   const { ordenes, loading, error, cancelar } = useOrdenes(user?.id ?? null)
   const [cancelError, setCancelError] = useState(null)
 
-  const handleLogout = () => { logout(); navigate('/') }
+  const handleLogout = () => { authService.logout(); dispatch(logout()); navigate('/') }
 
   const handleCancelar = async (ordenId) => {
     setCancelError(null)

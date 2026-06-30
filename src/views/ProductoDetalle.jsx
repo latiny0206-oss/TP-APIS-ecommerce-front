@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { ArrowLeft, ShoppingCart, Minus, Plus, Check, X } from 'lucide-react'
-import { useCart }          from '../context/CartContext.jsx'
+import { useSelector, useDispatch } from 'react-redux'
+import { addToCart } from '../store/cartSlice.js'
 import { useProductDetail } from '../hooks/useProductDetail.js'
 import { productService }   from '../api/productService.js'
 import { fmtPrice }         from '../utils/format.js'
@@ -17,7 +18,8 @@ export default function ProductoDetalle() {
   const navigate  = useNavigate()
   const location  = useLocation()
   const { id }    = useParams()
-  const { addToCart, items: cartItems } = useCart()
+  const dispatch   = useDispatch()
+  const cartItems  = useSelector((state) => state.cart.items)
 
   const { producto, loading, notFound } = useProductDetail(id)
 
@@ -134,7 +136,7 @@ export default function ProductoDetalle() {
     if (faltaColor || faltaTalle || atMaxStock) return
     const cantidadAgregar = Math.min(cantidad, stockDisponible)
     if (cantidadAgregar <= 0) return
-    addToCart({
+    dispatch(addToCart({
       productId:  producto.id,
       varianteId: varianteSeleccionada?.id ?? null,
       nombre:     producto.nombre,
@@ -142,7 +144,7 @@ export default function ProductoDetalle() {
       imagen:     imagenSrc,
       talle:      talleSeleccionado ?? (tallesFiltrados?.[0] ?? null),
       qty:        cantidadAgregar,
-    })
+    }))
     setAgregado(true)
     setTimeout(() => setAgregado(false), 2000)
   }

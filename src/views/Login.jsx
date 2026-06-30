@@ -1,32 +1,34 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Mountain, Eye, EyeOff, AlertTriangle, X, Check } from 'lucide-react'
-import { useAuth } from '../context/AuthContext.jsx'
-import { authService } from '../api/authService.js'
-import { getErrorMessage } from '../api/api.js'
+import { Mountain, Eye, EyeOff, AlertTriangle } from 'lucide-react'
+import { useSelector, useDispatch } from 'react-redux'
+import { loginThunk, clearError } from '../store/authSlice.js'
 import Button from '../components/ui/Button.jsx'
 
-
-
 export default function Login() {
-  const { login, status, error, clearError, isLoggedIn } = useAuth()
-  const navigate = useNavigate()
+  const dispatch   = useDispatch()
+  const navigate   = useNavigate()
+  const { status, error, isLoggedIn, returnTo } = useSelector((state) => state.auth)
 
   useEffect(() => {
     if (isLoggedIn) navigate('/', { replace: true })
   }, [isLoggedIn, navigate])
 
-  const [email,       setEmail]       = useState('')
-  const [password,    setPassword]    = useState('')
-  const [showPwd,     setShowPwd]     = useState(false)
+  const [email,   setEmail]   = useState('')
+  const [password, setPassword] = useState('')
+  const [showPwd,  setShowPwd]  = useState(false)
 
   useEffect(() => {
-    if (error) clearError()
+    if (error) dispatch(clearError())
   }, [email, password]) // eslint-disable-line
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    login(email, password)
+    const result = await dispatch(loginThunk({ username: email, password }))
+    if (loginThunk.fulfilled.match(result)) {
+      const user = result.payload
+      navigate(user.rol === 'ADMIN' ? '/admin/dashboard' : (returnTo || '/'))
+    }
   }
 
   return (

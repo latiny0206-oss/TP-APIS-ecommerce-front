@@ -3,8 +3,10 @@ import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-do
 import {
   Mountain, ShoppingCart, Menu, X, ArrowUpRight, LogOut, UserCircle,
 } from 'lucide-react'
-import { useAuth } from '../context/AuthContext.jsx'
-import { useCart } from '../context/CartContext.jsx'
+import { useSelector, useDispatch } from 'react-redux'
+import { logout } from '../store/authSlice.js'
+import { computeTotals } from '../store/cartSlice.js'
+import { authService } from '../api/authService.js'
 import { NAV_ITEMS, MARQUEE_ITEMS } from '../data/index.js'
 
 function PromoMarquee() {
@@ -32,12 +34,13 @@ function IconButton({ children, className = '', ...props }) {
 }
 
 export default function Navbar() {
-  const navigate                         = useNavigate()
-  const { pathname }                     = useLocation()
-  const [searchParams]                   = useSearchParams()
-  const { isLoggedIn, user, logout }     = useAuth()
-  const { totals }                       = useCart()
-  const cartCount = totals.itemCount
+  const navigate       = useNavigate()
+  const { pathname }   = useLocation()
+  const [searchParams] = useSearchParams()
+  const dispatch       = useDispatch()
+  const { isLoggedIn, user } = useSelector((state) => state.auth)
+  const items    = useSelector((state) => state.cart.items)
+  const cartCount = computeTotals(items).itemCount
 
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled,   setScrolled]   = useState(false)
@@ -67,7 +70,8 @@ export default function Navbar() {
   }
 
   const handleLogout = () => {
-    logout()
+    authService.logout()
+    dispatch(logout())
     navigate('/')
     closeMobile()
   }

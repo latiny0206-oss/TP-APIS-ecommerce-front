@@ -1,14 +1,15 @@
 import { useEffect } from 'react'
 import { ShoppingCart, X } from 'lucide-react'
-import { useCart } from '../../context/CartContext.jsx'
+import { useSelector, useDispatch } from 'react-redux'
+import { hideToast } from '../../store/toastSlice.js'
 
 export default function Toast() {
-  const { toast, hideToast } = useCart()
-  const { visible, productName } = toast
+  const { visible, productName } = useSelector((state) => state.toast)
+  const dispatch = useDispatch()
 
   useEffect(() => {
     if (!visible) return
-    const t = setTimeout(() => hideToast(), 3000)
+    const t = setTimeout(() => dispatch(hideToast()), 3000)
     return () => clearTimeout(t)
   }, [visible]) // eslint-disable-line
 
@@ -29,7 +30,7 @@ export default function Toast() {
           </div>
         </div>
         <button
-          onClick={() => hideToast()}
+          onClick={() => dispatch(hideToast())}
           className="text-ivory/60 hover:text-ivory mt-0.5 shrink-0"
           aria-label="Cerrar notificación"
         >

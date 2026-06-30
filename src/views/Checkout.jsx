@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, ChevronRight, Tag, X } from 'lucide-react'
-import { useCart }           from '../context/CartContext.jsx'
-import { useAuth }           from '../context/AuthContext.jsx'
+import { useSelector, useDispatch } from 'react-redux'
+import { clearCart, computeTotals } from '../store/cartSlice.js'
 import { cartService }       from '../api/cartService.js'
 import { discountService }   from '../api/discountService.js'
 import { getErrorMessage }   from '../api/api.js'
@@ -168,9 +168,11 @@ const EMPTY_ENVIO = {
 
 // ─── Checkout principal ─────────────────────────────────────────────────────
 export default function Checkout() {
-  const navigate                    = useNavigate()
-  const { items, totals, clearCart } = useCart()
-  const { user }                    = useAuth()
+  const navigate  = useNavigate()
+  const dispatch  = useDispatch()
+  const items     = useSelector((state) => state.cart.items)
+  const totals    = computeTotals(items)
+  const user      = useSelector((state) => state.auth.user)
 
   const [step, setStep] = useState(1)
 
@@ -415,7 +417,7 @@ export default function Checkout() {
         metodoPago,
       })
 
-      clearCart()
+      dispatch(clearCart())
       navigate('/confirmacion', {
         state: { orderNumber: `#ORD-${orden.id}`, ordenId: orden.id },
       })

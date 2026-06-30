@@ -2,11 +2,11 @@
 // Integra useCarritoActivo + useCartApi en un solo componente
 import { useEffect, useState } from 'react'
 import { useNavigate }          from 'react-router-dom'
-import { useAuth }              from '../context/AuthContext.jsx'
+import { useSelector }          from 'react-redux'
 import { useCarritoActivo, useCartApi } from '../hooks/useCartApi.js'
 
 export function CheckoutFlow({ variante }) {
-  const { user } = useAuth()
+  const user = useSelector((state) => state.auth.user)
   const navigate  = useNavigate()
 
   const { carritoId, init, loading: initLoading } = useCarritoActivo()
