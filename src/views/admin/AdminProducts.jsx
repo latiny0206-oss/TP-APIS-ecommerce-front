@@ -69,6 +69,7 @@ function ProductDrawer({ product: existing, onClose, onSaved }) {
         marcaId:      Number(form.marcaId),
         categoriaId:  Number(form.categoriaId),
         descuentoPct: Number(form.descuentoPct) || 0,
+        tag:          form.tag || null,
       }
       if (existing) {
         await productService.actualizarProducto(existing.id, payload)
@@ -238,7 +239,7 @@ export default function AdminProducts() {
         productService.getAllFotos().catch(() => []),
       ])
       const varByProd = vars.reduce((acc, v) => {
-        const pid = v.idProducto ?? v.productoId
+        const pid = v.productoId
         if (pid) { acc[pid] = acc[pid] ?? []; acc[pid].push(v) }
         return acc
       }, {})
@@ -274,7 +275,7 @@ export default function AdminProducts() {
           productService.getAllFotos().catch(() => []),
         ])
         const varByProd = vars.reduce((acc, v) => {
-          const pid = v.idProducto ?? v.productoId
+          const pid = v.productoId
           if (pid) { acc[pid] = acc[pid] ?? []; acc[pid].push(v) }
           return acc
         }, {})

@@ -1,6 +1,9 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 import { discountService } from '../api/discountService.js'
-import { getErrorMessage } from '../api/api.js'
+import { getErrorMessage }  from '../api/api.js'
+
+export const SHIPPING_THRESHOLD = 80_000
+export const SHIPPING_COST      = 10_000
 
 export function loadSaved() {
   try {
@@ -15,12 +18,28 @@ export function loadSaved() {
 
 const saved = loadSaved()
 
+// Defined before the slice so extraReducers can reference the action types
+export const applyCoupon = createAsyncThunk(
+  'cart/applyCoupon',
+  async (code, { rejectWithValue }) => {
+    const trimmed = (code || '').trim().toUpperCase()
+    if (!trimmed) return null
+    try {
+      return await discountService.buscarPorCodigo(trimmed)
+    } catch (e) {
+      const msg = e.response?.status === 404 ? 'Código no encontrado' : getErrorMessage(e)
+      return rejectWithValue(msg)
+    }
+  }
+)
+
 const cartSlice = createSlice({
   name: 'cart',
   initialState: {
-    items:       saved.items,
-    coupon:      saved.coupon,
-    couponError: null,
+    items:        saved.items,
+    coupon:       saved.coupon,
+    couponError:  null,
+    couponStatus: 'idle',   // 'idle' | 'loading'
   },
   reducers: {
     addToCart(state, action) {
@@ -56,58 +75,69 @@ const cartSlice = createSlice({
       }
     },
     setCoupon(state, action) {
-      state.coupon      = action.payload
-      state.couponError = null
+      state.coupon       = action.payload
+      state.couponError  = null
+      state.couponStatus = 'idle'
     },
     setCouponError(state, action) {
-      state.couponError = action.payload
+      state.couponError  = action.payload
+      state.couponStatus = 'idle'
     },
     removeCoupon(state) {
-      state.coupon      = null
-      state.couponError = null
+      state.coupon       = null
+      state.couponError  = null
+      state.couponStatus = 'idle'
     },
     clearCart(state) {
-      state.items       = []
-      state.coupon      = null
-      state.couponError = null
+      state.items        = []
+      state.coupon       = null
+      state.couponError  = null
+      state.couponStatus = 'idle'
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(applyCoupon.pending, (state) => {
+        state.couponStatus = 'loading'
+        state.couponError  = null
+      })
+      .addCase(applyCoupon.fulfilled, (state, action) => {
+        state.couponStatus = 'idle'
+        if (action.payload) {
+          state.coupon      = action.payload
+          state.couponError = null
+        }
+      })
+      .addCase(applyCoupon.rejected, (state, action) => {
+        state.couponStatus = 'idle'
+        state.couponError  = action.payload ?? 'Error al aplicar el cupón'
+      })
   },
 })
 
-export const applyCoupon = createAsyncThunk(
-  'cart/applyCoupon',
-  async (code, { dispatch }) => {
-    const trimmed = (code || '').trim().toUpperCase()
-    if (!trimmed) return
-    try {
-      const descuentos = await discountService.getDescuentosActivos()
-      const found = descuentos.find(
-        (d) => d.codigo?.toUpperCase() === trimmed && d.estado === 'ACTIVO'
-      )
-      if (!found) {
-        dispatch(setCouponError(`Código "${trimmed}" inválido o vencido`))
-        return
-      }
-      const pct   = found.tipo === 'PORCENTAJE' ? Number(found.valor) : 0
-      const label = found.tipo === 'PORCENTAJE'
-        ? `${found.codigo} · ${pct}% OFF`
-        : `${found.codigo} · -$${Number(found.valor).toLocaleString('es-CL')}`
-      dispatch(setCoupon({ ...found, label }))
-    } catch (e) {
-      dispatch(setCouponError(getErrorMessage(e)))
+// Memoized selector: computes subtotal, discount, shipping and total in one pass.
+// Shipping threshold is applied after the coupon discount.
+export const selectCartTotals = createSelector(
+  (state) => state.cart.items,
+  (state) => state.cart.coupon,
+  (items, coupon) => {
+    const subtotal  = items.reduce((s, i) => s + i.precio * i.qty, 0)
+    const itemCount = items.reduce((n, i) => n + i.qty, 0)
+
+    let discount = 0
+    if (coupon) {
+      const val = Number(coupon.valor ?? 0)
+      if (coupon.tipo === 'PORCENTAJE')  discount = Math.round(subtotal * val / 100)
+      else if (coupon.tipo === 'FIJO')   discount = Math.min(val, subtotal)
     }
+
+    const subtotalConDesc = Math.max(0, subtotal - discount)
+    const shipping        = subtotalConDesc >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST
+    const total           = subtotalConDesc + shipping
+
+    return { subtotal, discount, subtotalConDesc, shipping, total, itemCount }
   }
 )
-
-export function computeTotals(items) {
-  const subtotal = items.reduce((s, i) => s + i.precio * i.qty, 0)
-  return {
-    subtotal,
-    discount:  0,
-    total:     subtotal,
-    itemCount: items.reduce((n, i) => n + i.qty, 0),
-  }
-}
 
 export const {
   addToCart,

@@ -25,11 +25,12 @@ export default function Perfil() {
   const dispatch = useDispatch()
   const user     = useSelector((state) => state.auth.user)
 
-  if (!user) return null
-
+  // Hooks must be called unconditionally — before any early return
   // user?.id ?? null: si id no existe (sesión vieja), el hook muestra error en lugar de llamar /ordenes
   const { ordenes, loading, error, cancelar } = useOrdenes(user?.id ?? null)
   const [cancelError, setCancelError] = useState(null)
+
+  if (!user) return null
 
   const handleLogout = () => { authService.logout(); dispatch(logout()); navigate('/') }
 

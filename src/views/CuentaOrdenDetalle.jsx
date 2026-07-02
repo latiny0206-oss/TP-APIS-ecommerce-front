@@ -82,9 +82,9 @@ export default function CuentaOrdenDetalle() {
                     <span className="font-mono text-[10px] mr-1.5">{item.cantidad ?? item.qty}×</span>
                   )}
                   {item.productoNombre ?? item.nombreProducto ?? item.nombre}
-                  {(item.varianteTalla ?? item.talla ?? item.talle) && (
+                  {item.talle && (
                     <span className="font-mono text-[10px] text-rock/45 ml-2">
-                      · talle {item.varianteTalla ?? item.talla ?? item.talle}
+                      · talle {item.talle}
                     </span>
                   )}
                 </span>

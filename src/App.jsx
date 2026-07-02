@@ -167,11 +167,14 @@ function AccountGuard() {
   const dispatch                     = useDispatch()
   const location                     = useLocation()
 
+  useEffect(() => {
+    if (!initializing && !isLoggedIn) {
+      dispatch(setReturnTo(location.pathname))
+    }
+  }, [initializing, isLoggedIn, location.pathname, dispatch])
+
   if (initializing) return <PageLoader />
-  if (!isLoggedIn) {
-    dispatch(setReturnTo(location.pathname))
-    return <Navigate to="/login" replace />
-  }
+  if (!isLoggedIn) return <Navigate to="/login" replace />
   return <Outlet />
 }
 

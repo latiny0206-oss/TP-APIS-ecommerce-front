@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { ArrowLeft, ShoppingCart, Minus, Plus, Check, X } from 'lucide-react'
 import { useSelector, useDispatch } from 'react-redux'
@@ -27,32 +27,18 @@ export default function ProductoDetalle() {
   const [colorSeleccionado, setColorSeleccionado]   = useState(null)
   const [cantidad,  setCantidad]  = useState(1)
   const [agregado,  setAgregado]  = useState(false)
-  const [fotos,    setFotos]    = useState([])
+  const [selectedFotoId, setSelectedFotoId] = useState(null)
 
   const handleVolver = () => {
     if (location.state?.from === 'catalogo') navigate(-1)
     else navigate('/catalogo')
   }
 
-  // Auto-seleccionar primer color e inicializar fotos cuando cambia el producto
+  // Auto-seleccionar primer color cuando cambia el producto
   useEffect(() => {
     if (!producto) return
     const colors = [...new Set((producto._variantes ?? []).map(v => v.color).filter(Boolean))]
-    if (colors.length > 0) {
-      setColorSeleccionado(colors[0])
-    } else {
-      setColorSeleccionado(null)
-    }
-
-    // Obtener fotos de la primera variante que las tenga
-    let fotosIniciales = []
-    for (const v of producto._variantes ?? []) {
-      if (v.fotos && v.fotos.length > 0) {
-        fotosIniciales = v.fotos
-        break
-      }
-    }
-    setFotos(fotosIniciales)
+    setColorSeleccionado(colors.length > 0 ? colors[0] : null)
     setTalleSeleccionado(null)
     setCantidad(1)
   }, [producto])
@@ -64,15 +50,22 @@ export default function ProductoDetalle() {
     : variantesProducto
 
   const varianteSeleccionada = talleSeleccionado
-    ? variantesFiltradas.find((v) => (v.talla ?? v.talle) === talleSeleccionado)
+    ? variantesFiltradas.find((v) => v.talla === talleSeleccionado)
     : variantesFiltradas[0] ?? null
 
-  // Actualizar fotos cuando cambia la variante seleccionada
-  useEffect(() => {
-    if (varianteSeleccionada?.fotos && varianteSeleccionada.fotos.length > 0) {
-      setFotos(varianteSeleccionada.fotos)
+  // Fotos derivadas de la variante seleccionada (no duplicadas en useState)
+  const fotos = useMemo(() => {
+    if (varianteSeleccionada?.fotos?.length > 0) return varianteSeleccionada.fotos
+    for (const v of variantesProducto) {
+      if (v.fotos?.length > 0) return v.fotos
     }
-  }, [varianteSeleccionada?.id])
+    return []
+  }, [varianteSeleccionada, variantesProducto])
+
+  // Resetear foto seleccionada cuando cambia la lista de fotos
+  useEffect(() => {
+    setSelectedFotoId(null)
+  }, [fotos])
 
   // --- Early returns (después de todos los hooks) ---
   if (loading) {
@@ -100,7 +93,7 @@ export default function ProductoDetalle() {
   const pf              = precioVariante != null ? Number(precioVariante) : (producto.precioFinal ?? producto.precio)
   const displayTalle    = (t) => t === 'U' ? 'Único' : t
   const categoriaLabel  = CATEGORIA_LABELS[producto.categoria] || producto.categoria
-  const primeraFoto     = fotos[0]
+  const primeraFoto     = (selectedFotoId ? fotos.find(f => f.id === selectedFotoId) : null) ?? fotos[0]
   const imagenSrc       = primeraFoto
     ? productService.buildImageSrc(primeraFoto)
     : producto.imagen
@@ -109,12 +102,12 @@ export default function ProductoDetalle() {
   const coloresUnicos    = [...new Set(variantesProducto.map(v => v.color).filter(Boolean))]
   const materialesUnicos = [...new Set(variantesProducto.map(v => v.material).filter(Boolean))]
 
-  const tallesFiltrados = [...new Set(variantesFiltradas.map(v => v.talla ?? v.talle).filter(Boolean))]
+  const tallesFiltrados = [...new Set(variantesFiltradas.map(v => v.talla).filter(Boolean))]
   const hayTalles = tallesFiltrados.length > 0 && tallesFiltrados[0] !== 'Único' && tallesFiltrados[0] !== 'U'
 
   const getStockParaTalle = (talle) => {
     if (!hayTalles) return producto.stock
-    const v = variantesFiltradas.find((v) => (v.talla ?? v.talle) === talle)
+    const v = variantesFiltradas.find((v) => v.talla === talle)
     return v?.stock ?? 0
   }
 
@@ -184,10 +177,10 @@ export default function ProductoDetalle() {
             {/* Galería adicional */}
             {fotos.length > 1 && (
               <div className="absolute bottom-3 left-3 flex gap-1.5">
-                {fotos.slice(1, 4).map((f, i) => (
-                  <img key={i} src={productService.buildImageSrc(f)} alt=""
+                {fotos.filter(f => f !== primeraFoto).slice(0, 3).map((f, i) => (
+                  <img key={f.id ?? i} src={productService.buildImageSrc(f)} alt=""
                     className="h-14 w-14 object-cover border-2 border-ivory/60 cursor-pointer hover:border-ivory"
-                    onClick={() => setFotos([f, ...fotos.filter((_, j) => j !== i + 1)])} />
+                    onClick={() => setSelectedFotoId(f.id ?? null)} />
                 ))}
               </div>
             )}

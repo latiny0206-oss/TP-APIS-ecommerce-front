@@ -1,22 +1,21 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Minus, Plus, Trash2, Tag, ArrowRight, ShoppingCart } from 'lucide-react'
 import { useSelector, useDispatch } from 'react-redux'
-import { updateQty, removeFromCart, clearCart, computeTotals } from '../store/cartSlice.js'
+import { updateQty, removeFromCart, clearCart, selectCartTotals, SHIPPING_THRESHOLD, SHIPPING_COST } from '../store/cartSlice.js'
 import { setReturnTo } from '../store/authSlice.js'
 import { useProducts } from '../context/ProductsContext.jsx'
 import { fmtPrice } from '../utils/format.js'
 import Button from '../components/ui/Button.jsx'
 
-const SHIPPING_THRESHOLD = 80000
-const SHIPPING_COST      = 10000
-
-
 export default function Carrito() {
   const navigate   = useNavigate()
   const dispatch   = useDispatch()
   const items      = useSelector((state) => state.cart.items)
-  const totals     = computeTotals(items)
+  const totals     = useSelector(selectCartTotals)
   const isLoggedIn = useSelector((state) => state.auth.isLoggedIn)
+  // Cart page shows shipping based on pre-coupon subtotal (coupon applied at checkout)
+  const cartShipping = totals.subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST
+  const cartTotal    = totals.subtotal + cartShipping
   const { byId }   = useProducts()
 
   const handleCheckout = () => {
@@ -167,10 +166,10 @@ export default function Carrito() {
                 <div className="flex justify-between text-ivory/45">
                   <span>Envío</span>
                   <span className="font-mono">
-                    {totals.subtotal >= SHIPPING_THRESHOLD ? 'Gratis' : fmtPrice(SHIPPING_COST)}
+                    {cartShipping === 0 ? 'Gratis' : fmtPrice(cartShipping)}
                   </span>
                 </div>
-                {totals.subtotal < SHIPPING_THRESHOLD && (
+                {cartShipping > 0 && (
                   <p className="font-mono text-[9px] text-ivory/30">
                     Envío gratis en compras mayores a {fmtPrice(SHIPPING_THRESHOLD)}
                   </p>
@@ -180,7 +179,7 @@ export default function Carrito() {
               <div className="flex items-baseline justify-between border-t border-ivory/15 pt-5 mb-7">
                 <span className="font-narrow font-bold uppercase tracking-widest-2">Total</span>
                 <span className="font-display font-black tracking-tightest text-3xl">
-                  {fmtPrice(totals.subtotal + (totals.subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST))}
+                  {fmtPrice(cartTotal)}
                 </span>
               </div>
 

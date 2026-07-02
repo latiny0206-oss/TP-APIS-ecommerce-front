@@ -85,9 +85,9 @@ function OrderDetail({ order, onClose, onConfirm, onCancel, actionLoading, actio
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="font-narrow font-bold text-xs uppercase tracking-tight leading-tight truncate">{nombre}</div>
-                      {(item.talla ?? item.talle) && (
+                      {item.talle && (
                         <div className="font-mono text-[9px] text-rock/45 mt-0.5">
-                          Talle: {item.talla ?? item.talle} · Cant.: {cantidad}
+                          Talle: {item.talle} · Cant.: {cantidad}
                         </div>
                       )}
                     </div>

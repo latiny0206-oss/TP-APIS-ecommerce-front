@@ -34,7 +34,7 @@ export default function AdminPhotos() {
       productService.getVariantes(),
     ]).then(([prods, vars]) => {
       const varByProd = vars.reduce((acc, v) => {
-        const pid = v.idProducto ?? v.productoId
+        const pid = v.productoId
         if (pid) { acc[pid] = acc[pid] ?? []; acc[pid].push(v) }
         return acc
       }, {})
@@ -186,7 +186,7 @@ export default function AdminPhotos() {
                 ${selectedVar?.id === v.id
                   ? 'bg-rock text-ivory border-rock'
                   : 'border-rock/20 text-rock/60 hover:text-rock'}`}>
-              {v.color} · {v.talla ?? v.talle} #{v.id}
+              {v.color} · {v.talla} #{v.id}
             </button>
           ))}
         </div>

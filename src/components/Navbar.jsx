@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import { useSelector, useDispatch } from 'react-redux'
 import { logout } from '../store/authSlice.js'
-import { computeTotals } from '../store/cartSlice.js'
+import { selectCartTotals } from '../store/cartSlice.js'
 import { authService } from '../api/authService.js'
 import { NAV_ITEMS, MARQUEE_ITEMS } from '../data/index.js'
 
@@ -39,8 +39,7 @@ export default function Navbar() {
   const [searchParams] = useSearchParams()
   const dispatch       = useDispatch()
   const { isLoggedIn, user } = useSelector((state) => state.auth)
-  const items    = useSelector((state) => state.cart.items)
-  const cartCount = computeTotals(items).itemCount
+  const cartCount = useSelector(selectCartTotals).itemCount
 
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled,   setScrolled]   = useState(false)

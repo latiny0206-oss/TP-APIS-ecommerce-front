@@ -82,7 +82,7 @@ function VariantRow({ variant, onUpdate, onDelete }) {
           <span className="font-narrow font-bold text-xs uppercase tracking-tight whitespace-nowrap">{variant.color}</span>
         </div>
       </td>
-      <td className="px-3 py-2.5 font-narrow text-xs">{variant.talla ?? variant.talle}</td>
+      <td className="px-3 py-2.5 font-narrow text-xs">{variant.talla}</td>
       <td className="px-3 py-2.5 font-narrow text-xs text-rock/60 whitespace-nowrap">{variant.material}</td>
       <td className="px-3 py-2.5"><NumInput value={variant.peso}   onChange={v => onUpdate('peso', v)}   width={72} /></td>
       <td className="px-3 py-2.5"><NumInput value={variant.precio} onChange={v => onUpdate('precio', v)} width={88} /></td>
@@ -122,7 +122,7 @@ export default function AdminVariants() {
       productService.getAllFotos().catch(() => []),
     ]).then(([prods, vars, fotos]) => {
       const varByProd = vars.reduce((acc, v) => {
-        const pid = v.idProducto ?? v.productoId
+        const pid = v.productoId
         if (pid) { acc[pid] = acc[pid] ?? []; acc[pid].push(v) }
         return acc
       }, {})
@@ -182,7 +182,7 @@ export default function AdminVariants() {
       const created = await productService.crearVariante({
         productoId: selectedId,
         color:    newVariant.color,
-        talla:    newVariant.talla ?? newVariant.talle,
+        talla:    newVariant.talla,
         material: newVariant.material,
         peso:     Number(newVariant.peso),
         precio:   Number(newVariant.precio),
@@ -221,7 +221,7 @@ export default function AdminVariants() {
           productService.actualizarVariante(v.id, {
             productoId: selectedId,
             color:    v.color,
-            talla:    v.talla ?? v.talle,
+            talla:    v.talla,
             material: v.material,
             peso:     Number(v.peso),
             precio:   Number(v.precio),

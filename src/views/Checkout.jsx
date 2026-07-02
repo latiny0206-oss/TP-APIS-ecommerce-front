@@ -2,11 +2,10 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, ChevronRight, Tag, X } from 'lucide-react'
 import { useSelector, useDispatch } from 'react-redux'
-import { clearCart, computeTotals } from '../store/cartSlice.js'
-import { cartService }       from '../api/cartService.js'
-import { discountService }   from '../api/discountService.js'
-import { getErrorMessage }   from '../api/api.js'
-import { fmtPrice }          from '../utils/format.js'
+import { clearCart, applyCoupon, removeCoupon, selectCartTotals, SHIPPING_THRESHOLD, SHIPPING_COST } from '../store/cartSlice.js'
+import { cartService }     from '../api/cartService.js'
+import { getErrorMessage } from '../api/api.js'
+import { fmtPrice }        from '../utils/format.js'
 import Button from '../components/ui/Button.jsx'
 
 // ─── Stepper ───────────────────────────────────────────────────────────────
@@ -47,21 +46,9 @@ function Field({ label, error, children }) {
   )
 }
 
-const SHIPPING_THRESHOLD = 80000
-const SHIPPING_COST      = 10000
-
 // ─── Resumen del pedido (sidebar) ───────────────────────────────────────────
-function OrderSummary({ items, totals, cuponCodigo, cuponInfo }) {
-  let descuentoAmt = 0
-  if (cuponInfo) {
-    const val = Number(cuponInfo.porcentaje ?? cuponInfo.valor ?? 0)
-    if (cuponInfo.tipo === 'PORCENTAJE') descuentoAmt = Math.round(totals.subtotal * val / 100)
-    else if (cuponInfo.tipo === 'FIJO')  descuentoAmt = Math.min(val, totals.subtotal)
-  }
-  const subtotalConDesc = Math.max(0, totals.subtotal - descuentoAmt)
-  const shippingCost    = subtotalConDesc >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST
-  const totalFinal      = subtotalConDesc + shippingCost
-
+// totals comes from selectCartTotals (includes coupon discount + shipping)
+function OrderSummary({ items, totals, coupon }) {
   return (
     <aside className="lg:sticky lg:top-24 h-fit bg-rock text-ivory p-7 lg:p-9">
       <div className="font-mono text-[11px] tracking-widest-2 uppercase text-alpenglow mb-2">Resumen</div>
@@ -88,26 +75,26 @@ function OrderSummary({ items, totals, cuponCodigo, cuponInfo }) {
           <span>Subtotal</span>
           <span className="font-mono">{fmtPrice(totals.subtotal)}</span>
         </div>
-        {descuentoAmt > 0 && (
+        {totals.discount > 0 && (
           <div className="flex items-center justify-between text-alpenglow">
             <div className="flex items-center gap-2">
               <Tag size={12} />
-              <span className="font-mono text-[10px] tracking-widest-2 uppercase truncate">{cuponCodigo}</span>
+              <span className="font-mono text-[10px] tracking-widest-2 uppercase truncate">{coupon?.codigo}</span>
             </div>
-            <span className="font-mono text-sm">-{fmtPrice(descuentoAmt)}</span>
+            <span className="font-mono text-sm">-{fmtPrice(totals.discount)}</span>
           </div>
         )}
-        {cuponCodigo && descuentoAmt === 0 && (
+        {coupon && totals.discount === 0 && (
           <div className="flex items-center gap-2 text-alpenglow">
             <Tag size={12} />
-            <span className="font-mono text-[10px] tracking-widest-2 uppercase truncate">{cuponCodigo}</span>
+            <span className="font-mono text-[10px] tracking-widest-2 uppercase truncate">{coupon.codigo}</span>
           </div>
         )}
         <div className="flex justify-between text-ivory/45">
           <span>Envío</span>
-          <span className="font-mono">{shippingCost === 0 ? 'Gratis' : fmtPrice(shippingCost)}</span>
+          <span className="font-mono">{totals.shipping === 0 ? 'Gratis' : fmtPrice(totals.shipping)}</span>
         </div>
-        {shippingCost > 0 && (
+        {totals.shipping > 0 && (
           <p className="font-mono text-[9px] text-ivory/30">
             Envío gratis en compras mayores a {fmtPrice(SHIPPING_THRESHOLD)}
           </p>
@@ -116,9 +103,9 @@ function OrderSummary({ items, totals, cuponCodigo, cuponInfo }) {
 
       <div className="flex items-baseline justify-between border-t border-ivory/15 pt-4">
         <span className="font-narrow font-bold uppercase tracking-widest-2">Total</span>
-        <span className="font-display font-black tracking-tightest text-3xl">{fmtPrice(totalFinal)}</span>
+        <span className="font-display font-black tracking-tightest text-3xl">{fmtPrice(totals.total)}</span>
       </div>
-      {cuponCodigo && descuentoAmt === 0 && (
+      {coupon && totals.discount === 0 && (
         <p className="font-mono text-[9px] tracking-widest-2 uppercase text-ivory/35 mt-2">
           Descuento aplicado al confirmar
         </p>
@@ -171,8 +158,13 @@ export default function Checkout() {
   const navigate  = useNavigate()
   const dispatch  = useDispatch()
   const items     = useSelector((state) => state.cart.items)
-  const totals    = computeTotals(items)
+  const totals    = useSelector(selectCartTotals)
   const user      = useSelector((state) => state.auth.user)
+
+  // Coupon state — sourced from Redux (single source of truth)
+  const coupon       = useSelector((state) => state.cart.coupon)
+  const couponError  = useSelector((state) => state.cart.couponError)
+  const couponLoading = useSelector((state) => state.cart.couponStatus === 'loading')
 
   const [step, setStep] = useState(1)
 
@@ -181,13 +173,9 @@ export default function Checkout() {
   const [envioErrors, setEnvioErrors] = useState({})
 
   // Paso 2 — Pago / Cupón
-  const [metodoPago,      setMetodoPago]      = useState('')
-  const [cuponCodigo,     setCuponCodigo]      = useState('')
-  const [cuponInput,      setCuponInput]       = useState('')
-  const [cuponInfo,       setCuponInfo]        = useState(null)  // objeto del backend
-  const [cuponError,      setCuponError]       = useState(null)
-  const [cuponLoading,    setCuponLoading]     = useState(false)
-  const [pagoError,       setPagoError]        = useState(null)
+  const [metodoPago,    setMetodoPago]    = useState('')
+  const [cuponInput,    setCuponInput]    = useState('')   // transient UI input
+  const [pagoError,     setPagoError]     = useState(null)
 
   // Tarjeta de crédito/débito
   const [tarjeta, setTarjeta] = useState({ numero: '', nombre: '', vencimiento: '', cvv: '' })
@@ -244,7 +232,6 @@ export default function Checkout() {
     return errs
   }
 
-
   // Submit final
   const [submitting,   setSubmitting]   = useState(false)
   const [processError, setProcessError] = useState(null)
@@ -297,7 +284,6 @@ export default function Checkout() {
     return errs
   }
 
-
   const setEnvioField = (field) => (e) => {
     setEnvio((prev) => ({ ...prev, [field]: e.target.value }))
     setEnvioErrors((prev) => ({ ...prev, [field]: undefined }))
@@ -319,37 +305,27 @@ export default function Checkout() {
     window.scrollTo({ top: 0 })
   }
 
-  // ── Validar cupón ─────────────────────────────────────────────────────────
-  const aplicarCupon = async () => {
+  // ── Cupón (dispatches to Redux) ────────────────────────────────────────────
+  const handleAplicarCupon = async () => {
     const codigo = cuponInput.trim().toUpperCase()
     if (!codigo) return
-    setCuponLoading(true)
-    setCuponError(null)
-    setCuponInfo(null)
     try {
-      const descuento = await discountService.buscarPorCodigo(codigo)
-      setCuponInfo(descuento)
-      setCuponCodigo(codigo)
+      await dispatch(applyCoupon(codigo)).unwrap()
       setCuponInput('')
-    } catch (e) {
-      const msg = getErrorMessage(e)
-      setCuponError(e.response?.status === 404 ? 'Código no encontrado' : msg)
-    } finally {
-      setCuponLoading(false)
+    } catch {
+      // error is stored in state.cart.couponError — no local handling needed
     }
   }
 
-  const quitarCupon = () => {
-    setCuponCodigo('')
-    setCuponInfo(null)
-    setCuponError(null)
+  const handleQuitarCupon = () => {
+    dispatch(removeCoupon())
     setCuponInput('')
   }
 
   function descuentoLabel(d) {
     if (!d) return ''
-    if (d.tipo === 'PORCENTAJE') return `${d.codigo ?? d.nombre ?? 'Descuento'} — ${d.porcentaje ?? d.valor}% OFF`
-    if (d.tipo === 'FIJO')       return `${d.codigo ?? d.nombre ?? 'Descuento'} — -${fmtPrice(d.valor ?? d.monto)}`
+    if (d.tipo === 'PORCENTAJE') return `${d.codigo ?? d.nombre ?? 'Descuento'} — ${d.valor}% OFF`
+    if (d.tipo === 'FIJO')       return `${d.codigo ?? d.nombre ?? 'Descuento'} — -${fmtPrice(d.valor)}`
     return d.codigo ?? d.nombre ?? 'Descuento'
   }
 
@@ -394,10 +370,10 @@ export default function Checkout() {
         throw new Error(`Error en "${items[firstFailed].nombre}": ${getErrorMessage(addResults[firstFailed].reason)}`)
       }
 
-      // 4. Aplicar cupón o limpiar descuento previo
-      if (cuponCodigo) {
+      // 4. Aplicar cupón (código viene de Redux)
+      if (coupon?.codigo) {
         try {
-          await cartService.aplicarCupon(carritoId, cuponCodigo)
+          await cartService.aplicarCupon(carritoId, coupon.codigo)
         } catch {
           await cartService.vaciar(carritoId).catch(() => {})
           throw new Error('No se pudo aplicar el cupón. Verificá el código o retiralo para continuar sin descuento.')
@@ -736,7 +712,7 @@ export default function Checkout() {
                   </div>
                 )}
 
-                {/* Cupón por código */}
+                {/* Cupón por código — estado en Redux */}
                 <div className="border-t border-rock/10 pt-6">
                   <div className="font-mono text-[11px] tracking-widest-2 uppercase text-alpenglow mb-2">
                     ¿Tenés un cupón?
@@ -745,19 +721,19 @@ export default function Checkout() {
                     Código de descuento
                   </h3>
 
-                  {cuponInfo ? (
+                  {coupon ? (
                     <div className="flex items-center gap-3 p-4 border border-pine bg-pine/[0.04]">
                       <Tag size={16} className="text-pine shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="font-narrow font-bold uppercase tracking-tight text-sm">
-                          {descuentoLabel(cuponInfo)}
+                          {descuentoLabel(coupon)}
                         </div>
                         <div className="font-mono text-[10px] text-rock/50 mt-0.5">
-                          Código: {cuponCodigo}
+                          Código: {coupon.codigo}
                         </div>
                       </div>
                       <button
-                        onClick={quitarCupon}
+                        onClick={handleQuitarCupon}
                         className="h-7 w-7 grid place-items-center text-rock/40 hover:text-red-700 transition-colors shrink-0"
                       >
                         <X size={14} />
@@ -768,24 +744,24 @@ export default function Checkout() {
                       <input
                         type="text"
                         value={cuponInput}
-                        onChange={(e) => { setCuponInput(e.target.value.toUpperCase()); setCuponError(null) }}
-                        onKeyDown={(e) => { if (e.key === 'Enter') aplicarCupon() }}
+                        onChange={(e) => setCuponInput(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleAplicarCupon() }}
                         placeholder="OTONO2026"
                         className="input-base flex-1 font-mono tracking-widest uppercase"
                       />
                       <Button
                         variant="ghost-light"
                         size="md"
-                        onClick={aplicarCupon}
-                        disabled={cuponLoading || !cuponInput.trim()}
+                        onClick={handleAplicarCupon}
+                        disabled={couponLoading || !cuponInput.trim()}
                       >
-                        {cuponLoading ? <span className="spinner" /> : 'Aplicar'}
+                        {couponLoading ? <span className="spinner" /> : 'Aplicar'}
                       </Button>
                     </div>
                   )}
 
-                  {cuponError && (
-                    <p className="font-mono text-[10px] text-red-600 mt-2">{cuponError}</p>
+                  {couponError && (
+                    <p className="font-mono text-[10px] text-red-600 mt-2">{couponError}</p>
                   )}
                   <p className="font-mono text-[10px] tracking-widest-2 uppercase text-rock/35 mt-3">
                     Opcional · El descuento se aplica al confirmar el pedido
@@ -861,11 +837,11 @@ export default function Checkout() {
                       Tarjeta: •••• •••• •••• {tarjeta.numero.slice(-4)}
                     </p>
                   )}
-                  {cuponInfo && (
+                  {coupon && (
                     <div className="flex items-center gap-2 mt-3 text-pine">
                       <Tag size={13} />
                       <span className="font-mono text-[10px] tracking-widest-2 uppercase">
-                        {descuentoLabel(cuponInfo)}
+                        {descuentoLabel(coupon)}
                       </span>
                     </div>
                   )}
@@ -910,8 +886,7 @@ export default function Checkout() {
           <OrderSummary
             items={items}
             totals={totals}
-            cuponCodigo={cuponCodigo || null}
-            cuponInfo={cuponInfo}
+            coupon={coupon}
           />
         </div>
       </div>

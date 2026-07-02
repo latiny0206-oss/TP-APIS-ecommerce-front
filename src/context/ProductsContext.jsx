@@ -39,7 +39,7 @@ export function ProductsProvider({ children }) {
       productService.getAllFotos().catch(() => []),
     ]).then(([productos, variantes, fotos]) => {
       const variantesByProducto = variantes.reduce((acc, v) => {
-        const pid = v.idProducto ?? v.productoId
+        const pid = v.productoId
         if (pid) {
           acc[pid] = acc[pid] ?? []
           acc[pid].push(v)

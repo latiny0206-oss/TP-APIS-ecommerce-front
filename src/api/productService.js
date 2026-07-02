@@ -155,13 +155,12 @@ export const productService = {
     const categoriaNombre = (producto.categoriaNombre ?? producto.categoria?.nombre ?? '').toLowerCase()
     const marcaNombre     = producto.marcaNombre ?? producto.marca?.nombre ?? ''
 
-    const talles   = variantes.map((v) => v.talla ?? v.talle).filter(Boolean)
+    const talles   = variantes.map((v) => v.talla).filter(Boolean)
     const stock    = variantes.reduce((s, v) => s + (v.stock ?? 0), 0)
-    const temporada = variantes[0]?.estacion ?? variantes[0]?.temporada ?? '4 Estaciones'
+    const temporada = variantes[0]?.estacion ?? '4 Estaciones'
 
     const stockPorTalle = variantes.reduce((acc, v) => {
-      const t = v.talla ?? v.talle
-      if (t) acc[t] = v.stock ?? 0
+      if (v.talla) acc[v.talla] = v.stock ?? 0
       return acc
     }, {})
 
