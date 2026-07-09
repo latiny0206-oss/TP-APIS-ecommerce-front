@@ -22,6 +22,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Propaga el mensaje del backend en error.message: los thunks no necesitan
+    // try/catch — createAsyncThunk serializa el error y lo expone en action.error.message
+    error.message = error.response?.data?.message ?? error.message
     if (error.response?.status === 401) {
       const url = error.config?.url ?? ''
       const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/register')

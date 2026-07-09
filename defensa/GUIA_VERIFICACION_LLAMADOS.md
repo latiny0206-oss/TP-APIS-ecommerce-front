@@ -1,0 +1,161 @@
+# Guía de verificación de llamados a la API — por flujo
+
+Para usar por **cualquiera del equipo**, aunque no haya programado esa parte. La idea: recorrer cada flujo con las herramientas del navegador abiertas y tildar el checklist. Si algo no coincide, anotar qué viste y en qué flujo.
+
+## Preparación (una sola vez)
+
+1. Levantar el backend (`./mvnw spring-boot:run` en `Back/ecommerce`) y el front (`npm run dev` en `Front`).
+2. Abrir Chrome → F12 (DevTools) → pestaña **Network** → filtrar por **Fetch/XHR** (así solo ves llamados a la API, no imágenes ni JS).
+3. Instalar la extensión **Redux DevTools** si no la tenés → en F12 aparece la pestaña "Redux". Ahí se ve cada action despachada, en orden, con el estado antes y después.
+4. Tildá "Preserve log" en Network si vas a navegar entre páginas sin perder el historial.
+
+## StrictMode: el "doble llamado" que NO es un bug
+
+React StrictMode (activado en `main.jsx`, **solo en desarrollo**) monta cada componente dos veces a propósito para detectar efectos mal escritos — por eso en dev podés ver algo repetido que en producción sale una sola vez.
+
+**Cómo diferenciar**: un falso positivo de StrictMode aparece *solo en dev*, *duplicado exacto e inmediato* (mismo endpoint, milisegundos de diferencia, al montar la página). Un duplicado real también aparece con `npm run build && npm run preview` (que no tiene StrictMode), o se repite en cada render/interacción, no solo al montar. En este proyecto además pusimos guards (en `ProductsContext` y caches de promesa en servicios), así que **incluso en dev no deberías ver dobles** — si ves uno, anotalo: es un bug real o un guard que se rompió.
+
+## Qué mirar en Redux DevTools (regla general)
+
+Por cada acción del usuario que dispara un thunk tienen que aparecer **exactamente dos actions**: `<slice>/<thunk>/pending` y después `<slice>/<thunk>/fulfilled` (o `/rejected` si falló). Si ves `pending` dos veces seguidas para un solo click, hay un dispatch duplicado. Las actions síncronas (`cart/addToCart`, `auth/logout`) aparecen una sola vez por click y **sin** pending/fulfilled — no son asíncronas.
+
+---
+
+## Flujo 1 — Home / primera carga de la app
+
+**Acción**: abrir `http://localhost:5173/` con el carrito de Network vacío (Ctrl+R).
+
+**Network esperado** (una vez cada uno, sin importar cuántos componentes usen los datos):
+| Llamado | Método | Cuántas veces | Quién lo dispara |
+|---|---|---|---|
+| `/api/productos` | GET | 1 | `ProductsProvider` al montar |
+| `/api/variantes` | GET | 1 | ídem (van juntos en un `Promise.all`) |
+| `/api/fotos` | GET | 1 | ídem |
+| `/api/descuentos/activos` | GET | 1 | `HeroSection` (promo del banner) — cacheado por promesa a nivel módulo |
+
+**Redux DevTools**: si había sesión guardada, una única `auth/sessionRestored`; si no, `auth/initDone`. Nada del carrito (se rehidrata de localStorage al importar el módulo, sin actions).
+
+- [ ] `/productos`, `/variantes`, `/fotos` aparecen 1 vez cada uno
+- [ ] `/descuentos/activos` aparece 1 vez
+- [ ] Ningún llamado se repite al quedarse quieto en la página
+
+## Flujo 2 — Catálogo y detalle de producto
+
+**Acción**: navegar a `/catalogo`, filtrar, abrir un producto.
+
+**Network esperado**: **CERO llamados nuevos**. Todo el catálogo (productos, variantes, fotos) ya se cargó en el Flujo 1 y vive en `ProductsContext`; filtrar, ordenar y abrir el detalle leen de memoria.
+
+**Redux DevTools**: nada — el catálogo no pasa por Redux (decisión de diseño: es estado de solo-lectura).
+
+- [ ] Filtrar/ordenar en catálogo: 0 requests
+- [ ] Abrir detalle de producto: 0 requests
+- [ ] Volver al catálogo y abrir otro producto: 0 requests
+
+## Flujo 3 — Login
+
+**Acción**: en `/login`, completar credenciales y enviar.
+
+**Network esperado**: `POST /api/auth/login` — **1 vez por click** en "Ingresar". Con credenciales malas: el mismo POST devuelve 401 (rojo en Network) — eso no es un bug, es el flujo de error.
+
+**Redux DevTools**: `auth/login/pending` → `auth/login/fulfilled` (una vez cada una). Con credenciales malas: `pending` → `rejected` y `state.auth.error` queda con el mensaje. Al tipear de nuevo: una `auth/clearError`.
+
+- [ ] 1 solo POST por click (probar click rápido doble: el botón se deshabilita con `status === 'loading'`)
+- [ ] Ciclo pending → fulfilled/rejected una sola vez
+- [ ] Login incorrecto muestra el mensaje del backend, no un error genérico
+
+## Flujo 4 — Registro
+
+**Acción**: completar el form de `/registro` y enviar.
+
+**Network esperado**: `POST /api/auth/register` — 1 vez. (La validación del form es local: si el form tiene errores, **cero** requests.)
+
+**Redux DevTools**: `auth/register/pending` → `fulfilled` (status queda `'registered'`, por eso aparece la pantalla de bienvenida) → a los 2 s navega sola al home.
+
+- [ ] Form inválido: 0 requests
+- [ ] Form válido: 1 POST, ciclo pending → fulfilled una vez
+
+## Flujo 5 — Agregar / quitar / modificar carrito
+
+**Acción**: "Agregar al carrito" en un producto; en `/carrito` usar +, −, "Quitar", "Vaciar".
+
+**Network esperado**: **CERO**. El carrito es 100% local (Redux + localStorage) hasta el checkout. Si ves un request acá, es un bug.
+
+**Redux DevTools**: una action síncrona por click — `cart/addToCart`, `cart/updateQty`, `cart/removeFromCart`, `cart/clearCart`. Al agregar, el estado de `toast` también cambia en la MISMA action (extraReducer cross-slice — no hay una action separada del toast).
+
+- [ ] Agregar/quitar/± cantidad: 0 requests
+- [ ] Una action por click en DevTools
+- [ ] `addToCart` cambia `cart.items` Y `toast.visible` en la misma action
+
+## Flujo 6 — Aplicar cupón (checkout, paso 2)
+
+**Acción**: escribir el código y click en "Aplicar" (o Enter).
+
+**Network esperado**: `GET /api/descuentos/buscar?codigo=XXX` — 1 vez por click. Con código inválido: mismo GET, respuesta 404 — el mensaje aparece bajo el input.
+
+**Redux DevTools**: `cart/applyCoupon/pending` (couponStatus `'loading'`) → `fulfilled` (cupón en `state.cart.coupon`) o `rejected` (`couponError` con el mensaje). Quitar el cupón (✕) despacha `cart/removeCoupon` — sin request.
+
+- [ ] 1 GET por click en Aplicar (el botón se deshabilita mientras `couponStatus === 'loading'`)
+- [ ] Ciclo pending → fulfilled/rejected una sola vez
+- [ ] Quitar cupón: 0 requests
+- [ ] Navegar carrito ↔ checkout con cupón puesto: 0 requests (el cupón vive en el store)
+
+## Flujo 7 — Confirmar compra (checkout, paso 3)
+
+**Acción**: click en "Confirmar compra". Es el único flujo con varios llamados encadenados — esta es la secuencia esperada, en orden:
+
+| # | Llamado | Método | Cuántas veces |
+|---|---|---|---|
+| 1 | `/api/carritos` | GET | 1 (busca carrito activo del usuario) |
+| 2 | `/api/carritos` | POST | 0 o 1 (solo si no tenía carrito) |
+| 3 | `/api/carritos/{id}/vaciar` | POST | 1 |
+| 4 | `/api/carritos/{id}/items` | POST | **1 por línea del carrito** (en paralelo — verlas juntas es normal) |
+| 5a | `/api/carritos/{id}/descuento` | PUT | 1 solo si hay cupón |
+| 5b | `/api/carritos/{id}` | PUT | 1 solo si NO hay cupón (desasocia descuentos viejos) |
+| 6 | `/api/carritos/{id}/checkout` | POST | 1 |
+
+**Redux DevTools**: al éxito, una única `cart/clearCart` y navega a `/confirmacion`.
+
+**Verificación del fix de envío**: armar un carrito de ~$85.000, aplicar un cupón que lo baje de $80.000 → el resumen debe decir "Gratis" y el `montoFinal` de la respuesta del checkout (mirarla en Network → Response) debe venir **sin** los $10.000 de envío. Y el detalle del pedido en "Mis pedidos" tiene que coincidir con lo que mostró el checkout.
+
+- [ ] La secuencia aparece una sola vez y en orden (doble click en Confirmar no duplica: `submitting` lo bloquea)
+- [ ] Tantos POST de items como líneas tenía el carrito
+- [ ] $85.000 + cupón → envío gratis en UI y en la respuesta del backend
+- [ ] Pedido < $80.000 sin cupón → envío $10.000 en ambos lados
+- [ ] Después del éxito: carrito vacío (badge en 0)
+
+## Flujo 8 — Historial de pedidos y detalle
+
+**Acción**: ir a "Mis pedidos" (`/cuenta/ordenes`); abrir un pedido.
+
+**Network esperado**: `GET /api/ordenes/usuario/{id}` — 1 vez **la primera entrada**; volver a entrar en la misma sesión: **0 requests** (cache a nivel módulo en `useOrders.js`, se invalida al login/logout). Detalle: `GET /api/ordenes/{id}` — 1 vez la primera, después cache.
+
+- [ ] Primera visita: 1 GET; segunda visita sin recargar: 0
+- [ ] Cancelar un pedido: 1 POST `/api/ordenes/{id}/cancelar` y la lista se actualiza sin refetch completo
+
+## Flujo 9 — Logout
+
+**Acción**: cerrar sesión desde el menú de la Navbar (o Perfil, o el panel admin).
+
+**Network esperado**: **CERO llamados** — el logout es local (borra token/usuario de localStorage y resetea el store). No hay endpoint de logout en el backend (JWT stateless).
+
+**Redux DevTools**: una única `auth/logout`. En esa MISMA action, mirar el diff del estado: `auth` se resetea **y `cart` se vacía** (extraReducer del cartSlice escuchando `logout` — es el fix del bug "carrito post-logout").
+
+- [ ] 0 requests al desloguear
+- [ ] `auth/logout` vacía `cart.items` y `cart.coupon` en la misma action
+- [ ] El badge del carrito queda en 0 y `/carrito` aparece vacío SIN recargar la página
+- [ ] Loguearse con otro usuario: no aparece nada del carrito anterior
+
+## Flujo 10 — Panel admin (breve)
+
+Cada vista admin fetchea lo suyo al entrar (1 vez, con caches a nivel módulo en descuentos y órdenes): Dashboard → `GET /api/admin/dashboard`; Descuentos → `GET /api/descuentos` (fallback a `/activos`); Órdenes → `GET /api/ordenes`. Crear/editar/borrar dispara 1 request por acción e invalida el cache correspondiente.
+
+- [ ] Entrar dos veces a Descuentos sin recargar: 1 solo GET total
+- [ ] Cada alta/edición/borrado: 1 request por acción
+
+---
+
+## Nota final
+
+- **No existe un flujo de "cajas"** en este proyecto (eso era de otro grupo) — los flujos listados arriba son todos los que hacen llamados a la API.
+- Si un llamado aparece **dos veces idénticas al montar una página en dev** y una sola con `npm run build && npm run preview`, es StrictMode (ver arriba) — pero reportalo igual, porque en este proyecto los guards deberían evitarlo incluso en dev.
+- Herramienta extra: los logs del backend (`spring.jpa.show-sql` en el perfil dev) muestran cada query — si la pestaña Network se ve bien pero el backend loguea consultas repetidas, también vale anotarlo.

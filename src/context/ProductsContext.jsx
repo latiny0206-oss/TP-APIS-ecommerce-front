@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, useCallback, useMemo } from 'react'
+import { createContext, useContext, useReducer, useEffect, useCallback, useMemo, useRef } from 'react'
 import { productService } from '../api/productService.js'
 import { getErrorMessage } from '../api/api.js'
 
@@ -77,7 +77,14 @@ export function ProductsProvider({ children }) {
     })
   }, [])
 
-  useEffect(() => { load() }, [load])
+  // Guard: StrictMode monta el provider dos veces en dev; sin esto el fetch
+  // inicial (productos + variantes + fotos) se duplicaría. reload() no se ve afectado.
+  const didInit = useRef(false)
+  useEffect(() => {
+    if (didInit.current) return
+    didInit.current = true
+    load()
+  }, [load])
 
   const upsert = useCallback((product) => dispatch({ type: 'UPSERT', payload: product }), [])
   const remove = useCallback((id)      => dispatch({ type: 'REMOVE', payload: id }),      [])

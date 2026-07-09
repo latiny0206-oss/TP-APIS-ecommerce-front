@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 import { discountService } from '../api/discountService.js'
-import { getErrorMessage }  from '../api/api.js'
+import { logout } from './authSlice.js'
 
 export const SHIPPING_THRESHOLD = 80_000
 export const SHIPPING_COST      = 10_000
@@ -18,18 +18,15 @@ export function loadSaved() {
 
 const saved = loadSaved()
 
-// Defined before the slice so extraReducers can reference the action types
+// Defined before the slice so extraReducers can reference the action types.
+// Sin try/catch: createAsyncThunk captura el rechazo y despacha .rejected solo;
+// el mensaje del backend llega por action.error.message (normalizado en api.js).
 export const applyCoupon = createAsyncThunk(
   'cart/applyCoupon',
-  async (code, { rejectWithValue }) => {
+  async (code) => {
     const trimmed = (code || '').trim().toUpperCase()
     if (!trimmed) return null
-    try {
-      return await discountService.buscarPorCodigo(trimmed)
-    } catch (e) {
-      const msg = e.response?.status === 404 ? 'Código no encontrado' : getErrorMessage(e)
-      return rejectWithValue(msg)
-    }
+    return await discountService.buscarPorCodigo(trimmed)
   }
 )
 
@@ -110,13 +107,22 @@ const cartSlice = createSlice({
       })
       .addCase(applyCoupon.rejected, (state, action) => {
         state.couponStatus = 'idle'
-        state.couponError  = action.payload ?? 'Error al aplicar el cupón'
+        state.couponError  = action.error.message ?? 'Error al aplicar el cupón'
+      })
+      // Al cerrar sesión (botón o auto-logout por 401) el carrito visible se vacía.
+      // El carrito del backend queda asociado al usuario y no se toca.
+      .addCase(logout, (state) => {
+        state.items        = []
+        state.coupon       = null
+        state.couponError  = null
+        state.couponStatus = 'idle'
       })
   },
 })
 
 // Memoized selector: computes subtotal, discount, shipping and total in one pass.
-// Shipping threshold is applied after the coupon discount.
+// El umbral de envío gratis se evalúa sobre el subtotal ANTES del cupón:
+// un descuento no puede quitar el envío gratis ya ganado por monto de compra.
 export const selectCartTotals = createSelector(
   (state) => state.cart.items,
   (state) => state.cart.coupon,
@@ -132,7 +138,7 @@ export const selectCartTotals = createSelector(
     }
 
     const subtotalConDesc = Math.max(0, subtotal - discount)
-    const shipping        = subtotalConDesc >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST
+    const shipping        = subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST
     const total           = subtotalConDesc + shipping
 
     return { subtotal, discount, subtotalConDesc, shipping, total, itemCount }

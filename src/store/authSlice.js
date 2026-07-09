@@ -1,42 +1,35 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { authService } from '../api/authService.js'
-import { getErrorMessage } from '../api/api.js'
 
+// Sin try/catch: createAsyncThunk captura el rechazo y despacha .rejected solo;
+// el mensaje del backend llega por action.error.message (normalizado en api.js).
 export const loginThunk = createAsyncThunk(
   'auth/login',
-  async ({ username, password }, { rejectWithValue }) => {
-    try {
-      const data = await authService.login({ username, password })
-      window.dispatchEvent(new CustomEvent('auth:login', { detail: { id: data.id } }))
-      return {
-        id:       data.id,
-        username: data.username,
-        nombre:   data.nombre,
-        email:    data.email,
-        rol:      data.rol,
-      }
-    } catch (e) {
-      return rejectWithValue(getErrorMessage(e))
+  async ({ username, password }) => {
+    const data = await authService.login({ username, password })
+    window.dispatchEvent(new CustomEvent('auth:login', { detail: { id: data.id } }))
+    return {
+      id:       data.id,
+      username: data.username,
+      nombre:   data.nombre,
+      email:    data.email,
+      rol:      data.rol,
     }
   }
 )
 
 export const registerThunk = createAsyncThunk(
   'auth/register',
-  async ({ username, email, password, nombre, apellido }, { rejectWithValue }) => {
-    try {
-      const data = await authService.register({ username, email, password, nombre, apellido })
-      window.dispatchEvent(new CustomEvent('auth:login', { detail: { id: data.id } }))
-      return {
-        id:         data.id,
-        username:   data.username,
-        nombre:     data.nombre,
-        email:      data.email,
-        rol:        data.rol,
-        registered: true,
-      }
-    } catch (e) {
-      return rejectWithValue(getErrorMessage(e))
+  async ({ username, email, password, nombre, apellido }) => {
+    const data = await authService.register({ username, email, password, nombre, apellido })
+    window.dispatchEvent(new CustomEvent('auth:login', { detail: { id: data.id } }))
+    return {
+      id:         data.id,
+      username:   data.username,
+      nombre:     data.nombre,
+      email:      data.email,
+      rol:        data.rol,
+      registered: true,
     }
   }
 )
@@ -93,7 +86,7 @@ const authSlice = createSlice({
       })
       .addCase(loginThunk.rejected, (state, action) => {
         state.status = 'error'
-        state.error  = action.payload
+        state.error  = action.error.message
       })
       .addCase(registerThunk.pending, (state) => {
         state.status = 'loading'
@@ -108,7 +101,7 @@ const authSlice = createSlice({
       })
       .addCase(registerThunk.rejected, (state, action) => {
         state.status = 'error'
-        state.error  = action.payload
+        state.error  = action.error.message
       })
   },
 })

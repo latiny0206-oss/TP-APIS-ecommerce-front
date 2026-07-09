@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Minus, Plus, Trash2, Tag, ArrowRight, ShoppingCart } from 'lucide-react'
 import { useSelector, useDispatch } from 'react-redux'
-import { updateQty, removeFromCart, clearCart, selectCartTotals, SHIPPING_THRESHOLD, SHIPPING_COST } from '../store/cartSlice.js'
+import { updateQty, removeFromCart, clearCart, selectCartTotals, SHIPPING_THRESHOLD } from '../store/cartSlice.js'
 import { setReturnTo } from '../store/authSlice.js'
 import { useProducts } from '../context/ProductsContext.jsx'
 import { fmtPrice } from '../utils/format.js'
@@ -13,8 +13,9 @@ export default function Carrito() {
   const items      = useSelector((state) => state.cart.items)
   const totals     = useSelector(selectCartTotals)
   const isLoggedIn = useSelector((state) => state.auth.isLoggedIn)
-  // Cart page shows shipping based on pre-coupon subtotal (coupon applied at checkout)
-  const cartShipping = totals.subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_COST
+  // El envío sale del selector (umbral sobre subtotal pre-cupón, misma regla en toda la app);
+  // esta página muestra el total sin descuento porque el cupón se aplica en el checkout.
+  const cartShipping = totals.shipping
   const cartTotal    = totals.subtotal + cartShipping
   const { byId }   = useProducts()
 

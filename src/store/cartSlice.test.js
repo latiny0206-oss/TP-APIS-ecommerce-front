@@ -10,6 +10,7 @@ import cartReducer, {
   SHIPPING_THRESHOLD,
   SHIPPING_COST,
 } from './cartSlice.js'
+import { logout } from './authSlice.js'
 
 // localStorage no existe en jsdom con este setup; lo mockeamos para evitar
 // que loadSaved() tire en la inicialización del módulo.
@@ -162,6 +163,30 @@ describe('cartSlice — reducers', () => {
       expect(state.couponError).toBeNull()
     })
   })
+
+  describe('logout limpia el carrito (extraReducer cross-slice)', () => {
+    it('vacía items, cupón y estado del cupón al cerrar sesión', () => {
+      let state = cartReducer(EMPTY, addToCart(PRODUCTO_A))
+      state     = cartReducer(state, setCoupon(CUPON))
+      state     = cartReducer(state, logout())
+      expect(state.items).toEqual([])
+      expect(state.coupon).toBeNull()
+      expect(state.couponError).toBeNull()
+      expect(state.couponStatus).toBe('idle')
+    })
+
+    it('escenario: usuario A arma carrito y cierra sesión → el carrito queda vacío antes de cualquier otro login', () => {
+      // A compra
+      let state = cartReducer(EMPTY, addToCart(PRODUCTO_A))
+      state     = cartReducer(state, addToCart(PRODUCTO_B))
+      expect(state.items).toHaveLength(2)
+      // A cierra sesión (cualquier vía despacha auth/logout)
+      state = cartReducer(state, logout())
+      // B abre el carrito en el mismo navegador, sin loguearse todavía
+      expect(state.items).toEqual([])
+      expect(state.coupon).toBeNull()
+    })
+  })
 })
 
 // ─── selectCartTotals ───────────────────────────────────────────────────────
@@ -196,8 +221,8 @@ describe('selectCartTotals', () => {
     expect(t.total).toBe(180000)
   })
 
-  it('aplica descuento PORCENTAJE y recalcula envío sobre subtotalConDesc', () => {
-    // 1 x $50.000, cupon 10% OFF → subtotalConDesc = $45.000 < $80.000 → envío $10.000
+  it('aplica descuento PORCENTAJE; el envío se evalúa sobre el subtotal PRE-cupón (bajo umbral → se cobra)', () => {
+    // 1 x $50.000 (< $80.000, no calificaba de entrada), cupon 10% OFF → envío $10.000
     const items  = [{ ...PRODUCTO_A, lineId: 'v10', qty: 1 }]
     const state  = { ...EMPTY, items, coupon: CUPON }
     const t      = selectCartTotals(storeCart(state))
@@ -206,6 +231,26 @@ describe('selectCartTotals', () => {
     expect(t.subtotalConDesc).toBe(45000)
     expect(t.shipping).toBe(SHIPPING_COST)
     expect(t.total).toBe(55000)
+  })
+
+  it('BUG FIX: mantiene el envío gratis cuando el cupón lleva el total por debajo del umbral', () => {
+    // 1 x $85.000 (≥ $80.000 → ganó envío gratis), cupón 10% → total $76.500.
+    // El cupón NO quita el beneficio ya ganado por monto de compra.
+    const items = [{ ...PRODUCTO_A, precio: 85000, lineId: 'v10', qty: 1 }]
+    const state = { ...EMPTY, items, coupon: CUPON }
+    const t     = selectCartTotals(storeCart(state))
+    expect(t.subtotal).toBe(85000)
+    expect(t.discount).toBe(8500)
+    expect(t.subtotalConDesc).toBe(76500)
+    expect(t.shipping).toBe(0)        // gratis: el umbral se evalúa sobre 85.000
+    expect(t.total).toBe(76500)
+  })
+
+  it('límite exacto: subtotal igual al umbral → envío gratis', () => {
+    const items = [{ ...PRODUCTO_A, precio: SHIPPING_THRESHOLD, lineId: 'v10', qty: 1 }]
+    const t     = selectCartTotals(storeCart({ ...EMPTY, items }))
+    expect(t.shipping).toBe(0)
+    expect(t.total).toBe(SHIPPING_THRESHOLD)
   })
 
   it('aplica descuento FIJO', () => {
@@ -228,8 +273,8 @@ describe('selectCartTotals', () => {
     expect(t.total).toBe(SHIPPING_COST)
   })
 
-  it('envío gratis cuando subtotalConDesc supera el umbral', () => {
-    // 2 x $50.000 = $100.000, coupon 10% → $90.000 ≥ $80.000 → gratis
+  it('envío gratis cuando el subtotal pre-cupón supera el umbral', () => {
+    // 2 x $50.000 = $100.000 ≥ $80.000 → gratis; el cupón solo baja el total
     const items  = [{ ...PRODUCTO_A, lineId: 'v10', qty: 2 }]
     const state  = { ...EMPTY, items, coupon: CUPON }
     const t      = selectCartTotals(storeCart(state))
