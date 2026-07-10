@@ -44,7 +44,7 @@ Por cada acción del usuario que dispara un thunk tienen que aparecer **exactame
 | `/api/fotos` | GET | 1 | ídem |
 | `/api/descuentos/activos` | GET | 1 | `HeroSection` (promo del banner) — cacheado por promesa a nivel módulo |
 
-**Redux DevTools**: si había sesión guardada, una única `auth/sessionRestored`; si no, `auth/initDone`. Nada del carrito (se rehidrata de localStorage al importar el módulo, sin actions).
+**Redux DevTools**: si había sesión guardada, `auth/sessionRestored`; si no, `auth/initDone`. **En dev aparecen DOS VECES** (StrictMode duplica el `useEffect` de `AuthInit` — la segunda pasada no cambia el estado, RDT muestra diff vacío). Con `npm run build && npm run preview` sale una sola vez. Nada del carrito acá: se rehidrata de localStorage al importar el módulo, sin actions.
 
 - [ ] `/productos`, `/variantes`, `/fotos` aparecen 1 vez cada uno
 - [ ] `/descuentos/activos` aparece 1 vez
