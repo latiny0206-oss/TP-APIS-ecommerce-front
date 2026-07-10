@@ -65,7 +65,7 @@ El backend tiene su propia entidad `Carrito` en base de datos (tabla `carritos`)
 
 La secuencia en `Checkout.jsx:confirmar()` (líneas 348-400) es:
 
-1. `obtenerOCrearCarrito()` — busca un carrito ACTIVO o VACIO del usuario en el backend (`GET /carritos/usuario`), o crea uno nuevo (`POST /carritos`).
+1. `obtenerOCrearCarrito()` — busca un carrito ACTIVO o VACIO del usuario en el backend (`GET /api/carritos` — el backend filtra por el usuario del JWT), o crea uno nuevo (`POST /api/carritos`).
 2. `cartService.vaciar(carritoId)` — vacía el carrito backend para evitar mezcla con items de una sesión anterior.
 3. `cartService.addItem(carritoId, {...})` — agrega cada item del carrito local (Redux) al carrito del backend, **uno por uno en paralelo** con `Promise.allSettled`. Acá el backend valida stock (`CarritoServiceImpl.agregarItem`, línea 120-156).
 4. `cartService.aplicarCupon(carritoId, codigo)` — si hay cupón en Redux, lo aplica al carrito backend (`PUT /carritos/{id}/descuento`). Acá el backend re-valida vigencia (`aplicarDescuentoPorCodigo`, línea 441-454).

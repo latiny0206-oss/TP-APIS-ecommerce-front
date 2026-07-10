@@ -67,7 +67,7 @@ addToCart(state, action) {
   else     state.items.push({ ... })
 }
 ```
-Nuestros reducers de `cart`: `addToCart`, `removeFromCart`, `updateQty`, `setCoupon`, `setCouponError`, `removeCoupon`, `clearCart`.
+Nuestros reducers de `cart`: `addToCart`, `removeFromCart`, `updateQty`, `setCoupon`, `setCouponError`, `removeCoupon`, `clearCart`, `hydrateItems` (este último **fusiona** los items traídos del backend al iniciar sesión con lo que hubiera local — suma cantidades por `lineId` y no dispara el toast, porque no es una acción del usuario).
 
 ### extraReducer
 Reducer que responde a **actions definidas fuera del slice**. Lo usamos para dos cosas:
@@ -155,8 +155,9 @@ Preparación: backend levantado (reiniciarlo si hubo cambios), `npm run dev` en 
 5. **Checkout paso 2, cupón inválido** (ej. `NOEXISTE`) → `cart/applyCoupon/pending` → `rejected`; `couponStatus` hace `'idle' → 'loading' → 'idle'` y `couponError` queda con el mensaje. Un solo GET en Network.
 6. **Cupón válido** (`OTONO2026`) → `pending` → `fulfilled`; `coupon` poblado; el resumen recalcula descuento y envío sin ningún request extra (es `selectCartTotals`, puro cliente).
 7. **Navegar carrito ↔ checkout con cupón puesto** → Network en silencio: cero refetch (el cupón está en el store).
-8. **Confirmar compra** → en Network: la secuencia carrito/items/cupón/checkout, cada request **una sola vez**.
+8. **Confirmar compra** → en Network: la secuencia carrito/items/cupón/checkout, cada request **una sola vez** (ver Flujo 7 de la guía). En Redux, `cart/clearCart` se despacha **después** del POST `/checkout` exitoso, no antes.
 9. **F5 en cualquier página** → el carrito y el cupón sobreviven (localStorage vía `CartPersist`), y los fetches iniciales siguen siendo uno por endpoint.
+10. **Cancelar un pedido en "Mis pedidos"** → 1 `POST /ordenes/{id}/cancelar` **seguido de** 1 `GET /ordenes/usuario/{id}` (refetch por diseño para asegurar consistencia con el backend). No es un llamado duplicado, es intencional (`useOrders.js:113-125`).
 
 ---
 

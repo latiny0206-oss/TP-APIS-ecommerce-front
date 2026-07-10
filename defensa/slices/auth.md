@@ -71,11 +71,11 @@ El patrón pending/fulfilled/rejected y por qué no hay try/catch está explicad
 |---|---|---|
 | `App.jsx:240` (`AccountGuard`) | `isLoggedIn`, `initializing` | Proteger `/cuenta/*`; muestra loader mientras `initializing` |
 | `App.jsx:257` (`AdminGuard`) | + `user` | Exigir `user.rol === 'ADMIN'` para `/admin/*` |
-| `Navbar.jsx:41` | `isLoggedIn`, `user` | Menú usuario vs botón "Ingresar" |
+| `Navbar.jsx:40` | `isLoggedIn`, `user` | Menú usuario vs botón "Ingresar" |
 | `Footer.jsx:7` | `isLoggedIn` | Links condicionales |
 | `Login.jsx:11` | `status`, `error`, `isLoggedIn`, `returnTo` | Spinner, mensaje de error, redirect si ya está logueado, destino post-login |
 | `Registro.jsx:26` | `status`, `error` | Pantalla `'registered'`, errores |
-| `Perfil.jsx:26`, `AdminLayout.jsx:44` | `user` | Datos del usuario en pantalla |
+| `Perfil.jsx:25`, `AdminLayout.jsx:43` | `user` | Datos del usuario en pantalla |
 | `Carrito.jsx:15` | `isLoggedIn` | Decidir si el checkout pasa antes por login |
 | `Checkout.jsx:162` | `user` | Contexto de la compra |
 

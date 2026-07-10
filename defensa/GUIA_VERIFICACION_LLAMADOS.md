@@ -15,6 +15,17 @@ React StrictMode (activado en `main.jsx`, **solo en desarrollo**) monta cada com
 
 **Cómo diferenciar**: un falso positivo de StrictMode aparece *solo en dev*, *duplicado exacto e inmediato* (mismo endpoint, milisegundos de diferencia, al montar la página). Un duplicado real también aparece con `npm run build && npm run preview` (que no tiene StrictMode), o se repite en cada render/interacción, no solo al montar. En este proyecto además pusimos guards (en `ProductsContext` y caches de promesa en servicios), así que **incluso en dev no deberías ver dobles** — si ves uno, anotalo: es un bug real o un guard que se rompió.
 
+**Actions duplicadas en Redux DevTools**: acciones síncronas idempotentes como `auth/initDone` pueden aparecer dos veces al montar la app en dev (StrictMode dispara `useEffect` de `AuthInit` dos veces). La segunda invocación no cambia el estado (RDT muestra "state = previous state"). Es esperado y desaparece en producción.
+
+## Llamados "extra" del CartBackendSync (leelos antes de contar requests)
+
+`App.jsx:95-161` monta un componente invisible `CartBackendSync` que sincroniza el carrito con el backend **en los bordes de la sesión**, no en cada interacción. Puede meter requests que no vienen de la vista que estás mirando:
+
+- **Al ocultar la pestaña (visibilitychange → hidden) o cerrarla (pagehide)** — si el carrito cambió desde el último volcado, hace `flushCart` = **GET `/carritos`** + (POST `/carritos` si no había uno) + **PUT `/carritos/{id}/items`** (reemplazo atómico). Si el carrito local está vacío y no hay uno reutilizable en backend, solo hace el GET.
+- **Al iniciar sesión** (evento `auth:login` — login fresco o registro, **no** refresh) — `loadBackendCart()` hace **GET `/carritos`** para recuperar el carrito ACTIVO/VACIO y despachar `hydrateItems`.
+
+Consecuencia práctica: si al probar un flujo abrís DevTools después de haber empezado, o alternás pestañas, verás llamados que no son "del flujo" que estás observando. Antes de reportar un llamado inesperado, verificá que no venga del `CartBackendSync`.
+
 ## Qué mirar en Redux DevTools (regla general)
 
 Por cada acción del usuario que dispara un thunk tienen que aparecer **exactamente dos actions**: `<slice>/<thunk>/pending` y después `<slice>/<thunk>/fulfilled` (o `/rejected` si falló). Si ves `pending` dos veces seguidas para un solo click, hay un dispatch duplicado. Las actions síncronas (`cart/addToCart`, `auth/logout`) aparecen una sola vez por click y **sin** pending/fulfilled — no son asíncronas.
@@ -101,19 +112,21 @@ Por cada acción del usuario que dispara un thunk tienen que aparecer **exactame
 
 ## Flujo 7 — Confirmar compra (checkout, paso 3)
 
-**Acción**: click en "Confirmar compra". Es el único flujo con varios llamados encadenados — esta es la secuencia esperada, en orden:
+**Acción**: click en "Confirmar compra". Es el único flujo con varios llamados encadenados — esta es la secuencia esperada, en orden (ver `Checkout.jsx:348-404`, función `confirmar`):
 
 | # | Llamado | Método | Cuántas veces |
 |---|---|---|---|
-| 1 | `/api/carritos` | GET | 1 (busca carrito activo del usuario) |
-| 2 | `/api/carritos` | POST | 0 o 1 (solo si no tenía carrito) |
-| 3 | `/api/carritos/{id}/vaciar` | POST | 1 |
-| 4 | `/api/carritos/{id}/items` | POST | **1 por línea del carrito** (en paralelo — verlas juntas es normal) |
+| 1 | `/api/carritos` | GET | 1 (busca carrito ACTIVO/VACIO del usuario, `obtenerOCrearCarrito`) |
+| 2 | `/api/carritos` | POST | 0 o 1 (solo si no tenía carrito reutilizable) |
+| 3 | `/api/carritos/{id}/vaciar` | POST | 1 (evita mezcla con items de sesión anterior) |
+| 4 | `/api/carritos/{id}/items` | POST | **1 por línea del carrito** (en paralelo con `Promise.allSettled` — verlas juntas es normal) |
 | 5a | `/api/carritos/{id}/descuento` | PUT | 1 solo si hay cupón |
-| 5b | `/api/carritos/{id}` | PUT | 1 solo si NO hay cupón (desasocia descuentos viejos) |
+| 5b | `/api/carritos/{id}` | PUT | 1 solo si NO hay cupón (desasocia descuentos viejos con `{ descuentoId: null }`) |
 | 6 | `/api/carritos/{id}/checkout` | POST | 1 |
 
-**Redux DevTools**: al éxito, una única `cart/clearCart` y navega a `/confirmacion`.
+**Redux DevTools**: al éxito, una única `cart/clearCart` **al final** (después del POST `/checkout`, no antes), y navega a `/confirmacion`.
+
+**Nota sobre llamados "extra"**: si al entrar al checkout viste `GET /carritos` + `POST /carritos` + `PUT /carritos/{id}/items` **antes** de tocar "Confirmar compra", son del `CartBackendSync` (visibilitychange/pagehide — probablemente pasaste por DevTools o cambiaste de pestaña). No son parte de `confirmar()`. Ver la sección "Llamados extra del CartBackendSync" al inicio de la guía.
 
 **Verificación del fix de envío**: armar un carrito de ~$85.000, aplicar un cupón que lo baje de $80.000 → el resumen debe decir "Gratis" y el `montoFinal` de la respuesta del checkout (mirarla en Network → Response) debe venir **sin** los $10.000 de envío. Y el detalle del pedido en "Mis pedidos" tiene que coincidir con lo que mostró el checkout.
 
@@ -127,10 +140,12 @@ Por cada acción del usuario que dispara un thunk tienen que aparecer **exactame
 
 **Acción**: ir a "Mis pedidos" (`/cuenta/ordenes`); abrir un pedido.
 
-**Network esperado**: `GET /api/ordenes/usuario/{id}` — 1 vez **la primera entrada**; volver a entrar en la misma sesión: **0 requests** (cache a nivel módulo en `useOrders.js`, se invalida al login/logout). Detalle: `GET /api/ordenes/{id}` — 1 vez la primera, después cache.
+**Network esperado — visitar la lista**: `GET /api/ordenes/usuario/{id}` — 1 vez **la primera entrada**; volver a entrar en la misma sesión: **0 requests** (cache a nivel módulo en `useOrders.js`, se invalida al login/logout). Detalle: `GET /api/ordenes/{id}` — 1 vez la primera, después cache (el hook `useOrden` también busca primero en el cache de listas antes de pedir el detalle).
+
+**Network esperado — cancelar un pedido**: `POST /api/ordenes/{id}/cancelar` **seguido de** `GET /api/ordenes/usuario/{id}` (refetch de la lista para reflejar el nuevo estado). El código (`useOrders.js:113-125` — función `cancelar`) invalida el cache y llama a `load(true)`, que fuerza el refetch. Es intencional: garantiza que la UI muestra exactamente lo que quedó en el backend (estado, `fechaCancelacion`, etc.) sin depender de un patch local.
 
 - [ ] Primera visita: 1 GET; segunda visita sin recargar: 0
-- [ ] Cancelar un pedido: 1 POST `/api/ordenes/{id}/cancelar` y la lista se actualiza sin refetch completo
+- [ ] Cancelar un pedido: 1 POST `/api/ordenes/{id}/cancelar` seguido de 1 GET `/api/ordenes/usuario/{id}` (refetch por diseño)
 
 ## Flujo 9 — Logout
 
@@ -153,8 +168,11 @@ Por cada acción del usuario que dispara un thunk tienen que aparecer **exactame
 
 Cada vista admin fetchea lo suyo al entrar (1 vez, con caches a nivel módulo en descuentos y órdenes): Dashboard → `GET /api/admin/dashboard`; Descuentos → `GET /api/descuentos` (fallback a `/activos`); Órdenes → `GET /api/ordenes`. Crear/editar/borrar dispara 1 request por acción e invalida el cache correspondiente.
 
+**Confirmar / cancelar orden desde AdminOrders** (mismo patrón que Flujo 8): `POST /api/ordenes/{id}/confirmar` (o `/cancelar`) **seguido de** `GET /api/ordenes` (refetch de la lista completa vía `load(true)` en `useOrders.js:99-125`). El admin usa el hook `useOrdenes()` **sin userId** — la key de cache es `'all'` y el endpoint es `/ordenes` (no `/ordenes/usuario/{id}`).
+
 - [ ] Entrar dos veces a Descuentos sin recargar: 1 solo GET total
 - [ ] Cada alta/edición/borrado: 1 request por acción
+- [ ] Confirmar/cancelar orden desde admin: 1 POST + 1 GET `/api/ordenes` (refetch)
 
 ---
 
