@@ -136,14 +136,18 @@ Por cada acción del usuario que dispara un thunk tienen que aparecer **exactame
 
 **Acción**: cerrar sesión desde el menú de la Navbar (o Perfil, o el panel admin).
 
-**Network esperado**: **CERO llamados** — el logout es local (borra token/usuario de localStorage y resetea el store). No hay endpoint de logout en el backend (JWT stateless).
+**Network esperado**:
+- Con **carrito vacío**: **CERO llamados** — no hay endpoint de logout en el backend (JWT stateless).
+- Con **carrito con items**: `PUT /api/carritos/{id}/items` — **1 llamado**. Es el volcado del carrito al backend (`flushCart` dentro de `logoutThunk`, con el token todavía válido) para poder recuperarlo al re-loguearse. Si el `PUT` falla, el logout ocurre igual (es best-effort).
 
-**Redux DevTools**: una única `auth/logout`. En esa MISMA action, mirar el diff del estado: `auth` se resetea **y `cart` se vacía** (extraReducer del cartSlice escuchando `logout` — es el fix del bug "carrito post-logout").
+**Redux DevTools**: al despachar `logoutThunk` aparecen tres actions en orden — `auth/logoutFull/pending` → `auth/logout` (reducer síncrono del `logout()` interno; en esa MISMA action, mirar el diff: `auth` se resetea **y `cart` se vacía** por el extraReducer cross-slice del cartSlice) → `auth/logoutFull/fulfilled`. El auto-logout por 401 no pasa por el thunk: en ese caso ves solo `auth/logout`.
 
-- [ ] 0 requests al desloguear
+- [ ] Carrito vacío → 0 requests al desloguear
+- [ ] Carrito con items → 1 PUT `/api/carritos/{id}/items` (el volcado). Cerrar sesión de nuevo sin cambios: sigue siendo 1 PUT si aparecieron items nuevos, 0 si no
 - [ ] `auth/logout` vacía `cart.items` y `cart.coupon` en la misma action
 - [ ] El badge del carrito queda en 0 y `/carrito` aparece vacío SIN recargar la página
 - [ ] Loguearse con otro usuario: no aparece nada del carrito anterior
+- [ ] Loguearse con el **mismo** usuario: los items vuelven a aparecer (recuperación desde backend vía `CartBackendSync` en el evento `auth:login`)
 
 ## Flujo 10 — Panel admin (breve)
 

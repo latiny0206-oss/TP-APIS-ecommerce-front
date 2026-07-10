@@ -35,7 +35,7 @@ El carrito del proyecto tiene **dos vidas independientes**: una en el front y ot
 El carrito que ve el usuario mientras navega es **100% estado local del navegador**. No existe en el backend. Se almacena en dos lugares simultáneos:
 
 1. **Redux store** (`state.cart.items` y `state.cart.coupon`): es la fuente de verdad en memoria. Todos los componentes leen de acá con `useSelector`.
-2. **localStorage** (clave `cumbre_cart`): es la copia persistente. El componente invisible `CartPersist` (App.jsx:75-86) observa el store con `useSelector` y cada vez que `items` o `coupon` cambian, escribe `localStorage.setItem('cumbre_cart', JSON.stringify({ items, coupon }))`.
+2. **localStorage** (clave `cumbre_cart`): es la copia persistente. El componente invisible `CartPersist` (App.jsx:77-88) observa el store con `useSelector` y cada vez que `items` o `coupon` cambian, escribe `localStorage.setItem('cumbre_cart', JSON.stringify({ items, coupon }))`.
 
 **¿Cómo sobrevive a un F5?** Cuando el módulo `cartSlice.js` se importa, la función `loadSaved()` (línea 8-17) lee `localStorage['cumbre_cart']` y lo usa como `initialState`. No hay thunk ni efecto de "rehidratación" — sucede sincrónicamente en la carga del módulo.
 
@@ -76,7 +76,7 @@ La secuencia en `Checkout.jsx:confirmar()` (líneas 348-400) es:
 
 **SÍ. El carrito se persiste en el backend y se recupera al re-loguearse.** El mecanismo evita golpear al backend en cada cambio: sincroniza **solo en los bordes de la sesión**.
 
-- **Volcado (front → back)**: el componente invisible `CartBackendSync` (App.jsx) vuelca el snapshot del carrito al backend con `PUT /api/carritos/{id}/items` (reemplazo atómico de todos los items en un solo request) cuando el usuario **"se va"**: al ocultar/cerrar la pestaña (`visibilitychange` → `hidden`, `pagehide`) y en el **logout manual** (vía `logoutThunk`, con el token todavía válido). Solo vuelca si el carrito **cambió** desde el último volcado (dirty-check por snapshot serializado). Durante la compra activa: **cero llamadas al backend**.
+- **Volcado (front → back)**: el componente invisible `CartBackendSync` (App.jsx:95-161) vuelca el snapshot del carrito al backend con `PUT /api/carritos/{id}/items` (reemplazo atómico de todos los items en un solo request) cuando el usuario **"se va"**: al ocultar/cerrar la pestaña (`visibilitychange` → `hidden`, `pagehide`) y en el **logout manual** (vía `logoutThunk`, con el token todavía válido). Solo vuelca si el carrito **cambió** desde el último volcado (dirty-check por snapshot serializado). Durante la compra activa: **cero llamadas al backend**.
 - **Recuperación (back → front)**: al iniciar sesión (evento `auth:login`, login o registro frescos — **no** en un refresh), `CartBackendSync` llama a `loadBackendCart()` (`GET /api/carritos` → carrito ACTIVO/VACIO con sus items) y despacha `hydrateItems`, que **fusiona** los items del backend con lo que hubiera local (suma cantidades por `lineId`, sin disparar el toast).
 
 Decisiones de diseño detrás de esto:
@@ -113,17 +113,18 @@ Decisiones de diseño detrás de esto:
 | Reducer | Qué hace exactamente | Quién lo despacha |
 |---|---|---|
 | `addToCart` | Calcula la clave de línea `lineId` (`v{varianteId}` si hay variante, si no `p{productId}-{talle}`). Si ya existe esa línea suma `qty`; si no, agrega la línea nueva | `ProductoDetalle.jsx:132` — botón "Agregar al carrito" |
-| `removeFromCart` | Filtra la línea por `lineId` | `Carrito.jsx:129` — botón "Quitar" |
-| `updateQty` | Setea `qty`; si `qty <= 0` **elimina la línea** (no deja cantidades en cero) | `Carrito.jsx:117` y `:123` — botones − / + |
+| `removeFromCart` | Filtra la línea por `lineId` | `Carrito.jsx:131` — botón "Quitar" |
+| `updateQty` | Setea `qty`; si `qty <= 0` **elimina la línea** (no deja cantidades en cero) | `Carrito.jsx:119` y `:125` — botones − / + |
 | `setCoupon` | Setea el cupón directo (sin fetch) y limpia error/status | No se usa en vistas hoy; existe para tests y para setear un cupón ya conocido |
 | `setCouponError` | Setea el mensaje de error manualmente | Ídem — hoy solo tests |
 | `removeCoupon` | `coupon = null`, limpia error y status | `Checkout.jsx:321` — la ✕ del cupón aplicado |
-| `clearCart` | Vacía todo: items, cupón, error, status | `Carrito.jsx:51` y `:144` (vaciar), `Checkout.jsx:396` (compra exitosa), `App.jsx:97` (`CartUserCheck`: cambió el usuario logueado) |
+| `clearCart` | Vacía todo: items, cupón, error, status | `Carrito.jsx:51` y `:146` (vaciar), `Checkout.jsx:396` (compra exitosa), `App.jsx:172` (`CartUserCheck`: cambió el usuario logueado) |
+| `hydrateItems` | Fusiona items traídos del backend con los que ya haya en el carrito local (suma cantidades por `lineId`). NO dispara el toast — no es una acción del usuario | `App.jsx:149` (`CartBackendSync`) al iniciar sesión, después de `loadBackendCart()` |
 
 ## Thunk: `applyCoupon` — y el patrón que comparten todos los thunks del proyecto
 
 ```js
-// cartSlice.js:23-30 — SIN try/catch (ver "puntos finos")
+// cartSlice.js:24-31 — SIN try/catch (ver "puntos finos")
 export const applyCoupon = createAsyncThunk(
   'cart/applyCoupon',
   async (code) => {
@@ -138,7 +139,7 @@ export const applyCoupon = createAsyncThunk(
 - **Manda**: el código como query param, normalizado a mayúsculas y sin espacios.
 - **Respuesta** (`DescuentoResponse` del backend): `{ id, nombre, codigo, tipo: 'PORCENTAJE'|'FIJO', valor, fechaInicio, fechaFin, estado }`. Se guarda tal cual en `state.cart.coupon`.
 
-**extraReducers** (cartSlice.js:94-112) — este es el patrón que `auth` repite, acá explicado una vez:
+**extraReducers** (cartSlice.js:105-130) — este es el patrón que `auth` repite, acá explicado una vez:
 
 `createAsyncThunk` genera automáticamente **tres action types**: `cart/applyCoupon/pending` (al arrancar), `.../fulfilled` (la promesa resolvió) y `.../rejected` (la promesa rechazó). Como esas actions no nacen en `reducers:` del slice, se manejan en `extraReducers`:
 
@@ -166,7 +167,7 @@ Además del thunk, el slice tiene un **extraReducer cross-slice**: escucha `logo
 
 ## Selector memoizado: `selectCartTotals`
 
-`cartSlice.js:126-146`, hecho con `createSelector` (de reselect, incluido en RTK). Toma `items` y `coupon` y devuelve `{ subtotal, discount, subtotalConDesc, shipping, total, itemCount }`. Reglas: descuento `PORCENTAJE` = `subtotal * valor / 100` redondeado; `FIJO` = `min(valor, subtotal)`; envío gratis si el **subtotal antes del cupón** ≥ $80.000, si no $10.000 (el cupón no quita el envío gratis ya ganado por monto de compra — misma regla en el backend, `CarritoServiceImpl.realizarCompra`). Al ser memoizado, solo recalcula cuando cambian `items` o `coupon` — un cambio en `toast` o `auth` no lo re-ejecuta.
+`cartSlice.js:136-156`, hecho con `createSelector` (de reselect, incluido en RTK). Toma `items` y `coupon` y devuelve `{ subtotal, discount, subtotalConDesc, shipping, total, itemCount }`. Reglas: descuento `PORCENTAJE` = `subtotal * valor / 100` redondeado; `FIJO` = `min(valor, subtotal)`; envío gratis si el **subtotal antes del cupón** ≥ $80.000, si no $10.000 (el cupón no quita el envío gratis ya ganado por monto de compra — misma regla en el backend, `CarritoServiceImpl.java:276-322`, evaluada sobre `subtotalSinDesc`). Al ser memoizado, solo recalcula cuando cambian `items` o `coupon` — un cambio en `toast` o `auth` no lo re-ejecuta.
 
 ## Hooks de Redux — Mapa completo por componente
 
@@ -185,8 +186,10 @@ Además del thunk, el slice tiene un **extraReducer cross-slice**: escucha `logo
 | `Checkout.jsx` | `:166` | `state.cart.couponError` | Mostrar el error del cupón en rojo |
 | `Checkout.jsx` | `:167` | `state.cart.couponStatus === 'loading'` | Mostrar spinner en el botón "Aplicar" |
 | `ProductoDetalle.jsx` | `:22` | `state.cart.items` | Descontar del stock disponible lo que ya está en el carrito |
-| `App.jsx` (`CartPersist`) | `:76` | `state.cart.items` | Persistir en localStorage en cada cambio |
-| `App.jsx` (`CartPersist`) | `:77` | `state.cart.coupon` | Persistir en localStorage en cada cambio |
+| `App.jsx` (`CartPersist`) | `:78` | `state.cart.items` | Persistir en localStorage en cada cambio |
+| `App.jsx` (`CartPersist`) | `:79` | `state.cart.coupon` | Persistir en localStorage en cada cambio |
+| `App.jsx` (`CartBackendSync`) | `:97` | `state.cart.items` | Snapshot para volcar al backend en los bordes de la sesión |
+| `App.jsx` (`CartBackendSync`) | `:98` | `state.auth.isLoggedIn` | No vuelca ni recupera si no hay sesión |
 | `Toast.jsx` | `:7` | `state.toast.visible`, `state.toast.productName` | Mostrar/ocultar el toast (indirectamente del carrito via extraReducer) |
 
 ### `useDispatch` — Quién despacha qué acción del carrito
@@ -194,22 +197,23 @@ Además del thunk, el slice tiene un **extraReducer cross-slice**: escucha `logo
 | Componente | Línea exacta | Acción despachada | Evento del usuario |
 |---|---|---|---|
 | `ProductoDetalle.jsx` | `:132` | `addToCart({productId, varianteId, nombre, precio, imagen, talle, qty})` | Botón "Agregar al carrito" |
-| `Carrito.jsx` | `:117` | `updateQty({ lineId, qty: qty - 1 })` | Botón "−" (decrementar cantidad) |
-| `Carrito.jsx` | `:123` | `updateQty({ lineId, qty: qty + 1 })` | Botón "+" (incrementar cantidad) |
-| `Carrito.jsx` | `:129` | `removeFromCart(lineId)` | Botón basura "Quitar" |
-| `Carrito.jsx` | `:51, :144` | `clearCart()` | Botón "Vaciar carrito" |
+| `Carrito.jsx` | `:119` | `updateQty({ lineId, qty: qty - 1 })` | Botón "−" (decrementar cantidad) |
+| `Carrito.jsx` | `:125` | `updateQty({ lineId, qty: qty + 1 })` | Botón "+" (incrementar cantidad) |
+| `Carrito.jsx` | `:131` | `removeFromCart(lineId)` | Botón basura "Quitar" |
+| `Carrito.jsx` | `:51, :146` | `clearCart()` | Botón "Vaciar carrito" |
 | `Carrito.jsx` | `:24` | `setReturnTo('/checkout')` ← **de authSlice, no de cart** | Al ir al checkout sin estar logueado, guarda la URL de retorno |
 | `Checkout.jsx` | `:313` | `applyCoupon(codigo)` ← **thunk asíncrono** | Botón "Aplicar" cupón (paso 2) |
 | `Checkout.jsx` | `:321` | `removeCoupon()` | Botón ✕ quitar cupón aplicado |
 | `Checkout.jsx` | `:396` | `clearCart()` | Compra exitosa → limpiar todo |
-| `App.jsx` (`CartUserCheck`) | `:97` | `clearCart()` | Cambio de usuario logueado (login con otro usuario) |
+| `App.jsx` (`CartUserCheck`) | `:172` | `clearCart()` | Cambio de usuario logueado (login con otro usuario) |
+| `App.jsx` (`CartBackendSync`) | `:149` | `hydrateItems(mapped)` | Fusiona el carrito recuperado del backend al iniciar sesión |
 | `Toast.jsx` | `:8` | `hideToast()` ← **de toastSlice** | Auto-cierre del toast |
 
 ### `createSelector` (selector memoizado)
 
 | Selector | Archivo y líneas | Inputs | Output | Usado en |
 |---|---|---|---|---|
-| `selectCartTotals` | `cartSlice.js:126-146` | `state.cart.items`, `state.cart.coupon` | `{subtotal, discount, subtotalConDesc, shipping, total, itemCount}` | Navbar, Carrito, Checkout |
+| `selectCartTotals` | `cartSlice.js:136-156` | `state.cart.items`, `state.cart.coupon` | `{subtotal, discount, subtotalConDesc, shipping, total, itemCount}` | Navbar, Carrito, Checkout |
 
 `createSelector` es de **reselect** (incluido en RTK). Solo recalcula cuando cambian sus inputs. Si cambia `state.auth` o `state.toast`, este selector **no** se re-ejecuta → mejor performance.
 
@@ -232,7 +236,7 @@ builder.addCase(addToCart, (state, action) => {
 ### b) `cartSlice` escucha `logout` del `authSlice`
 
 ```js
-// cartSlice.js:114-119 — el carrito se vacía cuando el authSlice despacha logout
+// cartSlice.js:124-129 — el carrito se vacía cuando el authSlice despacha logout
 .addCase(logout, (state) => {
   state.items        = []
   state.coupon       = null
@@ -241,7 +245,7 @@ builder.addCase(addToCart, (state, action) => {
 })
 ```
 
-**4 botones de logout en la app** (Navbar, Perfil, AdminLayout, auto-logout por 401) y **ninguno despacha `clearCart()` manualmente**. El carrito se limpia solo porque escucha la action de auth. Si mañana se agrega un quinto botón de logout, funciona sin tocar nada.
+**4 vías de logout en la app** (Navbar, Perfil, AdminLayout, auto-logout por 401) y **ninguna despacha `clearCart()` manualmente**. Las tres primeras van por `logoutThunk`, que como último paso hace `dispatch(logout())`; la cuarta lo despacha directo. En los cuatro casos el carrito se limpia solo porque escucha la action de auth. Si mañana se agrega un quinto botón de logout, funciona sin tocar nada.
 
 ### ¿Por qué son importantes estos patrones?
 
@@ -253,7 +257,7 @@ builder.addCase(addToCart, (state, action) => {
 
 1. En `ProductoDetalle.jsx`, el usuario elige color/talle. El componente calcula `stockDisponible = stockActual - enCarrito` (línea ~120: lee `state.cart.items` con `useSelector` para descontar lo ya agregado) y al click de "Agregar" despacha `addToCart({...})` con `useDispatch`, con `qty` acotado al stock.
 2. El reducer `addToCart` suma la línea (o incrementa `qty` si ya estaba). **Dos slices reaccionan a la misma action**: `cart` actualiza items y `toastSlice` (extraReducer) pone `visible: true` → aparece el toast.
-3. `CartPersist` (App.jsx:75-86) tiene un `useEffect` con deps `[items, coupon]`: al cambiar items, escribe `localStorage['cumbre_cart']`.
+3. `CartPersist` (App.jsx:77-88) tiene un `useEffect` con deps `[items, coupon]`: al cambiar items, escribe `localStorage['cumbre_cart']`.
 4. `Navbar` re-renderiza el badge porque `selectCartTotals.itemCount` cambió (memoizado: solo recalcula cuando items o coupon cambian).
 5. En `/checkout` paso 2, el usuario escribe `OTONO2026` y toca "Aplicar" → `Checkout.jsx:313` hace `await dispatch(applyCoupon(codigo)).unwrap()`.
 6. RTK despacha `pending` → `couponStatus = 'loading'` → el botón muestra spinner (`Checkout.jsx:167` lo lee con `useSelector`).
@@ -288,7 +292,7 @@ Checkout "Confirmar" ──confirmar()──▶ Backend: crear carrito → items
 
 ### ¿Y si se logueó con otro usuario?
 
-Hay una segunda capa de seguridad: `CartUserCheck` (App.jsx:89-106). Cuando el thunk `loginThunk` tiene éxito, emite un `CustomEvent('auth:login')` con el id del usuario. `CartUserCheck` escucha ese evento y compara el id con `localStorage['cumbre_cart_uid']`. Si es un usuario distinto, despacha `clearCart()` — esto previene que un usuario vea el carrito de otro en una computadora compartida.
+Hay una segunda capa de seguridad: `CartUserCheck` (App.jsx:164-181). Cuando el thunk `loginThunk` tiene éxito, emite un `CustomEvent('auth:login')` con el id del usuario. `CartUserCheck` escucha ese evento y compara el id con `localStorage['cumbre_cart_uid']`. Si es un usuario distinto, despacha `clearCart()` — esto previene que un usuario vea el carrito de otro en una computadora compartida.
 
 ### Resumen del ciclo de sesión y carrito
 
@@ -312,7 +316,7 @@ Re-login (usuario B) ──▶ CartUserCheck detecta cambio ──▶ clearCart(
 - **`applyCoupon('')` no es un error**: el thunk devuelve `null` (fulfilled) y el guard `if (action.payload)` del extraReducer lo ignora. Por eso el fulfilled tiene un `if`.
 - **`.unwrap()` en Checkout**: convierte el resultado del dispatch en una promesa que rechaza si el thunk falló; el `catch {}` está vacío a propósito porque el error ya quedó en `state.cart.couponError` — la UI lo lee del store, no de la variable local.
 - **El logout limpia el carrito por extraReducer, no por dispatch manual**: en vez de despachar `clearCart()` en cada botón de logout (4 lugares), el slice escucha la action `logout` de auth. Si preguntan "¿y si mañana agregan un quinto botón de logout?": funciona solo, porque la limpieza vive en el slice, no en los componentes.
-- **Cambio de usuario limpia el carrito**: el thunk de login emite `CustomEvent('auth:login')`; `CartUserCheck` (App.jsx:89-106) compara el id con `localStorage['cumbre_cart_uid']` y si es otro usuario despacha `clearCart()`. Es la segunda capa: la primera es el vaciado al desloguear.
+- **Cambio de usuario limpia el carrito**: el thunk de login emite `CustomEvent('auth:login')`; `CartUserCheck` (App.jsx:164-181) compara el id con `localStorage['cumbre_cart_uid']` y si es otro usuario despacha `clearCart()`. Es la segunda capa: la primera es el vaciado al desloguear.
 - **lineId con dos formatos** (`v10` vs `p1-M`): productos con variante real usan el id de variante; el fallback por producto+talle existe para items sin variante (que el checkout igual rechaza, porque el backend necesita `varianteId`).
 - **¿Cómo se recupera el carrito del backend al re-loguearse sin golpear al back en cada cambio?** El volcado no ocurre por interacción sino en los bordes de la sesión: `CartBackendSync` vuelca el snapshot con `PUT /carritos/{id}/items` (reemplazo atómico, un request) al ocultar/cerrar la pestaña y en el logout, solo si cambió (dirty-check). Al `auth:login` recupera con `loadBackendCart()` + `hydrateItems`. Así el carrito local sigue sin network lag y aun así persiste cross-sesión.
 - **¿Qué pasa con el carrito backend después del checkout?** Su estado pasa a `CONVERTIDO`, sus items se borran, y se crea una `Orden` con los `ItemOrden`. El carrito nunca vuelve a usarse — en la próxima compra se crea uno nuevo.

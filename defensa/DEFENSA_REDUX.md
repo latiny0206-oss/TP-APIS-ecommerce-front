@@ -40,7 +40,7 @@ Los archivos, en orden de participación:
 1. `Front/src/views/Checkout.jsx:313` — `dispatch(applyCoupon(codigo)).unwrap()`
 2. `Front/src/store/cartSlice.js:24` — `createAsyncThunk('cart/applyCoupon', ...)`
 3. `Front/src/api/discountService.js:16` — llamada axios al backend
-4. `Front/src/store/cartSlice.js:97-113` — `extraReducers` (pending/fulfilled/rejected)
+4. `Front/src/store/cartSlice.js:105-130` — `extraReducers` (pending/fulfilled/rejected + cross-slice `logout`)
 5. `Front/src/store/index.js` — el store combina `cart`, `toast`, `auth`
 6. `Front/src/views/Checkout.jsx:165-167` — `useSelector` lee coupon/couponError/couponStatus
 
@@ -164,10 +164,10 @@ Preparación: backend levantado (reiniciarlo si hubo cambios), `npm run dev` en 
 
 | # | Hallazgo | Dónde estaba | Fix |
 |---|---|---|---|
-| 1 | try/catch manual en `applyCoupon` (con `rejectWithValue`, no silenciaba, pero es el patrón penalizado) | `Front/src/store/cartSlice.js:27-32` | Eliminado; el thunk quedó sin try/catch y `.rejected` lee `action.error.message` (`cartSlice.js:23-30` y `:107-110`) |
-| 2 | try/catch manual en `loginThunk` y `registerThunk` (ídem) | `Front/src/store/authSlice.js:8-21` y `:27-41` | Eliminados; rejected lee `action.error.message` (`authSlice.js:6-37`, `:87-90`, `:102-105`) |
+| 1 | try/catch manual en `applyCoupon` (con `rejectWithValue`, no silenciaba, pero es el patrón penalizado) | `Front/src/store/cartSlice.js:27-32` | Eliminado; el thunk quedó sin try/catch y `.rejected` lee `action.error.message` (`cartSlice.js:24-31` y `:118-121`) |
+| 2 | try/catch manual en `loginThunk` y `registerThunk` (ídem) | `Front/src/store/authSlice.js:8-21` y `:27-41` | Eliminados; rejected lee `action.error.message` (`authSlice.js:7-36`, `:105-108`, `:120-123`) |
 | 3 | Los mensajes amigables del backend se perdían al sacar `rejectWithValue` | — | Normalización única en el interceptor de axios: `error.message = error.response?.data?.message ?? error.message` (`Front/src/api/api.js:27`) |
-| 4 | Doble fetch de catálogo en dev por StrictMode (montaje doble de `ProductsProvider`, sin guard) | `Front/src/context/ProductsContext.jsx:80` | Guard con `useRef`: el efecto de montaje corre una sola vez; `reload()` sigue funcionando para las vistas admin (`ProductsContext.jsx:80-87`) |
+| 4 | Doble fetch de catálogo en dev por StrictMode (montaje doble de `ProductsProvider`, sin guard) | `Front/src/context/ProductsContext.jsx:80` | Guard con `useRef`: el efecto de montaje corre una sola vez; `reload()` sigue funcionando para las vistas admin (`ProductsContext.jsx:87-92`) |
 
 Verificación post-fix: `vitest run` → **34/34 tests pasan**; `vite build` → sin errores.
 
@@ -176,6 +176,8 @@ Verificación post-fix: `vitest run` → **34/34 tests pasan**; `vite build` →
 - **No existe una entidad "cajas/bigbox"** en este proyecto — eso era de otro grupo. Nuestras entidades son productos, variantes, fotos, carrito, descuentos, órdenes y usuarios. El análisis de cacheo se aplicó a todas (sección 3, última flashcard).
 - **El backend no usa `@Cacheable`** — no hay capa de cache explícita en Spring. El cacheo del proyecto es del lado del cliente (store de Redux, promesas a nivel módulo, Context).
 - En el paso final del checkout se re-aplica el cupón contra el backend (`PUT /carritos/{id}/descuento`). **No es un refetch duplicado**: es la sincronización necesaria para que la orden se cree con el descuento asociado en la base.
-- `Front/src/hooks/useCartApi.js` y `Front/src/examples/CheckoutFlow.jsx` son **código muerto** (nadie los importa). Recomendado borrarlos antes de la defensa para que no generen preguntas sobre hooks que no se usan.
+- **Persistencia del carrito entre sesiones (patrón `CartBackendSync`, `App.jsx:95-161`)**. Mientras el usuario navega el carrito es 100% local (Redux + localStorage). El backend solo se toca en los **bordes de la sesión**: se **vuelca** el snapshot con `PUT /api/carritos/{id}/items` (reemplazo atómico) al ocultar/cerrar la pestaña (`visibilitychange`/`pagehide`) y al hacer logout manual (paso 1 de `logoutThunk`, con el token aún válido; ver `authSlice.js:43-53`). Un dirty-check por snapshot serializado evita `PUT` duplicados. Al iniciar sesión (evento `auth:login`, login o registro), `loadBackendCart()` trae el carrito ACTIVO/VACIO del backend y `hydrateItems` lo **fusiona** con lo que hubiera local (suma por `lineId`, sin disparar el toast). El auto-logout por 401 **no** vuelca — el token ya no vale — pero el localStorage del mismo navegador conserva el carrito. Esto es lo que responde la pregunta de defensas anteriores: "¿los productos del carrito se recuperan al re-loguearse en otro dispositivo?" — **sí**, y sin castigar la performance con un `PUT` por click.
+- **Envío gratis con cupón**: el umbral ($80.000) se evalúa sobre el **subtotal ANTES del cupón**, tanto en el front (`cartSlice.js:151`, dentro de `selectCartTotals`) como en el back (`CarritoServiceImpl.java:276-322`, sobre `subtotalSinDesc`). Un cupón que baja el total por debajo de $80.000 **no quita** el envío gratis ya ganado por monto de compra. Verificarlo en el paso "Confirmar" del Flujo 7 del checklist mirando `montoFinal` en la respuesta del checkout.
+- `Front/src/hooks/useCartApi.js` y `Front/src/examples/CheckoutFlow.jsx` eran **código muerto** — se removieron antes de la defensa (junto con la carpeta `examples/`, que quedaba vacía). Si aparecen en `INTEGRACION_FRONTEND_BACKEND.md` o `REDUX_MIGRATION.md` son referencias históricas de la migración a Redux; no queda código que los use.
 - La verificación de duplicados se hizo por análisis estático + tests; el checklist de la sección 4 es la confirmación empírica que conviene correr una vez antes de rendir.
 - Productos usa **Context + useReducer**, no Redux. Si preguntan por qué: estado global de solo-lectura del catálogo, con normalización `byId/ids`; Redux quedó para el estado que muta con la interacción del usuario (carrito, sesión, toast). Es una decisión defendible — decirla como decisión, no como accidente.

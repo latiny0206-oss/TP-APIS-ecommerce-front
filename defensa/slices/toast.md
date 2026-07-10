@@ -47,7 +47,7 @@ La dirección de la dependencia importa: `toastSlice` importa la action de `cart
 
 ## Dónde se usa
 
-- **useSelector**: solo `Toast.jsx:7` — lee `{ visible, productName }` para renderizarse (montado globalmente en `App.jsx:206`, arriba del router, por eso aparece en cualquier página).
+- **useSelector**: solo `Toast.jsx:7` — lee `{ visible, productName }` para renderizarse (montado globalmente en `App.jsx:282`, arriba del router, por eso aparece en cualquier página).
 - **dispatch**: solo `Toast.jsx` despacha `hideToast` (timer + botón cerrar). A `addToCart` lo despacha `ProductoDetalle.jsx:132`, pero esa action es del slice `cart`.
 
 ## Flujo completo narrado
