@@ -12,6 +12,15 @@ export const cartService = {
   addItem: (carritoId, { idVariante, cantidad }) =>
     api.post(`/carritos/${carritoId}/items`, { idVariante, cantidad }).then((r) => r.data),
 
+  // Reemplaza TODOS los items del carrito en un solo request (operación atómica).
+  // items: [{ idVariante, cantidad }]. Usado para volcar el snapshot del carrito local.
+  sincronizarItems: (carritoId, items) =>
+    api.put(`/carritos/${carritoId}/items`, items).then((r) => r.data),
+
+  // Items del carrito (para recuperarlo al iniciar sesión)
+  getItems: (carritoId) =>
+    api.get(`/carritos/${carritoId}/items`).then((r) => r.data),
+
   // Elimina un item del carrito
   removeItem: (carritoId, itemId) =>
     api.delete(`/carritos/${carritoId}/items/${itemId}`).then((r) => r.data),

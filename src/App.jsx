@@ -1,10 +1,12 @@
-import { useEffect, lazy, Suspense } from 'react'
+import { useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { ArrowRight } from 'lucide-react'
 import { authService } from './api/authService.js'
 import { sessionRestored, initDone, logout, setReturnTo } from './store/authSlice.js'
-import { clearCart } from './store/cartSlice.js'
+import { clearCart, hydrateItems } from './store/cartSlice.js'
+import { flushCart, loadBackendCart } from './store/cartBackend.js'
+import { useProducts } from './context/ProductsContext.jsx'
 
 // Layout — always needed, load eagerly
 import Navbar  from './components/Navbar.jsx'
@@ -81,6 +83,79 @@ function CartPersist() {
       localStorage.setItem('cumbre_cart', JSON.stringify({ items, coupon }))
     } catch {}
   }, [items, coupon])
+
+  return null
+}
+
+// ─── Sincroniza el carrito con el backend en los bordes de la sesión ───────
+// No toca el backend en cada cambio del carrito: solo vuelca el snapshot cuando
+// el usuario "se va" (cambia de pestaña o la cierra), y solo si algo cambió
+// desde el último volcado. Al iniciar sesión, recupera el carrito del backend.
+// (El volcado en el logout manual lo hace logoutThunk, con el token aún válido.)
+function CartBackendSync() {
+  const dispatch   = useDispatch()
+  const items      = useSelector((state) => state.cart.items)
+  const isLoggedIn = useSelector((state) => state.auth.isLoggedIn)
+  const { byId }   = useProducts()
+
+  const itemsRef      = useRef(items)
+  const loggedInRef   = useRef(isLoggedIn)
+  const byIdRef       = useRef(byId)
+  const lastSyncedRef = useRef(null)   // snapshot serializado de lo último volcado
+  itemsRef.current    = items
+  loggedInRef.current = isLoggedIn
+  byIdRef.current     = byId
+
+  const serialize = (its) =>
+    JSON.stringify(its.filter((i) => i.varianteId).map((i) => [i.varianteId, i.qty]))
+
+  const flushIfDirty = useCallback(() => {
+    if (!loggedInRef.current) return
+    const snapshot = serialize(itemsRef.current)
+    if (snapshot === lastSyncedRef.current) return   // nada cambió desde el último volcado
+    lastSyncedRef.current = snapshot
+    // Si el volcado falla, se permite reintentar en el próximo "leave".
+    flushCart(itemsRef.current).catch(() => { lastSyncedRef.current = null })
+  }, [])
+
+  // Vuelca al backend cuando el usuario se va: cambia de pestaña, la minimiza o la cierra.
+  useEffect(() => {
+    const onVisibility = () => { if (document.visibilityState === 'hidden') flushIfDirty() }
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pagehide', flushIfDirty)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pagehide', flushIfDirty)
+    }
+  }, [flushIfDirty])
+
+  // Recupera el carrito del backend al iniciar sesión (login/registro frescos).
+  // No corre en un refresh (sessionRestored), así no duplica lo que ya hay local.
+  useEffect(() => {
+    const onLogin = () => {
+      loadBackendCart()
+        .then((backendItems) => {
+          if (!backendItems || backendItems.length === 0) return
+          const mapped = backendItems.map((it) => ({
+            lineId:     `v${it.varianteId}`,
+            productId:  it.productoId ?? null,
+            varianteId: it.varianteId,
+            nombre:     it.productoNombre ?? '',
+            precio:     Number(it.precioUnitario ?? 0),
+            imagen:     byIdRef.current[it.productoId]?.imagen ?? null,
+            talle:      it.varianteTalla ?? null,
+            qty:        it.cantidad ?? 1,
+          }))
+          dispatch(hydrateItems(mapped))
+          // El carrito fusionado (local + backend) debe persistirse en el próximo
+          // "leave": lo marcamos como sucio para que se vuelva a volcar.
+          lastSyncedRef.current = null
+        })
+        .catch(() => {})
+    }
+    window.addEventListener('auth:login', onLogin)
+    return () => window.removeEventListener('auth:login', onLogin)
+  }, [dispatch])
 
   return null
 }
@@ -203,6 +278,7 @@ export default function App() {
       <AuthInit />
       <CartPersist />
       <CartUserCheck />
+      <CartBackendSync />
       <Toast />
       <ScrollToTop />
       <Suspense fallback={<PageLoader />}>

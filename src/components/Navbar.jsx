@@ -4,9 +4,8 @@ import {
   Mountain, ShoppingCart, Menu, X, ArrowUpRight, LogOut, UserCircle,
 } from 'lucide-react'
 import { useSelector, useDispatch } from 'react-redux'
-import { logout } from '../store/authSlice.js'
+import { logoutThunk } from '../store/authSlice.js'
 import { selectCartTotals } from '../store/cartSlice.js'
-import { authService } from '../api/authService.js'
 import { NAV_ITEMS, MARQUEE_ITEMS } from '../data/index.js'
 
 function PromoMarquee() {
@@ -69,8 +68,7 @@ export default function Navbar() {
   }
 
   const handleLogout = () => {
-    authService.logout()
-    dispatch(logout())
+    dispatch(logoutThunk())
     navigate('/')
     closeMobile()
   }

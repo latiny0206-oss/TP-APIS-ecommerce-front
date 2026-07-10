@@ -4,8 +4,7 @@ import {
 } from 'lucide-react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
-import { logout } from '../../store/authSlice.js'
-import { authService } from '../../api/authService.js'
+import { logoutThunk } from '../../store/authSlice.js'
 import Button from '../../components/ui/Button.jsx'
 
 const ADMIN_NAV = [
@@ -96,7 +95,7 @@ export default function AdminLayout() {
               Nuevo producto
             </Button>
             <div className="flex items-center justify-end mt-3 px-2">
-              <button onClick={() => { authService.logout(); dispatch(logout()); navigate('/') }}
+              <button onClick={() => { dispatch(logoutThunk()); navigate('/') }}
                 className="font-mono text-[10px] tracking-widest-2 uppercase text-ivory/55 hover:text-alpenglow flex items-center gap-1.5">
                 <LogOut size={12} /> Salir
               </button>

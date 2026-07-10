@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { UserCircle, Package, LogOut, ShoppingBag } from 'lucide-react'
 import { useSelector, useDispatch } from 'react-redux'
-import { logout } from '../store/authSlice.js'
-import { authService } from '../api/authService.js'
+import { logoutThunk } from '../store/authSlice.js'
 import { useOrdenes }  from '../hooks/useOrders.js'
 import { fmtPrice }    from '../utils/format.js'
 import Button from '../components/ui/Button.jsx'
@@ -32,7 +31,7 @@ export default function Perfil() {
 
   if (!user) return null
 
-  const handleLogout = () => { authService.logout(); dispatch(logout()); navigate('/') }
+  const handleLogout = () => { dispatch(logoutThunk()); navigate('/') }
 
   const handleCancelar = async (ordenId) => {
     setCancelError(null)

@@ -81,14 +81,16 @@ export default function Carrito() {
                 const variantStock = byId[line.productId]?._variantes?.find(v => v.id === line.varianteId)?.stock
                 const maxStock = variantStock ?? Infinity
                 const atMax = maxStock !== Infinity && line.qty >= maxStock
+                // Los items recuperados del backend pueden venir sin imagen: se resuelve del contexto.
+                const imagen = line.imagen ?? byId[line.productId]?.imagen
                 return (
                 <div key={line.lineId} className="flex gap-4 sm:gap-6 items-start bg-white border border-rock/10 p-4">
                   <div
                     className="h-24 w-20 sm:h-32 sm:w-28 overflow-hidden bg-rock-700 shrink-0 cursor-pointer"
                     onClick={() => navigate(`/producto/${line.productId}`)}
                   >
-                    {line.imagen && (
-                      <img src={line.imagen} alt={line.nombre} className="w-full h-full object-cover"
+                    {imagen && (
+                      <img src={imagen} alt={line.nombre} className="w-full h-full object-cover"
                         onError={(e) => { e.currentTarget.style.display = 'none' }} />
                     )}
                   </div>

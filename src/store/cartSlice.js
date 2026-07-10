@@ -91,6 +91,16 @@ const cartSlice = createSlice({
       state.couponError  = null
       state.couponStatus = 'idle'
     },
+    // Fusiona items traídos del backend (al iniciar sesión) con lo que ya haya
+    // en el carrito local. Suma cantidades por lineId. No dispara el toast
+    // (a diferencia de addToCart), porque no es una acción del usuario.
+    hydrateItems(state, action) {
+      for (const incoming of action.payload) {
+        const hit = state.items.find((i) => i.lineId === incoming.lineId)
+        if (hit) hit.qty += incoming.qty
+        else     state.items.push(incoming)
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -153,6 +163,7 @@ export const {
   setCouponError,
   removeCoupon,
   clearCart,
+  hydrateItems,
 } = cartSlice.actions
 
 export default cartSlice.reducer
