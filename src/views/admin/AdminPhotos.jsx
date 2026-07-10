@@ -22,7 +22,7 @@ async function uploadFoto(varianteId, file, onProgress, nextOrden) {
 export default function AdminPhotos() {
   const navigate               = useNavigate()
   const { productId: paramId } = useParams()
-  const { reload }             = useProducts()
+  const { setProductImage }    = useProducts()
 
   const [adminProds,   setAdminProds]   = useState([])
   const [prodsLoading, setProdsLoading] = useState(true)
@@ -74,7 +74,6 @@ export default function AdminPhotos() {
     try {
       await productService.eliminarFoto(fotoId)
       setFotos(prev => prev.filter(f => f.id !== fotoId))
-      reload()
     } catch (e) {
       setDeleteError(getErrorMessage(e))
     }
@@ -94,7 +93,7 @@ export default function AdminPhotos() {
         .then((nueva) => {
           setFotos(prev => [...prev, nueva])
           setQueue(q => q.map(it => it.uid === uid ? { ...it, progress: 100, done: true } : it))
-          reload()
+          setProductImage(product.id, productService.buildImageSrc(nueva))
         })
         .catch((e) => {
           setQueue(q => q.map(it => it.uid === uid ? { ...it, error: getErrorMessage(e) } : it))

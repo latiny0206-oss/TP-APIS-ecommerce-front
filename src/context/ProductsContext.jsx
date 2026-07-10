@@ -22,6 +22,11 @@ function reducer(state, action) {
       const { [action.payload]: _, ...byId } = state.byId
       return { ...state, byId, ids: state.ids.filter((id) => id !== action.payload) }
     }
+    case 'SET_IMAGE': {
+      const { id, imagen } = action.payload
+      if (!state.byId[id]) return state
+      return { ...state, byId: { ...state.byId, [id]: { ...state.byId[id], imagen } } }
+    }
     default: return state
   }
 }
@@ -86,8 +91,9 @@ export function ProductsProvider({ children }) {
     load()
   }, [load])
 
-  const upsert = useCallback((product) => dispatch({ type: 'UPSERT', payload: product }), [])
-  const remove = useCallback((id)      => dispatch({ type: 'REMOVE', payload: id }),      [])
+  const upsert  = useCallback((product)        => dispatch({ type: 'UPSERT', payload: product }), [])
+  const remove  = useCallback((id)             => dispatch({ type: 'REMOVE', payload: id }),      [])
+  const setProductImage = useCallback((id, imagen) => dispatch({ type: 'SET_IMAGE', payload: { id, imagen } }), [])
 
   const value = useMemo(() => ({
     byId:    state.byId,
@@ -97,7 +103,8 @@ export function ProductsProvider({ children }) {
     reload:  load,
     upsert,
     remove,
-  }), [state.byId, state.ids, state.loading, state.error, load, upsert, remove])
+    setProductImage,
+  }), [state.byId, state.ids, state.loading, state.error, load, upsert, remove, setProductImage])
 
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>
 }

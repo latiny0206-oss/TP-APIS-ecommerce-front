@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api'
+export const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api'
 const TOKEN_KEY = 'cumbre_token'
 const USER_KEY  = 'cumbre_user'
 

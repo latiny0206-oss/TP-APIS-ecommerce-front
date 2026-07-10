@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Plus, Trash2, Check, X } from 'lucide-react'
 import Button from '../../components/ui/Button.jsx'
 import { productService } from '../../api/productService.js'
@@ -110,9 +110,21 @@ function VariantRow({ variant, onUpdate, onDelete }) {
 
 const ESTADO_LABEL = { PAUSADO: '⏸', ELIMINADO: '✕' }
 
+// Campos editables que se comparan contra el snapshot original para el dirty-tracking de "Guardar cambios"
+const EDITABLE_FIELDS = ['color', 'talla', 'material', 'peso', 'precio', 'stock', 'estacion']
+function snapshotOf(v) {
+  return EDITABLE_FIELDS.reduce((acc, f) => { acc[f] = v[f]; return acc }, {})
+}
+function isDirty(v, original) {
+  if (!original) return true
+  return EDITABLE_FIELDS.some((f) => v[f] !== original[f])
+}
+
 export default function AdminVariants() {
   const [products,       setProducts]       = useState([])
   const [productsLoading, setProductsLoading] = useState(true)
+  // Snapshot de los valores guardados por variante, para no reenviar PUTs de filas sin cambios
+  const originalsRef = useRef({})
 
   // Carga ACTIVO + PAUSADO + ELIMINADO junto con sus fotos
   useEffect(() => {
@@ -143,6 +155,9 @@ export default function AdminVariants() {
         }
         return n
       })
+      const originals = {}
+      vars.forEach((v) => { originals[v.id] = snapshotOf(v) })
+      originalsRef.current = originals
       setProducts(normalized)
       setAllVariants(varByProd)
     }).finally(() => setProductsLoading(false))
@@ -189,6 +204,7 @@ export default function AdminVariants() {
         stock:    newVariant.stock,
         estacion: newVariant.estacion ?? 'TODAS',
       })
+      originalsRef.current = { ...originalsRef.current, [created.id]: snapshotOf(created) }
       setAllVariants(prev => ({
         ...prev,
         [selectedId]: [...(prev[selectedId] || []), created],
@@ -203,6 +219,8 @@ export default function AdminVariants() {
     setActionMsg(null)
     try {
       await productService.eliminarVariante(variantId)
+      const { [variantId]: _removed, ...restOriginals } = originalsRef.current
+      originalsRef.current = restOriginals
       setAllVariants(prev => ({
         ...prev,
         [selectedId]: (prev[selectedId] || []).filter(v => v.id !== variantId),
@@ -213,11 +231,16 @@ export default function AdminVariants() {
   }
 
   async function saveChanges() {
+    const dirty = variants.filter((v) => isDirty(v, originalsRef.current[v.id]))
+    if (dirty.length === 0) {
+      setSaveMsg({ type: 'ok', text: 'No hay cambios para guardar' })
+      return
+    }
     setSaving(true)
     setSaveMsg(null)
     try {
       await Promise.all(
-        variants.map((v) =>
+        dirty.map((v) =>
           productService.actualizarVariante(v.id, {
             productoId: selectedId,
             color:    v.color,
@@ -230,6 +253,9 @@ export default function AdminVariants() {
           })
         )
       )
+      const updatedOriginals = { ...originalsRef.current }
+      dirty.forEach((v) => { updatedOriginals[v.id] = snapshotOf(v) })
+      originalsRef.current = updatedOriginals
       setSaveMsg({ type: 'ok', text: 'Cambios guardados correctamente' })
     } catch (e) {
       setSaveMsg({ type: 'err', text: getErrorMessage(e) })

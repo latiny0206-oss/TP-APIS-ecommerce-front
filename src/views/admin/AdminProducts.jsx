@@ -71,12 +71,10 @@ function ProductDrawer({ product: existing, onClose, onSaved }) {
         descuentoPct: Number(form.descuentoPct) || 0,
         tag:          form.tag || null,
       }
-      if (existing) {
-        await productService.actualizarProducto(existing.id, payload)
-      } else {
-        await productService.crearProducto(payload)
-      }
-      onSaved()
+      const resp = existing
+        ? await productService.actualizarProducto(existing.id, payload)
+        : await productService.crearProducto(payload)
+      onSaved(resp)
       onClose()
     } catch (err) {
       setSaveError(getErrorMessage(err))
@@ -309,6 +307,24 @@ export default function AdminProducts() {
 
   useEffect(() => { loadAdminProds() }, [loadAdminProds])
 
+  // Aplica la respuesta del POST/PUT de producto localmente en vez de
+  // refetchear productos+variantes+fotos completos (un producto creado/editado
+  // no cambia las variantes ni fotos de los demás productos).
+  const handleProductSaved = useCallback((resp) => {
+    setAdminProds((prev) => {
+      const existingEntry = prev.find((p) => p.id === resp.id)
+      const variantes = existingEntry?._variantes ?? []
+      const normalized = productService.normalizeProducto(resp, variantes)
+      normalized.imagen = existingEntry?.imagen ?? null
+      const next = existingEntry
+        ? prev.map((p) => (p.id === resp.id ? normalized : p))
+        : [normalized, ...prev]
+      if (normalized.estado === 'ACTIVO') upsert(normalized)
+      else if (existingEntry) remove(resp.id)
+      return next
+    })
+  }, [upsert, remove])
+
   // Abre drawer con el producto pasado por parámetro de URL
   useEffect(() => {
     if (paramId && adminProds.length > 0) {
@@ -471,7 +487,7 @@ export default function AdminProducts() {
       </div>
 
       {drawerOpen && (
-        <ProductDrawer product={editProduct} onClose={closeDrawer} onSaved={loadAdminProds} />
+        <ProductDrawer product={editProduct} onClose={closeDrawer} onSaved={handleProductSaved} />
       )}
 
       {delId !== null && (

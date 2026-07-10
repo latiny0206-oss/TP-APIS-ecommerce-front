@@ -1,4 +1,4 @@
-import { api } from './api.js'
+import { api, BASE_URL } from './api.js'
 
 let categoriasPromise = null
 let marcasPromise = null
@@ -8,13 +8,28 @@ let productosPromise = null
 let productosAdminPromise = null
 
 export const productService = {
-  invalidateCache: () => {
-    categoriasPromise = null
-    marcasPromise = null
-    variantesPromise = null
-    fotosPromise = null
+  // Invalidadores selectivos: cada mutación solo tira el cache de lo que
+  // realmente pudo haber cambiado, para no forzar refetches innecesarios
+  // (en particular el de /fotos, que es el payload más pesado).
+  invalidateProductos: () => {
     productosPromise = null
     productosAdminPromise = null
+  },
+  invalidateVariantes: () => {
+    variantesPromise = null
+  },
+  invalidateFotos: () => {
+    fotosPromise = null
+  },
+  invalidateCatalogos: () => {
+    categoriasPromise = null
+    marcasPromise = null
+  },
+  invalidateCache: () => {
+    productService.invalidateProductos()
+    productService.invalidateVariantes()
+    productService.invalidateFotos()
+    productService.invalidateCatalogos()
   },
 
   // Catálogo (GET públicos)
@@ -38,14 +53,10 @@ export const productService = {
   },
   getProducto:    (id) => api.get(`/productos/${id}`).then((r) => r.data),
 
-  // Admin: trae ACTIVO + PAUSADO + ELIMINADO (requiere ADMIN)
+  // Admin: trae ACTIVO + PAUSADO + ELIMINADO en un solo llamado (requiere ADMIN)
   getProductosAdmin: () => {
     if (!productosAdminPromise) {
-      productosAdminPromise = Promise.allSettled([
-        api.get('/productos/estado/ACTIVO').then((r) => r.data),
-        api.get('/productos/estado/PAUSADO').then((r) => r.data),
-        api.get('/productos/estado/ELIMINADO').then((r) => r.data),
-      ]).then((results) => results.flatMap((r) => (r.status === 'fulfilled' ? r.value : [])))
+      productosAdminPromise = api.get('/productos/admin').then((r) => r.data)
     }
     return productosAdminPromise
   },
@@ -63,7 +74,7 @@ export const productService = {
   getVariante:          (id)      => api.get(`/variantes/${id}`).then((r) => r.data),
   isStockDisponible:    (id, qty) => api.get(`/variantes/${id}/stock/disponible`, { params: { cantidad: qty } }).then((r) => r.data),
 
-  // Fotos Base64: [{ tipoContenido, datos }]
+  // Fotos: metadata liviana [{ id, varianteId, nombre, tipoContenido, orden }], sin el binario
   getAllFotos:          ()            => {
     if (!fotosPromise) {
       fotosPromise = api.get('/fotos').then((r) => r.data)
@@ -78,68 +89,78 @@ export const productService = {
     }
     return api.get(`/fotos/variante/${varianteId}`).then((r) => r.data)
   },
-  buildImageSrc: (foto) => `data:${foto.tipoContenido};base64,${foto.datos}`,
+  // El binario se sirve por separado y cacheable por el browser (ver FotoController#archivo)
+  buildImageSrc: (foto) => `${BASE_URL}/fotos/${foto.id}/archivo`,
 
   // CRUD admin (RESTful estándar)
+  // Cada mutación invalida solo los caches que puede haber afectado.
   crearProducto:    (data)       => api.post('/productos', data).then((r) => {
-    productService.invalidateCache()
+    productService.invalidateProductos()
     return r.data
   }),
   actualizarProducto: (id, data) => api.put(`/productos/${id}`, data).then((r) => {
-    productService.invalidateCache()
+    productService.invalidateProductos()
     return r.data
   }),
   eliminarProducto: (id)         => api.delete(`/productos/${id}`).then((r) => {
-    productService.invalidateCache()
+    productService.invalidateProductos()
     return r.data
   }),
 
   crearVariante:    (data)       => api.post('/variantes', data).then((r) => {
-    productService.invalidateCache()
+    productService.invalidateVariantes()
     return r.data
   }),
   actualizarVariante: (id, data) => api.put(`/variantes/${id}`, data).then((r) => {
-    productService.invalidateCache()
+    productService.invalidateVariantes()
     return r.data
   }),
   eliminarVariante: (id)         => api.delete(`/variantes/${id}`).then((r) => {
-    productService.invalidateCache()
+    productService.invalidateVariantes()
     return r.data
   }),
 
+  // Categorías/marcas van embebidas (denormalizadas) en la respuesta de productos
+  // (categoriaNombre/marcaNombre), por eso también invalidan productos.
   crearCategoria:   (data)       => api.post('/categorias', data).then((r) => {
-    productService.invalidateCache()
+    productService.invalidateCatalogos()
+    productService.invalidateProductos()
     return r.data
   }),
   actualizarCategoria: (id, data)=> api.put(`/categorias/${id}`, data).then((r) => {
-    productService.invalidateCache()
+    productService.invalidateCatalogos()
+    productService.invalidateProductos()
     return r.data
   }),
   eliminarCategoria:(id)         => api.delete(`/categorias/${id}`).then((r) => {
-    productService.invalidateCache()
+    productService.invalidateCatalogos()
+    productService.invalidateProductos()
     return r.data
   }),
 
   crearMarca:       (data)       => api.post('/marcas', data).then((r) => {
-    productService.invalidateCache()
+    productService.invalidateCatalogos()
+    productService.invalidateProductos()
     return r.data
   }),
   actualizarMarca:  (id, data)   => api.put(`/marcas/${id}`, data).then((r) => {
-    productService.invalidateCache()
+    productService.invalidateCatalogos()
+    productService.invalidateProductos()
     return r.data
   }),
   eliminarMarca:    (id)         => api.delete(`/marcas/${id}`).then((r) => {
-    productService.invalidateCache()
+    productService.invalidateCatalogos()
+    productService.invalidateProductos()
     return r.data
   }),
 
   // Fotos CRUD wrappers
   subirFoto:        (formData, config) => api.post('/fotos', formData, config).then((r) => {
-    productService.invalidateCache()
+    productService.invalidateFotos()
     return r.data
   }),
   eliminarFoto:     (id)         => api.delete(`/fotos/${id}`).then((r) => {
-    productService.invalidateCache()
+    productService.invalidateFotos()
     return r.data
   }),
 
