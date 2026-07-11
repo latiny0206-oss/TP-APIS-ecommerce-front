@@ -165,15 +165,282 @@ Por cada acción del usuario que dispara un thunk tienen que aparecer **exactame
 - [ ] Loguearse con otro usuario: no aparece nada del carrito anterior
 - [ ] Loguearse con el **mismo** usuario: los items vuelven a aparecer (recuperación desde backend vía `CartBackendSync` en el evento `auth:login`)
 
-## Flujo 10 — Panel admin (breve)
+## Flujo 10 — Panel admin: patrón común (leelo antes de los flujos 11 a 19)
 
-Cada vista admin fetchea lo suyo al entrar (1 vez, con caches a nivel módulo en descuentos y órdenes): Dashboard → `GET /api/admin/dashboard`; Descuentos → `GET /api/descuentos` (fallback a `/activos`); Órdenes → `GET /api/ordenes`. Crear/editar/borrar dispara 1 request por acción e invalida el cache correspondiente.
+Cada vista admin fetchea **su** dato al montar y guarda el resultado en una **cache a nivel módulo** propia de esa vista (o del service en el caso de productos/variantes/fotos/categorías/marcas). Todas esas caches escuchan `auth:logout` y `auth:login` y se **vacían** en cada cambio de sesión — por eso el primer render tras loguearse siempre dispara 1 GET, y volver a esa vista dentro de la misma sesión no vuelve a pegarle al backend.
 
-**Confirmar / cancelar orden desde AdminOrders** (mismo patrón que Flujo 8): `POST /api/ordenes/{id}/confirmar` (o `/cancelar`) **seguido de** `GET /api/ordenes` (refetch de la lista completa vía `load(true)` en `useOrders.js:99-125`). El admin usa el hook `useOrdenes()` **sin userId** — la key de cache es `'all'` y el endpoint es `/ordenes` (no `/ordenes/usuario/{id}`).
+Patrón de mutaciones (con la única excepción de "Confirmar/Cancelar" en Órdenes):
+- El POST/PUT/DELETE devuelve el objeto → la vista **actualiza el estado local optimísticamente y sincroniza la cache del módulo** con esa misma copia. **No hay refetch de la lista completa**.
+- En `productService` cada mutación también invalida las promesas cacheadas (`invalidateProductos`, `invalidateVariantes`, `invalidateFotos`, `invalidateCatalogos`), así el próximo montaje pide de nuevo. Las mutaciones de categorías/marcas invalidan también productos porque el DTO los trae denormalizados (`categoriaNombre`, `marcaNombre`).
 
-- [ ] Entrar dos veces a Descuentos sin recargar: 1 solo GET total
-- [ ] Cada alta/edición/borrado: 1 request por acción
-- [ ] Confirmar/cancelar orden desde admin: 1 POST + 1 GET `/api/ordenes` (refetch)
+Login como admin — **qué esperar en Network apenas entra al panel**:
+- `POST /api/auth/login` (una vez).
+- **No** `GET /api/carritos` — `CartBackendSync` corta al leer `e.detail.rol === 'ADMIN'` (ver "Llamados extra del CartBackendSync" arriba).
+- Al aterrizar en `/admin/dashboard`: 1 `GET /api/admin/dashboard`.
+
+Redux DevTools durante todo el panel admin: **solo actions de `auth`** (login, initDone, sessionRestored, logout). Ninguna vista admin despacha al store — usan hooks y state local. Si ves `cart/...` mientras administrás, algo está mal (o cambiaste de pestaña con carrito ajeno).
+
+## Flujo 11 — Admin Dashboard
+
+**Acción**: entrar a `/admin/dashboard` (post login).
+
+**Network esperado**:
+| Llamado | Método | Cuántas veces | Quién lo dispara |
+|---|---|---|---|
+| `/api/admin/dashboard` | GET | 1 | `AdminDashboard` al montar (`AdminDashboard.jsx:62`), vía `adminService.getDashboard()` |
+
+**Redux DevTools**: nada — la vista no despacha.
+
+**Reingresos**: navegar a otra vista admin y volver → **0 requests** (cache de módulo `cachedDashboard`). Solo se vuelve a pegar al presionar el botón "Reintentar" (que llama a `loadDashboard(true)`) o al hacer logout/login.
+
+- [ ] Primer ingreso: 1 GET `/api/admin/dashboard`
+- [ ] Volver desde otra vista admin en la misma sesión: 0 requests
+- [ ] Botón "Reintentar" tras error: 1 GET
+
+## Flujo 12 — Admin Catálogo (categorías + marcas)
+
+**Acción**: entrar a `/admin/catalog`.
+
+**Network esperado al montar** (primera vez en la sesión):
+| Llamado | Método | Cuántas veces | Quién lo dispara |
+|---|---|---|---|
+| `/api/categorias` | GET | 1 | `productService.getCategorias()` (cache de promesa) |
+| `/api/marcas`     | GET | 1 | `productService.getMarcas()` |
+
+Si venías de AdminProducts/AdminVariants/AdminPhotos en la misma sesión, esos GETs ya salieron y **no se repiten** — los caches de `productService` son compartidos.
+
+**Acciones (categorías; marcas idéntico)**:
+| Acción | Método | URL | Refetch de la lista |
+|---|---|---|---|
+| Nueva categoría | POST | `/api/categorias` | No — update local + invalida `categorias` y `productos` en cache |
+| Editar categoría | PUT | `/api/categorias/{id}` | No — ídem |
+| Eliminar categoría | DELETE | `/api/categorias/{id}` | No — ídem |
+
+**Redux DevTools**: nada.
+
+- [ ] Montaje: 1 GET `/categorias` + 1 GET `/marcas` (o 0 si ya se pidieron en otra vista del catálogo)
+- [ ] Crear categoría: 1 POST, sin GET posterior
+- [ ] Editar categoría: 1 PUT, sin GET posterior
+- [ ] Eliminar categoría: 1 DELETE, sin GET posterior
+- [ ] Ídem para marcas
+- [ ] Al ir después a AdminProducts, se rehace `GET /productos/admin` (la mutación de categorías/marcas invalidó también productos)
+
+## Flujo 13 — Admin Productos
+
+**Acción**: entrar a `/admin/products`.
+
+**Network esperado al montar** (primera vez en la sesión):
+| Llamado | Método | Cuántas veces | Notas |
+|---|---|---|---|
+| `/api/productos/admin` | GET | 1 | Trae ACTIVO + PAUSADO + ELIMINADO. Si el back devuelve 403, fallback a `/api/productos`. |
+| `/api/variantes` | GET | 1 | Cache de `productService` |
+| `/api/fotos` | GET | 1 | Metadata liviana; el binario no viaja acá |
+
+Al abrir el drawer "Nuevo producto" o "Editar" **por primera vez** puede dispararse `GET /api/marcas` y `GET /api/categorias` si esa sesión no los pidió antes (sale del cache si ya estaban).
+
+**Acciones**:
+| Acción | Método | URL | Refetch |
+|---|---|---|---|
+| Crear producto | POST | `/api/productos` | No — update local + invalida `productos`, `productosAdmin` |
+| Editar producto | PUT | `/api/productos/{id}` | No — ídem |
+| Eliminar producto | DELETE | `/api/productos/{id}` | No — ídem |
+
+**Redux DevTools**: nada.
+
+- [ ] Montaje: 1 GET `/productos/admin` + 1 GET `/variantes` + 1 GET `/fotos`
+- [ ] Abrir drawer nuevo: si es la primera vez de la sesión, 1 GET `/marcas` + 1 GET `/categorias`; si no, 0
+- [ ] Crear producto: 1 POST y **cero GET** posteriores
+- [ ] Editar producto: 1 PUT y cero GET posteriores
+- [ ] Eliminar producto: 1 DELETE y cero GET posteriores
+- [ ] Volver a la vista después de una mutación: rehace los 3 GET (cache invalidado). Volver **sin** mutar: 0 GET (cache vivo)
+
+## Flujo 14 — Admin Variantes (dirty-tracking + batch)
+
+**Acción**: entrar a `/admin/variants`.
+
+**Network esperado al montar**:
+| Llamado | Método | Cuántas veces | Notas |
+|---|---|---|---|
+| `/api/productos/admin` | GET | 1 | Fallback a `/productos` si 403 |
+| `/api/variantes` | GET | 1 | — |
+| `/api/fotos` | GET | 1 | — |
+
+Los tres salen de las caches compartidas de `productService` si ya se pidieron en otra vista de la misma sesión.
+
+**Seleccionar producto en el panel izquierdo**: **cero requests** — filtra en memoria.
+
+**Edición inline con dirty-tracking** — este es el patrón particular de esta vista:
+- Cambiar campos en la grilla (`color`, `talla`, `material`, `peso`, `precio`, `stock`, `estacion`) **no dispara nada** — se guarda en state local.
+- Al presionar **"Guardar cambios"**: se compara cada variante contra su snapshot (`originalsRef`) y solo las que difieren disparan `PUT /api/variantes/{id}` **en paralelo con `Promise.all`**. Si nada cambió, cero requests y un cartel "sin cambios".
+
+**Acciones**:
+| Acción | Método | URL | Refetch |
+|---|---|---|---|
+| Nueva variante | POST | `/api/variantes` | No — update local + invalida `variantes` |
+| Guardar cambios | N × PUT en paralelo | `/api/variantes/{id}` | No — actualiza snapshot local |
+| Eliminar variante | DELETE | `/api/variantes/{id}` | No — update local |
+
+**Redux DevTools**: nada.
+
+- [ ] Montaje: 1 GET `/productos/admin` + 1 `/variantes` + 1 `/fotos` (o 0 si ya venían cacheadas)
+- [ ] Cambiar un campo y no guardar: 0 requests
+- [ ] "Guardar cambios" sin editar nada: 0 requests
+- [ ] "Guardar cambios" tras editar 3 variantes: exactamente 3 PUT (en paralelo, mismos ms de inicio)
+- [ ] Crear variante: 1 POST, sin GET
+- [ ] Eliminar variante: 1 DELETE, sin GET
+
+## Flujo 15 — Admin Fotos
+
+**Acción**: entrar a `/admin/fotos` (o `/admin/fotos/{productId}` desde AdminProducts).
+
+**Network esperado al montar**:
+| Llamado | Método | Cuántas veces | Notas |
+|---|---|---|---|
+| `/api/productos/admin` | GET | 1 | Fallback a `/productos` |
+| `/api/variantes` | GET | 1 | — |
+
+Ojo: acá **no se carga `/fotos` completo al inicio**. Las fotos se piden **al seleccionar una variante**.
+
+**Seleccionar una variante**:
+- Si `productService.getAllFotos()` ya cargó (por venir de otra vista admin), se filtra en memoria — **0 requests**.
+- Si no, `productService.getFotosByVariante(id)` hace **1 GET `/api/fotos/variante/{id}`**.
+
+**Subir fotos** (drag & drop o input): por cada archivo → **1 POST `/api/fotos`** (multipart, con `onUploadProgress`). No refetch — se agrega la foto a la lista local; además actualiza `ProductsContext` con la nueva imagen del producto vía `setProductImage`.
+
+**Eliminar foto**: **1 DELETE `/api/fotos/{id}`** — quita del state local.
+
+**Redux DevTools**: nada.
+
+- [ ] Montaje directo (no venías de AdminProducts): 1 GET `/productos/admin` + 1 `/variantes`, **cero `/fotos`**
+- [ ] Seleccionar una variante por primera vez: 1 GET `/fotos/variante/{id}` (o 0 si el cache de `/fotos` ya estaba)
+- [ ] Subir 3 fotos: 3 POST `/fotos` en secuencia (uno por archivo)
+- [ ] Eliminar una foto: 1 DELETE `/fotos/{id}` y nada más
+
+## Flujo 16 — Admin Descuentos
+
+**Acción**: entrar a `/admin/discounts`.
+
+**Network esperado al montar**:
+| Llamado | Método | Cuántas veces | Notas |
+|---|---|---|---|
+| `/api/descuentos` | GET | 1 | Cache local `cachedDescuentos` en la vista. Si el back devuelve 403, fallback a `GET /api/descuentos/activos`. |
+
+**Acciones**:
+| Acción | Método | URL | Refetch |
+|---|---|---|---|
+| Crear cupón | POST | `/api/descuentos` | No — update local + invalida `activeDiscountsPromise` en `discountService` |
+| Editar cupón | PUT | `/api/descuentos/{id}` | No — ídem |
+| Toggle estado (ACTIVO ↔ EXPIRADO) | PUT | `/api/descuentos/{id}` | No — misma ruta que edición, con `estado` cambiado |
+| Eliminar cupón | DELETE | `/api/descuentos/{id}` | No — ídem |
+
+Detalle importante: la mutación **invalida** el cache público (`activeDiscountsPromise`), así que la próxima vez que la Home o el `HeroSection` pidan descuentos activos volverán a fetchear — lo esperado.
+
+**Redux DevTools**: nada del panel; si el usuario luego navega al Home, ahí sí se dispara `GET /descuentos/activos`.
+
+- [ ] Montaje: 1 GET `/descuentos`
+- [ ] Volver desde otra vista admin: 0 requests (cache local)
+- [ ] Crear cupón: 1 POST, sin GET posterior
+- [ ] Editar cupón: 1 PUT, sin GET posterior
+- [ ] Toggle estado: 1 PUT, sin GET posterior
+- [ ] Eliminar cupón: 1 DELETE, sin GET posterior
+- [ ] Ir después al Home: rehace `GET /descuentos/activos` (el cupón puede haber cambiado)
+
+## Flujo 17 — Admin Órdenes (única vista con refetch)
+
+**Acción**: entrar a `/admin/orders`.
+
+**Network esperado al montar** (primera vez en la sesión):
+| Llamado | Método | Cuántas veces | Notas |
+|---|---|---|---|
+| `/api/ordenes` | GET | 1 | `useOrdenes()` **sin userId** → key `'all'` → endpoint `/ordenes` (no `/ordenes/usuario/{id}`). Cache en el hook. |
+
+**Cambiar de tab (PENDIENTE / CONFIRMADA / ENTREGADA / CANCELADA)**: filtra en memoria — **0 requests**.
+
+**Ver detalle de una orden** (panel lateral): 0 requests — usa la orden ya en cache (`useOrden` mira las listas cacheadas antes de fetchear).
+
+**Confirmar / Cancelar orden** (SOLO para estado PENDIENTE) — **este es el único flujo del panel admin que refetchea la lista**:
+| Acción | Método | URL | Refetch |
+|---|---|---|---|
+| Confirmar orden | POST | `/api/ordenes/{id}/confirmar` | **SÍ** — invalida `cachedAllOrders` y llama `load(true)` → 1 GET `/api/ordenes` |
+| Cancelar orden | POST | `/api/ordenes/{id}/cancelar` | **SÍ** — ídem |
+
+Justificación (para la defensa): a diferencia de las otras vistas admin, acá no alcanzaría con un update local — el backend puede haber cambiado stock, estado del carrito asociado, etc. El refetch garantiza consistencia. El patrón está en `useOrders.js:99-125`. Es intencional, no un bug.
+
+**Redux DevTools**: nada.
+
+- [ ] Montaje: 1 GET `/ordenes` (o 0 si ya venía cacheada)
+- [ ] Cambiar de tab: 0 requests
+- [ ] Abrir detalle de una orden: 0 requests
+- [ ] Confirmar orden PENDIENTE: 1 POST `/ordenes/{id}/confirmar` + 1 GET `/ordenes` (refetch)
+- [ ] Cancelar orden PENDIENTE: 1 POST `/ordenes/{id}/cancelar` + 1 GET `/ordenes` (refetch)
+
+## Flujo 18 — Admin Usuarios
+
+**Acción**: entrar a `/admin/users`.
+
+**Network esperado al montar**:
+| Llamado | Método | Cuántas veces | Notas |
+|---|---|---|---|
+| `/api/usuarios` | GET | 1 | Cache local `cachedUsers` en la vista |
+
+**Buscar / filtrar por rol (TODOS / ADMIN / CLIENTE)**: filtro en memoria — **0 requests**.
+
+**Acciones**:
+| Acción | Método | URL | Refetch |
+|---|---|---|---|
+| Nuevo usuario | POST | `/api/usuarios` | No — update local + cache |
+| Editar usuario | PUT | `/api/usuarios/{id}` | No — ídem. Si el campo `password` viene vacío en edición, se elimina del payload |
+| Eliminar usuario | DELETE | `/api/usuarios/{id}` | No — ídem |
+
+**Redux DevTools**: nada.
+
+- [ ] Montaje: 1 GET `/usuarios`
+- [ ] Buscar por nombre o filtrar por rol: 0 requests
+- [ ] Crear usuario: 1 POST, sin GET
+- [ ] Editar usuario sin cambiar password: 1 PUT sin `password` en el body
+- [ ] Eliminar usuario: 1 DELETE, sin GET
+
+## Flujo 19 — Admin Mensajes de Contacto (solo lectura)
+
+**Acción**: entrar a `/admin/contacto`.
+
+**Network esperado al montar**:
+| Llamado | Método | Cuántas veces | Notas |
+|---|---|---|---|
+| `/api/contacto` | GET | 1 | Cache local `cachedMensajes` en la vista |
+
+**Ver un mensaje** (click en fila): 0 requests — selección local.
+
+**Botón "Actualizar"**: 1 GET `/api/contacto` (llama a `load(true)`, bypass del cache).
+
+Esta vista **no tiene** POST/PUT/DELETE — los mensajes solo se leen. El POST público (`enviarContacto`) lo dispara el formulario público en `/contacto`.
+
+**Redux DevTools**: nada.
+
+- [ ] Montaje: 1 GET `/contacto`
+- [ ] Seleccionar un mensaje: 0 requests
+- [ ] Botón "Actualizar": 1 GET `/contacto` (force refresh)
+
+---
+
+## Cheat sheet — Panel admin en una tabla
+
+| Vista | GETs al montar | Refetch después de mutar | Cache |
+|---|---|---|---|
+| Dashboard | `/admin/dashboard` | — (solo botón Reintentar) | Módulo vista |
+| Catálogo | `/categorias`, `/marcas` | No (update local + invalidación de módulo) | `productService` |
+| Productos | `/productos/admin`, `/variantes`, `/fotos` | No | `productService` |
+| Variantes | `/productos/admin`, `/variantes`, `/fotos` | No (batch PUT solo dirty) | `productService` |
+| Fotos | `/productos/admin`, `/variantes` (y `/fotos/variante/{id}` al elegir) | No | `productService` |
+| Descuentos | `/descuentos` | No (invalida `activeDiscountsPromise`) | Módulo vista |
+| **Órdenes** | `/ordenes` | **SÍ — `GET /ordenes` tras confirmar/cancelar** | Hook `useOrdenes` |
+| Usuarios | `/usuarios` | No | Módulo vista |
+| Contacto | `/contacto` | — (solo lectura) | Módulo vista |
+
+Reglas generales:
+- Todos los caches se **vacían** en `auth:logout` y `auth:login`, así que el primer render de cada vista tras loguearse siempre pega 1 vez al backend.
+- Ninguna vista admin despacha al Redux store — todo pasa por hooks o state local. Si Redux DevTools muestra actions durante una acción admin, es de `auth` o de otra pestaña.
+- Órdenes es la **única excepción** al patrón "no refetch": es intencional para garantizar consistencia post-cambio de estado.
 
 ---
 
