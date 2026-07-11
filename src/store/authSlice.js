@@ -8,7 +8,7 @@ export const loginThunk = createAsyncThunk(
   'auth/login',
   async ({ username, password }) => {
     const data = await authService.login({ username, password })
-    window.dispatchEvent(new CustomEvent('auth:login', { detail: { id: data.id } }))
+    window.dispatchEvent(new CustomEvent('auth:login', { detail: { id: data.id, rol: data.rol } }))
     return {
       id:       data.id,
       username: data.username,
@@ -23,7 +23,7 @@ export const registerThunk = createAsyncThunk(
   'auth/register',
   async ({ username, email, password, nombre, apellido }) => {
     const data = await authService.register({ username, email, password, nombre, apellido })
-    window.dispatchEvent(new CustomEvent('auth:login', { detail: { id: data.id } }))
+    window.dispatchEvent(new CustomEvent('auth:login', { detail: { id: data.id, rol: data.rol } }))
     return {
       id:         data.id,
       username:   data.username,

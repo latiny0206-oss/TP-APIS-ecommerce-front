@@ -23,6 +23,7 @@ React StrictMode (activado en `main.jsx`, **solo en desarrollo**) monta cada com
 
 - **Al ocultar la pestaña (visibilitychange → hidden) o cerrarla (pagehide)** — si el carrito cambió desde el último volcado, hace `flushCart` = **GET `/carritos`** + (POST `/carritos` si no había uno) + **PUT `/carritos/{id}/items`** (reemplazo atómico). Si el carrito local está vacío y no hay uno reutilizable en backend, solo hace el GET.
 - **Al iniciar sesión** (evento `auth:login` — login fresco o registro, **no** refresh) — `loadBackendCart()` hace **GET `/carritos`** para recuperar el carrito ACTIVO/VACIO y despachar `hydrateItems`.
+- **Excepción**: si el usuario que loguea tiene `rol === 'ADMIN'`, `CartBackendSync` corta antes de tocar el backend. El admin **no dispara** el GET al login ni el PUT al cerrar la pestaña — no tiene carrito propio. El evento `auth:login` viaja con `{ id, rol }` para que el handler pueda filtrar sin leer el store.
 
 Consecuencia práctica: si al probar un flujo abrís DevTools después de haber empezado, o alternás pestañas, verás llamados que no son "del flujo" que estás observando. Antes de reportar un llamado inesperado, verificá que no venga del `CartBackendSync`.
 

@@ -96,14 +96,17 @@ function CartBackendSync() {
   const dispatch   = useDispatch()
   const items      = useSelector((state) => state.cart.items)
   const isLoggedIn = useSelector((state) => state.auth.isLoggedIn)
+  const rol        = useSelector((state) => state.auth.user?.rol)
   const { byId }   = useProducts()
 
   const itemsRef      = useRef(items)
   const loggedInRef   = useRef(isLoggedIn)
+  const rolRef        = useRef(rol)
   const byIdRef       = useRef(byId)
   const lastSyncedRef = useRef(null)   // snapshot serializado de lo último volcado
   itemsRef.current    = items
   loggedInRef.current = isLoggedIn
+  rolRef.current      = rol
   byIdRef.current     = byId
 
   const serialize = (its) =>
@@ -111,6 +114,7 @@ function CartBackendSync() {
 
   const flushIfDirty = useCallback(() => {
     if (!loggedInRef.current) return
+    if (rolRef.current === 'ADMIN') return   // el admin no tiene carrito propio
     const snapshot = serialize(itemsRef.current)
     if (snapshot === lastSyncedRef.current) return   // nada cambió desde el último volcado
     lastSyncedRef.current = snapshot
@@ -132,7 +136,8 @@ function CartBackendSync() {
   // Recupera el carrito del backend al iniciar sesión (login/registro frescos).
   // No corre en un refresh (sessionRestored), así no duplica lo que ya hay local.
   useEffect(() => {
-    const onLogin = () => {
+    const onLogin = (e) => {
+      if (e.detail?.rol === 'ADMIN') return   // el admin no tiene carrito propio
       loadBackendCart()
         .then((backendItems) => {
           if (!backendItems || backendItems.length === 0) return
